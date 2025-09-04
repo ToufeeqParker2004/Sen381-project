@@ -10,7 +10,7 @@ This project is part of the **SEN381 Software Engineering Project** and leverage
 ## 👥 Group Members
 - **Trent Evans**  
 - **Jason Lee Taylor**  
-- **Muhammed Toufeeq Parker**  
+- **Muhammad Toufeeq Parker**  
 - **Gito Martin**  
 - **Renaldo Jardim**
 
