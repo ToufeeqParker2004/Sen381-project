@@ -16,26 +16,27 @@ public class UserController {
         this.userServices = userServices;
     }
 
+
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestParam String name, @RequestParam String surname) {
-        User user = userServices.login(name, surname);
+    public ResponseEntity<?> login(@RequestParam String email, @RequestParam String password) {
+        User user = userServices.login(email, password);
 
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Incorrect name or surname");
+                    .body("Incorrect email or password");
         }
 
         return ResponseEntity.ok(user);
     }
 
     @PostMapping("signUp")
-    public ResponseEntity<?> signUp(@RequestParam String name, @RequestParam String surname){
+    public ResponseEntity<?> signUp(@RequestParam String name, @RequestParam String email,@RequestParam String phone,@RequestParam String bio,@RequestParam String password){
 
-        if (name == null || surname == null || name.isEmpty() || surname.isEmpty()) {
+       /* if (name == null || email == null || name.isEmpty() || surname.isEmpty()) {
             return ResponseEntity.badRequest().body("Name and surname are required");
-        }
+        }*/
 
-        boolean signup = userServices.signUp(name,surname);
+        boolean signup = userServices.signUp(name,email,phone,bio,password);
 
         if (signup){
             return ResponseEntity.ok("Sign up successfull");

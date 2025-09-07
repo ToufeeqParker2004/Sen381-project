@@ -4,6 +4,9 @@ import com.backend.Java_Backend.Models.User;
 import com.backend.Java_Backend.Repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.sql.Time;
+import java.time.LocalDateTime;
+
 @Service
 public class UserServices {
 
@@ -13,8 +16,8 @@ public class UserServices {
         this.userRepository = userRepository;
     }
 
-    public User login(String name, String surname) {
-        User user = userRepository.login(name, surname);
+    public User login(String email, String password) {
+        User user = userRepository.login(email, password);
 
         if (user !=null){
             return user;
@@ -24,7 +27,8 @@ public class UserServices {
 
     }
 
-    public boolean signUp(String name, String surname) {
-        return userRepository.signUp(name, surname);
+    public boolean signUp(String name, String email, String phone, String bio, String password) {
+        return userRepository.signUp(name, email, phone, bio, password);
     }
+
 }
