@@ -1,22 +1,39 @@
 package com.backend.Java_Backend.Models;
 
+import jakarta.persistence.*;
+
 import java.sql.Timestamp;
 
+@Entity
+@Table(name="students")
 public class Student {
-    int id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // auto-increment for Postgres/MySQL
+    private int id;
+
+    @Column(name = "created_at")
     private Timestamp createdAt;
+
     private String name;
+
     private String email;
-    private String phone_number;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
     private String bio;
+
     private String password;
 
-    public Student(int id, Timestamp createdAt, String name, String email, String phone_number, String bio, String password) {
+    // Default constructor is required by JPA
+    public Student() {}
+
+    public Student(int id, Timestamp createdAt, String name, String email, String phoneNumber, String bio, String password) {
         this.id = id;
         this.createdAt = createdAt;
         this.name = name;
         this.email = email;
-        this.phone_number = phone_number;
+        this.phoneNumber = phoneNumber;
         this.bio = bio;
         this.password = password;
     }
@@ -54,11 +71,11 @@ public class Student {
     }
 
     public String getPhone_number() {
-        return phone_number;
+        return phoneNumber;
     }
 
     public void setPhone_number(String phone_number) {
-        this.phone_number = phone_number;
+        this.phoneNumber = phone_number;
     }
 
     public String getEmail() {
