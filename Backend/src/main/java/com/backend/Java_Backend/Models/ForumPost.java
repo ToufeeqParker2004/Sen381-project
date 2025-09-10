@@ -1,16 +1,25 @@
 package com.backend.Java_Backend.Models;
 
+import jakarta.persistence.*;
+
 import java.sql.Timestamp;
 import java.util.UUID;
-
+@Entity
+@Table(name = "forum_posts")
 public class ForumPost {
+    @Id
+    @GeneratedValue
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     UUID id;
     int author_id;
     UUID parent_post_id;
     String content;
+    @Column(name = "attachments")
     String[] attatchments;
     int upvotes;
-    Timestamp creted_at;
+    Timestamp created_at;
+
+    public ForumPost() {}
 
     public ForumPost(UUID id, int author_id, UUID parent_post_id, String content, String[] attatchments, int upvotes, Timestamp creted_at) {
         this.id = id;
@@ -19,16 +28,14 @@ public class ForumPost {
         this.content = content;
         this.attatchments = attatchments;
         this.upvotes = upvotes;
-        this.creted_at = creted_at;
+        this.created_at = creted_at;
     }
 
     public UUID getId() {
         return id;
     }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
+
 
     public int getAuthor_id() {
         return author_id;
@@ -70,11 +77,11 @@ public class ForumPost {
         this.upvotes = upvotes;
     }
 
-    public Timestamp getCreted_at() {
-        return creted_at;
+    public Timestamp getCreated_at() {
+        return created_at;
     }
 
-    public void setCreted_at(Timestamp creted_at) {
-        this.creted_at = creted_at;
+    public void setCreated_at(Timestamp created_at) {
+        this.created_at = created_at;
     }
 }

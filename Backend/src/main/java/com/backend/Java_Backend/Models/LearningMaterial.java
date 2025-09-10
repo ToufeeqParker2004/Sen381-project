@@ -1,9 +1,15 @@
 package com.backend.Java_Backend.Models;
 
+import jakarta.persistence.*;
+
 import java.sql.Timestamp;
 import java.util.UUID;
-
+@Entity
+@Table(name = "learning_materials")
 public class LearningMaterial {
+    @Id
+    @GeneratedValue
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     UUID id;
     int topic_id;
     int module_id;
@@ -14,8 +20,10 @@ public class LearningMaterial {
     Timestamp created_at;
     String[] tags;
 
-    public LearningMaterial(UUID id, int topic_id, int module_id, int uploader_id, String title, String document_type, String file_url, Timestamp created_at, String[] tags) {
-        this.id = id;
+    public LearningMaterial() {}
+
+    public LearningMaterial( int topic_id, int module_id, int uploader_id, String title, String document_type, String file_url, Timestamp created_at, String[] tags) {
+
         this.topic_id = topic_id;
         this.module_id = module_id;
         this.uploader_id = uploader_id;
@@ -30,9 +38,7 @@ public class LearningMaterial {
         return id;
     }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
+
 
     public int getTopic_id() {
         return topic_id;

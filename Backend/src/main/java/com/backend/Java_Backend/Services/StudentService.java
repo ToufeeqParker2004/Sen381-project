@@ -1,10 +1,14 @@
 package com.backend.Java_Backend.Services;
 
+import com.backend.Java_Backend.Models.Modules;
 import com.backend.Java_Backend.Models.Student;
+import com.backend.Java_Backend.Models.StudentModule;
+import com.backend.Java_Backend.Repository.StudentModuleRepository;
 import com.backend.Java_Backend.Repository.StudentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,10 +16,12 @@ import java.util.Optional;
 public class StudentService {
 
     private final StudentRepository studentRepository;
-
+    private final StudentModuleRepository studentModuleRepository;
     @Autowired
-    public StudentService(StudentRepository studentRepository) {
+    public StudentService(StudentRepository studentRepository,StudentModuleRepository studentModuleRepository) {
+
         this.studentRepository = studentRepository;
+        this.studentModuleRepository = studentModuleRepository;
     }
 
     // Get all students
@@ -41,5 +47,14 @@ public class StudentService {
     // Find student by email
     public Student getStudentByEmail(String email) {
         return studentRepository.findByEmail(email);
+    }
+
+    public List<Modules> getModulesForStudent(int studentId) {
+        List<StudentModule> enrollments = studentModuleRepository.findByStudentId(studentId);
+        List<Modules> modules = new ArrayList<>();
+        for (StudentModule sm : enrollments) {
+            modules.add(sm.getModule());
+        }
+        return modules;
     }
 }

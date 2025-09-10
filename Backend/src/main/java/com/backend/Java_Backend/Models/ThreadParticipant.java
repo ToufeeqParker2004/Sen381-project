@@ -1,29 +1,26 @@
 package com.backend.Java_Backend.Models;
 
-import java.util.UUID;
+import jakarta.persistence.*;
 
+@Entity
+@Table(name = "thread_participants")
 public class ThreadParticipant {
-    UUID thread_id;
-    int student_id;
 
-    public ThreadParticipant(UUID thread_id, int student_id) {
-        this.thread_id = thread_id;
-        this.student_id = student_id;
+    @EmbeddedId
+    private ThreadParticipantId id;
+
+    public ThreadParticipant() { }
+
+    public ThreadParticipant(ThreadParticipantId id) {
+        this.id = id;
+
     }
 
-    public UUID getThread_id() {
-        return thread_id;
-    }
+    // Getters and setters
+    public ThreadParticipantId getId() { return id; }
+    public void setId(ThreadParticipantId id) { this.id = id; }
 
-    public void setThread_id(UUID thread_id) {
-        this.thread_id = thread_id;
-    }
 
-    public int getStudent_id() {
-        return student_id;
-    }
-
-    public void setStudent_id(int student_id) {
-        this.student_id = student_id;
-    }
 }
+
+

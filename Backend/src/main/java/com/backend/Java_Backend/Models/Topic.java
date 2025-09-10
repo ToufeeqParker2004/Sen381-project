@@ -1,8 +1,13 @@
 package com.backend.Java_Backend.Models;
 
-import java.sql.Timestamp;
+import jakarta.persistence.*;
 
+import java.sql.Timestamp;
+@Entity
+@Table(name = "topics")
 public class Topic {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     int id;
     int module_id;
     int creator_id;
@@ -12,8 +17,10 @@ public class Topic {
     String description;
     String status;
 
-    public Topic(int id, int module_id, int creator_id, Timestamp created_at, Timestamp updated_at, String title, String description, String status) {
-        this.id = id;
+    public Topic() {}
+
+    public Topic( int module_id, int creator_id, Timestamp created_at, Timestamp updated_at, String title, String description, String status) {
+
         this.module_id = module_id;
         this.creator_id = creator_id;
         this.created_at = created_at;
@@ -27,9 +34,7 @@ public class Topic {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+
 
     public int getModule_id() {
         return module_id;

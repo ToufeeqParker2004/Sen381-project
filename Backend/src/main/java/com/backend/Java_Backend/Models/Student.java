@@ -3,10 +3,12 @@ package com.backend.Java_Backend.Models;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
+import java.util.List;
 
 @Entity
 @Table(name="students")
 public class Student {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY) // auto-increment for Postgres/MySQL
     private int id;
@@ -25,11 +27,15 @@ public class Student {
 
     private String password;
 
+    // Optional: link to modules
+    @OneToMany(mappedBy = "student")
+    private List<StudentModule> studentModules;
+
     // Default constructor is required by JPA
     public Student() {}
 
-    public Student(int id, Timestamp createdAt, String name, String email, String phoneNumber, String bio, String password) {
-        this.id = id;
+    public Student( Timestamp createdAt, String name, String email, String phoneNumber, String bio, String password) {
+
         this.createdAt = createdAt;
         this.name = name;
         this.email = email;
@@ -42,9 +48,7 @@ public class Student {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+
 
     public Timestamp getCreatedAt() {
         return createdAt;
@@ -93,4 +97,7 @@ public class Student {
     public void setName(String name) {
         this.name = name;
     }
+    @OneToMany(mappedBy = "student")
+    public List<StudentModule> getStudentModules() { return studentModules; }
+    public void setStudentModules(List<StudentModule> studentModules) { this.studentModules = studentModules; }
 }

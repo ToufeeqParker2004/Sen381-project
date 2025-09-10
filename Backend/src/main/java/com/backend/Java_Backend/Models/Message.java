@@ -1,70 +1,66 @@
 package com.backend.Java_Backend.Models;
 
+import jakarta.persistence.*;
+
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Entity
 public class Message {
-    UUID id;
-    UUID thread_id;
-    int sender_id;
-    String message_text;
-    String[] attatchments;
-    Timestamp created_at;
 
-    public Message(UUID id, UUID thread_id, int sender_id, String message_text, String[] attatchments, Timestamp created_at) {
-        this.id = id;
-        this.thread_id = thread_id;
-        this.sender_id = sender_id;
-        this.message_text = message_text;
-        this.attatchments = attatchments;
-        this.created_at = created_at;
-    }
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    public UUID getId() {
+    @Column(name = "threadid",nullable = false)
+    private UUID threadID; // reference to MessageThread
+    @Column(name = "sender_id")
+    private Long senderId; // could also be a @ManyToOne to User
+
+    private String content;
+    @Column(name = "timestamp")
+    private Timestamp timestamp;
+
+    // Getters and setters
+    public Long getId() {
         return id;
     }
 
-    public void setId(UUID id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public UUID getThread_id() {
-        return thread_id;
+    public UUID getThreadID() {
+        return threadID;
     }
 
-    public void setThread_id(UUID thread_id) {
-        this.thread_id = thread_id;
+    public void setThreadID(UUID threadID) {
+        this.threadID = threadID;
     }
 
-    public int getSender_id() {
-        return sender_id;
+    public Long getSenderId() {
+        return senderId;
     }
 
-    public void setSender_id(int sender_id) {
-        this.sender_id = sender_id;
+    public void setSenderId(Long senderId) {
+        this.senderId = senderId;
     }
 
-    public String getMessage_text() {
-        return message_text;
+    public String getContent() {
+        return content;
     }
 
-    public void setMessage_text(String message_text) {
-        this.message_text = message_text;
+    public void setContent(String content) {
+        this.content = content;
     }
 
-    public String[] getAttatchments() {
-        return attatchments;
+    public Timestamp getTimestamp() {
+        return timestamp;
     }
 
-    public void setAttatchments(String[] attatchments) {
-        this.attatchments = attatchments;
-    }
-
-    public Timestamp getCreated_at() {
-        return created_at;
-    }
-
-    public void setCreated_at(Timestamp created_at) {
-        this.created_at = created_at;
+    public void setTimestamp(Timestamp timestamp) {
+        this.timestamp = timestamp;
     }
 }
+

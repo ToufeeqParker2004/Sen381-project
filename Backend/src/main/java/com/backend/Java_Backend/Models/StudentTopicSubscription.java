@@ -1,39 +1,47 @@
 package com.backend.Java_Backend.Models;
 
-import java.sql.Timestamp;
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "student_topic_subscriptions")
 public class StudentTopicSubscription {
-    int student_id;
-    int topic_id;
-    Timestamp subscribed_at;
 
-    public StudentTopicSubscription(int student_id, int topic_id, Timestamp subscribed_at) {
-        this.student_id = student_id;
-        this.topic_id = topic_id;
-        this.subscribed_at = subscribed_at;
+    @EmbeddedId
+    private StudentTopicSubscriptionId id;
+
+    @ManyToOne
+    @MapsId("studentId")
+    @JoinColumn(name = "student_id")
+    private Student student;
+
+    @ManyToOne
+    @MapsId("topicId")
+    @JoinColumn(name = "topic_id")
+    private Topic topic;
+
+    private LocalDateTime subscribedAt;
+
+    public StudentTopicSubscription() { }
+
+    public StudentTopicSubscription(Student student, Topic topic) {
+        this.student = student;
+        this.topic = topic;
+        this.id = new StudentTopicSubscriptionId(student.getId(), topic.getId());
+        this.subscribedAt = LocalDateTime.now();
     }
 
-    public int getStudent_id() {
-        return student_id;
-    }
+    // Getters and setters
+    public StudentTopicSubscriptionId getId() { return id; }
+    public void setId(StudentTopicSubscriptionId id) { this.id = id; }
 
-    public void setStudent_id(int student_id) {
-        this.student_id = student_id;
-    }
+    public Student getStudent() { return student; }
+    public void setStudent(Student student) { this.student = student; }
 
-    public int getTopic_id() {
-        return topic_id;
-    }
+    public Topic getTopic() { return topic; }
+    public void setTopic(Topic topic) { this.topic = topic; }
 
-    public void setTopic_id(int topic_id) {
-        this.topic_id = topic_id;
-    }
-
-    public Timestamp getSubscribed_at() {
-        return subscribed_at;
-    }
-
-    public void setSubscribed_at(Timestamp subscribed_at) {
-        this.subscribed_at = subscribed_at;
-    }
+    public LocalDateTime getSubscribedAt() { return subscribedAt; }
+    public void setSubscribedAt(LocalDateTime subscribedAt) { this.subscribedAt = subscribedAt; }
 }
+

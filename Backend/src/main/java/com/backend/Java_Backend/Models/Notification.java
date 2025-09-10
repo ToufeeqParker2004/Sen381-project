@@ -1,9 +1,15 @@
 package com.backend.Java_Backend.Models;
 
+import jakarta.persistence.*;
+
 import java.sql.Timestamp;
 import java.util.UUID;
-
+@Entity
+@Table(name = "notifications")
 public class Notification {
+    @Id
+    @GeneratedValue
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     UUID id;
     int user_id;
     String message;
@@ -11,8 +17,10 @@ public class Notification {
     String status;
     Timestamp created_at;
 
-    public Notification(UUID id, int user_id, String message, String notification_type, String status, Timestamp created_at) {
-        this.id = id;
+    public Notification() {}
+
+    public Notification(int user_id, String message, String notification_type, String status, Timestamp created_at) {
+
         this.user_id = user_id;
         this.message = message;
         this.notification_type = notification_type;
@@ -24,9 +32,7 @@ public class Notification {
         return id;
     }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
+
 
     public int getUser_id() {
         return user_id;

@@ -1,39 +1,47 @@
 package com.backend.Java_Backend.Models;
 
-import java.sql.Timestamp;
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "student_tutor_subscriptions")
 public class StudentTutorSubscription {
-    int student_id;
-    int tutor_id;
-    Timestamp subscripbed_at;
 
-    public StudentTutorSubscription(int student_id, int tutor_id, Timestamp subscripbed_at) {
-        this.student_id = student_id;
-        this.tutor_id = tutor_id;
-        this.subscripbed_at = subscripbed_at;
+    @EmbeddedId
+    private StudentTutorSubscriptionId id;
+
+    @ManyToOne
+    @MapsId("studentId")
+    @JoinColumn(name = "student_id")
+    private Student student;
+
+    @ManyToOne
+    @MapsId("tutorId")
+    @JoinColumn(name = "tutor_id")
+    private Tutor tutor;
+    @Column(name ="subscribed_at")
+    private LocalDateTime createdAt;
+
+    public StudentTutorSubscription() { }
+
+    public StudentTutorSubscription(Student student, Tutor tutor) {
+        this.student = student;
+        this.tutor = tutor;
+        this.id = new StudentTutorSubscriptionId(student.getId(), tutor.getId());
+        this.createdAt = LocalDateTime.now();
     }
 
-    public int getStudent_id() {
-        return student_id;
-    }
+    // Getters and setters
+    public StudentTutorSubscriptionId getId() { return id; }
+    public void setId(StudentTutorSubscriptionId id) { this.id = id; }
 
-    public void setStudent_id(int student_id) {
-        this.student_id = student_id;
-    }
+    public Student getStudent() { return student; }
+    public void setStudent(Student student) { this.student = student; }
 
-    public int getTutor_id() {
-        return tutor_id;
-    }
+    public Tutor getTutor() { return tutor; }
+    public void setTutor(Tutor tutor) { this.tutor = tutor; }
 
-    public void setTutor_id(int tutor_id) {
-        this.tutor_id = tutor_id;
-    }
-
-    public Timestamp getSubscripbed_at() {
-        return subscripbed_at;
-    }
-
-    public void setSubscripbed_at(Timestamp subscripbed_at) {
-        this.subscripbed_at = subscripbed_at;
-    }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
+

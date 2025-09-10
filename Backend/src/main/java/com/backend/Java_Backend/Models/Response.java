@@ -1,34 +1,41 @@
 package com.backend.Java_Backend.Models;
 
+import jakarta.persistence.*;
+
 import java.sql.Timestamp;
 import java.util.UUID;
-
+@Entity
+@Table(name = "responses")
 public class Response {
+    @Id
+    @GeneratedValue
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     UUID id;
     UUID question_id;
     int responder_id;
     String response_text;
     int upvotes;
     Timestamp created_at;
-    String[] attatchments;
+    String[] attachments;
 
-    public Response(UUID id, UUID question_id, int responder_id, String response_text, int upvotes, Timestamp created_at, String[] attatchments) {
-        this.id = id;
+    public Response() {
+    }
+
+    public Response(UUID question_id, int responder_id, String response_text, int upvotes, Timestamp created_at, String[] attachments) {
+
         this.question_id = question_id;
         this.responder_id = responder_id;
         this.response_text = response_text;
         this.upvotes = upvotes;
         this.created_at = created_at;
-        this.attatchments = attatchments;
+        this.attachments = attachments;
     }
 
     public UUID getId() {
         return id;
     }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
+
 
     public UUID getQuestion_id() {
         return question_id;
@@ -70,11 +77,11 @@ public class Response {
         this.created_at = created_at;
     }
 
-    public String[] getAttatchments() {
-        return attatchments;
+    public String[] getAttachments() {
+        return attachments;
     }
 
-    public void setAttatchments(String[] attatchments) {
-        this.attatchments = attatchments;
+    public void setAttachments(String[] attachments) {
+        this.attachments = attachments;
     }
 }

@@ -1,14 +1,26 @@
 package com.backend.Java_Backend.Models;
 
-import java.sql.Timestamp;
+import jakarta.persistence.*;
 
+import java.sql.Timestamp;
+import java.util.List;
+
+@Entity
+@Table(name = "tutors")
 public class Tutor {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     int id;
     Timestamp created_at;
     int student_id;
 
-    public Tutor(int id, Timestamp created_at, int student_id) {
-        this.id = id;
+    @OneToMany(mappedBy = "tutor")
+    private List<TutorModule> tutorModules;
+    public Tutor() {
+    }
+
+    public Tutor( Timestamp created_at, int student_id) {
+
         this.created_at = created_at;
         this.student_id = student_id;
     }
@@ -17,9 +29,6 @@ public class Tutor {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
 
     public Timestamp getCreated_at() {
         return created_at;
@@ -36,4 +45,6 @@ public class Tutor {
     public void setStudent_id(int student_id) {
         this.student_id = student_id;
     }
+    public List<TutorModule> getTutorModules() { return tutorModules; }
+    public void setTutorModules(List<TutorModule> tutorModules) { this.tutorModules = tutorModules; }
 }
