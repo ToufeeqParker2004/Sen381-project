@@ -3,41 +3,49 @@ package com.backend.Java_Backend.Models;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
+@Table(name = "messages")
 public class Message {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
 
-    @Column(name = "threadid",nullable = false)
-    private UUID threadID; // reference to MessageThread
     @Column(name = "sender_id")
-    private Long senderId; // could also be a @ManyToOne to User
-
+    private Long senderId; // could also be a @ManyToOne to Student
+    @Column(name = "message_text")
     private String content;
-    @Column(name = "timestamp")
+    @Column(name = "created_at")
     private Timestamp timestamp;
 
+    @ManyToOne
+    @JoinColumn(name = "thread_id", nullable = false)
+    private MessageThread thread;  // manage FK through relation
+
+    public MessageThread getThread() {
+        return thread;
+    }
+
+    public void setThread(MessageThread thread) {
+        this.thread = thread;
+    }
+
     // Getters and setters
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 
-    public UUID getThreadID() {
-        return threadID;
+    public UUID getThreadId() {
+        return thread != null ? thread.getThreadId() : null;
     }
 
-    public void setThreadID(UUID threadID) {
-        this.threadID = threadID;
-    }
 
     public Long getSenderId() {
         return senderId;

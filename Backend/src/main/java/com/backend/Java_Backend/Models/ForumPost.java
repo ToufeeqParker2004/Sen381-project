@@ -11,7 +11,8 @@ public class ForumPost {
     @GeneratedValue
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     UUID id;
-    int author_id;
+    @Column(name = "author_id")
+    int authorId;
     UUID parent_post_id;
     String content;
     @Column(name = "attachments")
@@ -21,9 +22,9 @@ public class ForumPost {
 
     public ForumPost() {}
 
-    public ForumPost(UUID id, int author_id, UUID parent_post_id, String content, String[] attatchments, int upvotes, Timestamp creted_at) {
+    public ForumPost(UUID id, int authorId, UUID parent_post_id, String content, String[] attatchments, int upvotes, Timestamp creted_at) {
         this.id = id;
-        this.author_id = author_id;
+        this.authorId = authorId;
         this.parent_post_id = parent_post_id;
         this.content = content;
         this.attatchments = attatchments;
@@ -37,12 +38,12 @@ public class ForumPost {
 
 
 
-    public int getAuthor_id() {
-        return author_id;
+    public int getAuthorId() {
+        return authorId;
     }
 
-    public void setAuthor_id(int author_id) {
-        this.author_id = author_id;
+    public void setAuthorId(int authorId) {
+        this.authorId = authorId;
     }
 
     public UUID getParent_post_id() {

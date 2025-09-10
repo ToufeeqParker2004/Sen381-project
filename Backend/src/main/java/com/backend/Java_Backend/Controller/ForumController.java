@@ -43,7 +43,7 @@ public class ForumController {
     @PutMapping("/{id}")
     public ResponseEntity<ForumPost> updateForumPost(@PathVariable UUID id, @RequestBody ForumPost updatedPost) {
         return forumPostService.getForumPostById(id).map(forumPost -> {
-            forumPost.setAuthor_id(updatedPost.getAuthor_id());
+            forumPost.setAuthorId(updatedPost.getAuthorId());
             forumPost.setParent_post_id(updatedPost.getParent_post_id());
             forumPost.setContent(updatedPost.getContent());
             forumPost.setAttatchments(updatedPost.getAttatchments());

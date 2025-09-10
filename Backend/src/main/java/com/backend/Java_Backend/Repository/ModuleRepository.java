@@ -10,5 +10,5 @@ import java.util.UUID;
 
 @Repository
 public interface ModuleRepository extends JpaRepository<Modules,Integer> {
-    List<Message> findByThreadID(UUID threadID);
+
 }

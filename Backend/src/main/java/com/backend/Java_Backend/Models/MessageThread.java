@@ -2,42 +2,46 @@ package com.backend.Java_Backend.Models;
 
 
 import jakarta.persistence.*;
+
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
+@Table(name = "message_threads")
 public class MessageThread {
 
     @Id
-    @Column(name = "threadid")
-    private UUID threadID;
+    @Column(name = "id", columnDefinition = "uuid")
+    private UUID threadId;
 
-    private String title;
+    private Timestamp created_at;
 
-    @OneToMany
-    @JoinColumn(name = "thread_id", referencedColumnName = "threadid") // Fixed
+    public Timestamp getCreated_at() {
+        return created_at;
+    }
+
+    public void setCreated_at(Timestamp created_at) {
+        this.created_at = created_at;
+    }
+
+    @OneToMany(mappedBy = "thread")   // link to ThreadParticipant.thread
     private List<ThreadParticipant> participants;
 
-    @OneToMany
-    @JoinColumn(name = "threadid", referencedColumnName = "threadid") // Fixed
+
+    @OneToMany(mappedBy = "thread")
     private List<Message> messages;
 
     // Getters and setters
-    public UUID getThreadID() {
-        return threadID;
+    public UUID getThreadId() {
+        return threadId;
     }
 
-    public void setThreadID(UUID threadID) {
-        this.threadID = threadID;
+    public void setThreadId(UUID threadId) {
+        this.threadId = threadId;
     }
 
-    public String getTitle() {
-        return title;
-    }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
 
     public List<ThreadParticipant> getParticipants() {
         return participants;

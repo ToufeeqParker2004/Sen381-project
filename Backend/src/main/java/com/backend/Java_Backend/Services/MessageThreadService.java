@@ -9,6 +9,7 @@ import com.backend.Java_Backend.Repository.MessageThreadRepository;
 import com.backend.Java_Backend.Repository.ThreadParticipantRepository;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,10 +29,10 @@ public class MessageThreadService {
         this.participantRepo = participantRepo;
     }
 
-    public MessageThread createThread(String title) {
+    public MessageThread createThread() {
         MessageThread thread = new MessageThread();
-        thread.setThreadID(UUID.randomUUID());
-        thread.setTitle(title);
+        thread.setThreadId(UUID.randomUUID());
+        thread.setCreated_at(Timestamp.valueOf(java.time.LocalDateTime.now()));
         return threadRepo.save(thread);
     }
 
@@ -40,12 +41,31 @@ public class MessageThreadService {
     }
 
     public List<Message> getMessages(UUID threadID) {
-        return messageRepo.findByThreadID(threadID);
+        return messageRepo.findByThread_ThreadId(threadID);
     }
 
-    public List<ThreadParticipant> getParticipants(UUID threadID) {
-        return participantRepo.findByThreadID(threadID);
+    public Optional<ThreadParticipant> getParticipants(UUID threadID,Integer studentId) {
+        return participantRepo.findById_ThreadIdAndId_StudentId(threadID,studentId);
     }
+    public MessageThread createThread(MessageThread thread) {
+        return threadRepo.save(thread);
+    }
+
+    public Optional<MessageThread> getThreadById(UUID threadId) {
+        return threadRepo.findByThreadId(threadId);
+    }
+
+    public List<MessageThread> getAllThreads() {
+        return threadRepo.findAll();
+    }
+
+    public boolean deleteThread(UUID threadId) {
+        if (!threadRepo.existsById(threadId)) return false;
+        threadRepo.deleteById(threadId);
+        return true;
+    }
+
+
 }
 
 

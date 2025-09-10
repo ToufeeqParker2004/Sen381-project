@@ -40,6 +40,6 @@ public class LearningMaterialService {
 
     // Find student by email
     public Optional<LearningMaterial> getLearningMaterialbytitle(String title) {
-        return learningMatRepository.findbyTitle(title);
+        return learningMatRepository.findByTitle(title);
     }
 }

@@ -9,6 +9,16 @@ public class ThreadParticipant {
     @EmbeddedId
     private ThreadParticipantId id;
 
+    @MapsId("threadId")  // tells Hibernate to use id.threadId for this relation
+    @ManyToOne
+    @JoinColumn(name = "thread_id")
+    private MessageThread thread;
+
+    @MapsId("studentId")
+    @ManyToOne
+    @JoinColumn(name = "student_id")
+    private Student student;
+
     public ThreadParticipant() { }
 
     public ThreadParticipant(ThreadParticipantId id) {

@@ -7,6 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
 @Repository
-public interface MessageRepository extends JpaRepository<Message, Long> {
-    List<Message> findByThreadID(UUID threadID);
+public interface MessageRepository extends JpaRepository<Message, UUID> {
+    List<Message> findByThread_ThreadId(UUID threadId);
 }

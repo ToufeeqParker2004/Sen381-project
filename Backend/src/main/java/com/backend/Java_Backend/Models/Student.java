@@ -27,10 +27,12 @@ public class Student {
 
     private String password;
 
-    // Optional: link to modules
+    //  link to modules
     @OneToMany(mappedBy = "student")
     private List<StudentModule> studentModules;
 
+    @OneToMany(mappedBy = "student")
+    private List<ThreadParticipant> threadParticipants;
     // Default constructor is required by JPA
     public Student() {}
 

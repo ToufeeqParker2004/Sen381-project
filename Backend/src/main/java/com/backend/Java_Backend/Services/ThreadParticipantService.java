@@ -18,7 +18,7 @@ public class ThreadParticipantService {
         this.participantRepo = participantRepo;
     }
 
-    public ThreadParticipant addParticipant(UUID threadID, Long userId) {
+    public ThreadParticipant addParticipant(UUID threadID, int userId) {
         ThreadParticipantId id = new ThreadParticipantId(threadID, userId);
         ThreadParticipant participant = new ThreadParticipant(id);
         return participantRepo.save(participant);
