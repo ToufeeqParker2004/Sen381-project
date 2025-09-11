@@ -21,15 +21,7 @@ public class Response {
     public Response() {
     }
 
-    public Response(UUID question_id, int responder_id, String response_text, int upvotes, Timestamp created_at, String[] attachments) {
 
-        this.question_id = question_id;
-        this.responder_id = responder_id;
-        this.response_text = response_text;
-        this.upvotes = upvotes;
-        this.created_at = created_at;
-        this.attachments = attachments;
-    }
 
     public UUID getId() {
         return id;

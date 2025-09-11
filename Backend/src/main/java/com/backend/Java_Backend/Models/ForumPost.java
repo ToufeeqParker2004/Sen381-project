@@ -22,15 +22,7 @@ public class ForumPost {
 
     public ForumPost() {}
 
-    public ForumPost(UUID id, int authorId, UUID parent_post_id, String content, String[] attatchments, int upvotes, Timestamp creted_at) {
-        this.id = id;
-        this.authorId = authorId;
-        this.parent_post_id = parent_post_id;
-        this.content = content;
-        this.attatchments = attatchments;
-        this.upvotes = upvotes;
-        this.created_at = creted_at;
-    }
+
 
     public UUID getId() {
         return id;

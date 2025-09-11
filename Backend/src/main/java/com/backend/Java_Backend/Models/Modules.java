@@ -1,5 +1,7 @@
 package com.backend.Java_Backend.Models;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 
 import java.util.List;
@@ -11,11 +13,27 @@ public class Modules {
     @GeneratedValue(strategy = GenerationType.IDENTITY) // auto-increment for Postgres/MySQL
     int id;
     String module_code;
+    String module_name;
+
+    public String getModule_name() {
+        return module_name;
+    }
+
+    public void setModule_name(String module_name) {
+        this.module_name = module_name;
+    }
+
     String description;
     @OneToMany(mappedBy = "module")
+    @JsonIgnore
     private List<StudentModule> studentModules;
     @OneToMany(mappedBy = "module")
+    @JsonIgnore
     private List<TutorModule> tutorModules;
+
+    public Modules() {
+    }
+
     public Modules(String module_code, String description) {
 
         this.module_code = module_code;

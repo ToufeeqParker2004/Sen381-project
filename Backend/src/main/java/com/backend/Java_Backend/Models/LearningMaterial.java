@@ -22,17 +22,7 @@ public class LearningMaterial {
 
     public LearningMaterial() {}
 
-    public LearningMaterial( int topic_id, int module_id, int uploader_id, String title, String document_type, String file_url, Timestamp created_at, String[] tags) {
 
-        this.topic_id = topic_id;
-        this.module_id = module_id;
-        this.uploader_id = uploader_id;
-        this.title = title;
-        this.document_type = document_type;
-        this.file_url = file_url;
-        this.created_at = created_at;
-        this.tags = tags;
-    }
 
     public UUID getId() {
         return id;

@@ -1,5 +1,7 @@
 package com.backend.Java_Backend.Models;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
@@ -15,9 +17,11 @@ public class Tutor {
     int student_id;
 
     @OneToMany(mappedBy = "tutor")
+    @JsonIgnore
     private List<TutorModule> tutorModules;
     public Tutor() {
     }
+
 
     public Tutor( Timestamp created_at, int student_id) {
 

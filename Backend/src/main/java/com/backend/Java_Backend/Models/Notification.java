@@ -19,14 +19,7 @@ public class Notification {
 
     public Notification() {}
 
-    public Notification(int user_id, String message, String notification_type, String status, Timestamp created_at) {
 
-        this.user_id = user_id;
-        this.message = message;
-        this.notification_type = notification_type;
-        this.status = status;
-        this.created_at = created_at;
-    }
 
     public UUID getId() {
         return id;
