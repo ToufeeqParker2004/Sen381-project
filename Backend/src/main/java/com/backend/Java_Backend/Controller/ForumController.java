@@ -1,10 +1,13 @@
 package com.backend.Java_Backend.Controller;
 
 import com.backend.Java_Backend.Models.ForumPost;
+import com.backend.Java_Backend.NLP_Moderation.ModerationService;
 import com.backend.Java_Backend.Services.ForumPostService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -14,11 +17,14 @@ import java.util.UUID;
 @RequestMapping("/ForumPosts")
 public class ForumController {
     private final ForumPostService forumPostService;
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Autowired
     public ForumController(ForumPostService forumPostService) {
         this.forumPostService = forumPostService;
     }
+    @Autowired
+    private ModerationService moderationService;
 
     // Get all Forum Posts
     @GetMapping
@@ -35,8 +41,16 @@ public class ForumController {
 
     // Create new Forum Post
     @PostMapping
-    public ForumPost createForumPost(@RequestBody ForumPost forumPost) {
-        return forumPostService.saveForumPost(forumPost);
+    public ResponseEntity<?> createForumPost(@RequestBody ForumPost forumPost) {
+        boolean allowed = moderationService.isPostAllowed(forumPost.getContent());
+
+        if (!allowed) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Post blocked by moderation due to inappropriate content.");
+        }
+
+        ForumPost savedPost = forumPostService.saveForumPost(forumPost);
+        return ResponseEntity.ok(savedPost);
     }
 
     // Update Forum Post
