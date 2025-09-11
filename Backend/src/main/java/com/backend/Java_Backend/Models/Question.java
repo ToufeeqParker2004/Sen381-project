@@ -18,13 +18,7 @@ public class Question {
 
     public Question() {}
 
-    public Question(int topic_id, int author_id, String question_text, Timestamp created_at) {
 
-        this.topic_id = topic_id;
-        this.author_id = author_id;
-        this.question_text = question_text;
-        this.created_at = created_at;
-    }
 
     public UUID getId() {
         return id;

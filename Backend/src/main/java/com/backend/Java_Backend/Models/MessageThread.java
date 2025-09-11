@@ -32,6 +32,9 @@ public class MessageThread {
     @OneToMany(mappedBy = "thread")
     private List<Message> messages;
 
+    public MessageThread() {
+    }
+
     // Getters and setters
     public UUID getThreadId() {
         return threadId;

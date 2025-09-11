@@ -21,6 +21,9 @@ public class Message {
     @Column(name = "created_at")
     private Timestamp timestamp;
 
+    public Message() {
+    }
+
     @ManyToOne
     @JoinColumn(name = "thread_id", nullable = false)
     private MessageThread thread;  // manage FK through relation

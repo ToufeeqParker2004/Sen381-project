@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/module")
+@RequestMapping("/modules")
 public class ModuleController {
     private final ModuleService moduleService;
 

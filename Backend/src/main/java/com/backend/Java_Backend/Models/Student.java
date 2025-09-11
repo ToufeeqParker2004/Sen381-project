@@ -1,5 +1,7 @@
 package com.backend.Java_Backend.Models;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
@@ -29,9 +31,11 @@ public class Student {
 
     //  link to modules
     @OneToMany(mappedBy = "student")
+    @JsonIgnore
     private List<StudentModule> studentModules;
 
     @OneToMany(mappedBy = "student")
+    @JsonIgnore
     private List<ThreadParticipant> threadParticipants;
     // Default constructor is required by JPA
     public Student() {}
