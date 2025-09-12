@@ -5,6 +5,7 @@ import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Models.StudentModule;
 import com.backend.Java_Backend.Repository.StudentModuleRepository;
 import com.backend.Java_Backend.Repository.StudentRepository;
+import com.backend.Java_Backend.Security.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -56,5 +57,23 @@ public class StudentService {
             modules.add(sm.getModule());
         }
         return modules;
+    }
+
+    //Student login for auth
+    public String login(String email, String password) {
+        // Get student directly
+        Student student = studentRepository.findByEmail(email);
+
+        if (student == null) {
+            return null; // email not found
+        }
+
+        // Plaintext password check
+        if (!student.getPassword().equals(password)) {
+            return null; // wrong password
+        }
+
+        // Generate JWT token
+        return JwtUtil.generateToken(student.getId(), student.getEmail());
     }
 }

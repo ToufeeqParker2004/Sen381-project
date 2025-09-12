@@ -4,17 +4,21 @@ import com.backend.Java_Backend.Models.Modules;
 import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Models.StudentTopicSubscription;
 import com.backend.Java_Backend.Models.Topic;
+import com.backend.Java_Backend.Security.JwtUtil;
 import com.backend.Java_Backend.Services.StudentService;
 import com.backend.Java_Backend.Services.StudentTopicSubscriptionService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/students")
+@RequestMapping("/student")
 public class StudentController {
 
     private final StudentService studentService;
@@ -104,4 +108,42 @@ public class StudentController {
         if (students.isEmpty()) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(students);
     }
+
+    // Student login
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestParam String email, @RequestParam String password) {
+        String token = studentService.login(email, password);
+
+        if (token == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Incorrect email or password");
+        }
+
+        return ResponseEntity.ok(token); // returns JWT
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(Authentication authentication) {
+        try {
+            String studentIdStr = (String) authentication.getPrincipal();
+            int studentId = Integer.parseInt(studentIdStr);
+
+            Optional<Student> studentOpt = studentService.getStudentById(studentId);
+
+            if (studentOpt.isPresent()) {
+                return ResponseEntity.ok(studentOpt.get());
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Collections.singletonMap("error", "Student not found"));
+            }
+
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", "Invalid student ID"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Something went wrong"));
+        }
+    }
+
 }
