@@ -27,6 +27,7 @@ public class ModuleController {
         return ResponseEntity.ok(modules);
     }
 
+    // fix for modules did in wrong controller lol
     @GetMapping("/student")
     public ResponseEntity<ModuleDTO> getModuleById(Authentication authentication) {
         String studentIdStr = (String) authentication.getPrincipal();
