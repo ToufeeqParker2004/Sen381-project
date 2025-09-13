@@ -1,5 +1,6 @@
 package com.backend.Java_Backend.Controller;
 
+import com.backend.Java_Backend.DTO.TutorDTO;
 import com.backend.Java_Backend.Models.Modules;
 import com.backend.Java_Backend.Models.Tutor;
 import com.backend.Java_Backend.Models.TutorModule;
@@ -12,68 +13,39 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/tutors")
+@RequestMapping("/api/tutors")
 public class TutorController {
-    private final TutorService tutorService;
-
     @Autowired
-    public TutorController(TutorService tutorService) {
-        this.tutorService = tutorService;
-    }
+    private TutorService service;
 
-    // Get all tutors
-    @GetMapping
-    public List<Tutor> getAllTutors() {
-        return tutorService.getAllTutors();
-    }
-
-    // Get tutor by ID
-    @GetMapping("/{id}")
-    public ResponseEntity<Tutor> getTutorById(@PathVariable int id) {
-        Optional<Tutor> tutor = tutorService.getTutorById(id);
-        return tutor.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    // Create new tutor
     @PostMapping
-    public Tutor createTutor(@RequestBody Tutor tutor) {
-        return tutorService.saveTutor(tutor);
+    public ResponseEntity<TutorDTO> create(@RequestBody TutorDTO dto) {
+        return ResponseEntity.ok(service.create(dto));
     }
 
-    // Update tutor
+    @GetMapping
+    public ResponseEntity<List<TutorDTO>> findAll() {
+        return ResponseEntity.ok(service.findAll());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<TutorDTO> findById(@PathVariable int id) {
+        return ResponseEntity.ok(service.findById(id));
+    }
+
+    @GetMapping("/student/{studentId}")
+    public ResponseEntity<List<TutorDTO>> findByStudentId(@PathVariable int studentId) {
+        return ResponseEntity.ok(service.findByStudentId(studentId));
+    }
+
     @PutMapping("/{id}")
-    public ResponseEntity<Tutor> updateTutor(@PathVariable int id, @RequestBody Tutor updatedTutor) {
-        return tutorService.getTutorById(id).map(tutor -> {
-            tutor.setCreated_at(updatedTutor.getCreated_at());
-            tutor.setStudent_id(updatedTutor.getStudent_id());
-
-            return ResponseEntity.ok(tutorService.saveTutor(tutor));
-        }).orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<TutorDTO> update(@PathVariable int id, @RequestBody TutorDTO dto) {
+        return ResponseEntity.ok(service.update(id, dto));
     }
 
-    // Delete student
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStudent(@PathVariable int id) {
-        if (tutorService.getTutorById(id).isPresent()) {
-            tutorService.deleteTutor(id);
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
-    }
-    // Get modules taught by a tutor
-    @GetMapping("/{tutorId}/modules")
-    public ResponseEntity<List<Modules>> getModules(@PathVariable int tutorId) {
-        List<Modules> modules = tutorService.getModulesForTutor(tutorId);
-        if (modules.isEmpty()) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(modules);
-    }
-
-    // Assign a module to a tutor
-    @PostMapping("/{tutorId}/modules/{moduleId}")
-    public TutorModule assignModule(@PathVariable int tutorId,
-                                    @PathVariable int moduleId,
-                                    @RequestBody Tutor tutor,  // pass tutor object or just ID
-                                    @RequestBody Modules module) { // pass module object or just ID
-        return tutorService.assignModule(tutor, module);
+    public ResponseEntity<Void> delete(@PathVariable int id) {
+        service.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

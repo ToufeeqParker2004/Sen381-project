@@ -1,7 +1,4 @@
-package com.backend.Java_Backend.Services;
-
-
-
+package com.backend.Java_Backend.Controller;
 
 import com.backend.Java_Backend.DTO.StudentTopicSubscriptionDTO;
 import com.backend.Java_Backend.Models.Student;
@@ -12,15 +9,12 @@ import com.backend.Java_Backend.Repository.StudentRepository;
 import com.backend.Java_Backend.Repository.StudentTopicSubscriptionRepository;
 import com.backend.Java_Backend.Repository.TopicRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Service
-public class StudentTopicSubscriptionService {
-
+public class StudentTopicSubscriptionController {
     @Autowired
     private StudentTopicSubscriptionRepository repository;
     @Autowired
@@ -46,7 +40,7 @@ public class StudentTopicSubscriptionService {
 
     public StudentTopicSubscriptionDTO findById(int studentId, int topicId) {
         StudentTopicSubscription subscription = repository.findById(new StudentTopicSubscriptionId(studentId, topicId))
-                .orElseThrow(() -> new RuntimeException("StudentTopicSubscription not found for studentId: " + studentId + " and topicId: " + topicId));
+                .orElseThrow(() -> new RuntimeException("Subscription not found"));
         return new StudentTopicSubscriptionDTO(subscription.getStudent().getId(), subscription.getTopic().getId(), subscription.getSubscribedAt());
     }
 
@@ -64,7 +58,7 @@ public class StudentTopicSubscriptionService {
 
     public StudentTopicSubscriptionDTO update(int studentId, int topicId, StudentTopicSubscriptionDTO dto) {
         StudentTopicSubscription subscription = repository.findById(new StudentTopicSubscriptionId(studentId, topicId))
-                .orElseThrow(() -> new RuntimeException("StudentTopicSubscription not found for studentId: " + studentId + " and topicId: " + topicId));
+                .orElseThrow(() -> new RuntimeException("Subscription not found"));
         if (dto.getSubscribedAt() != null) {
             subscription.setSubscribedAt(dto.getSubscribedAt());
         }
@@ -73,10 +67,6 @@ public class StudentTopicSubscriptionService {
     }
 
     public void delete(int studentId, int topicId) {
-        if (!repository.existsById(new StudentTopicSubscriptionId(studentId, topicId))) {
-            throw new RuntimeException("StudentTopicSubscription not found for studentId: " + studentId + " and topicId: " + topicId);
-        }
         repository.deleteById(new StudentTopicSubscriptionId(studentId, topicId));
     }
 }
-

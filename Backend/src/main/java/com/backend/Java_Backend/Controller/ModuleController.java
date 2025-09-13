@@ -1,5 +1,9 @@
 package com.backend.Java_Backend.Controller;
 
+import com.backend.Java_Backend.DTO.CreateModuleDTO;
+import com.backend.Java_Backend.DTO.ModuleDTO;
+import com.backend.Java_Backend.DTO.ModuleWithStudentsDTO;
+import com.backend.Java_Backend.DTO.UpdateModuleDTO;
 import com.backend.Java_Backend.Models.Modules;
 import com.backend.Java_Backend.Services.ModuleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,50 +16,56 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/modules")
 public class ModuleController {
-    private final ModuleService moduleService;
 
     @Autowired
-    public ModuleController(ModuleService moduleService) {
-        this.moduleService = moduleService;
-    }
+    private ModuleService moduleService;
 
-    // Get all modules
     @GetMapping
-    public List<Modules> getAllModules() {
-        return moduleService.getAllModules();
+    public ResponseEntity<List<ModuleDTO>> getAllModules() {
+        List<ModuleDTO> modules = moduleService.getAllModules();
+        return ResponseEntity.ok(modules);
     }
 
-    // Get a module by ID
     @GetMapping("/{id}")
-    public ResponseEntity<Modules> getStudentById(@PathVariable int id) {
-        Optional<Modules> module = moduleService.getModuleById(id);
-        return module.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    // Create new module
-    @PostMapping
-    public Modules createModule(@RequestBody Modules module) {
-        return moduleService.saveModule(module);
-    }
-
-    // Update module
-    @PutMapping("/{id}")
-    public ResponseEntity<Modules> updateModule(@PathVariable int id, @RequestBody Modules updatedModule) {
-        return moduleService.getModuleById(id).map(module -> {
-            module.setModule_code(updatedModule.getModule_code());
-            module.setDescription(updatedModule.getDescription());
-            return ResponseEntity.ok(moduleService.saveModule(module));
-        }).orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    // Delete student
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStudent(@PathVariable int id) {
-        if (moduleService.getModuleById(id).isPresent()) {
-            moduleService.deleteModule(id);
-            return ResponseEntity.noContent().build();
+    public ResponseEntity<ModuleDTO> getModuleById(@PathVariable Integer id) {
+        ModuleDTO module = moduleService.getModuleById(id);
+        if (module == null) {
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(module);
+    }
+
+    @GetMapping("/{id}/students")
+    public ResponseEntity<ModuleWithStudentsDTO> getModuleWithStudents(@PathVariable Integer id) {
+        ModuleWithStudentsDTO module = moduleService.getModuleWithStudents(id);
+        if (module == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(module);
+    }
+
+    @PostMapping
+    public ResponseEntity<ModuleDTO> createModule(@RequestBody CreateModuleDTO createDTO) {
+        ModuleDTO module = moduleService.createModule(createDTO);
+        return ResponseEntity.ok(module);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ModuleDTO> updateModule(@PathVariable Integer id, @RequestBody UpdateModuleDTO updateDTO) {
+        ModuleDTO module = moduleService.updateModule(id, updateDTO);
+        if (module == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(module);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteModule(@PathVariable Integer id) {
+        boolean deleted = moduleService.deleteModule(id);
+        if (!deleted) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.noContent().build();
     }
 
 

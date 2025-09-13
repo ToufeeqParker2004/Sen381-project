@@ -22,8 +22,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable()) // disable CSRF for REST APIs
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/student/login").permitAll() // login is public
-                        .anyRequest().authenticated() // all other endpoints require JWT
+                        .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

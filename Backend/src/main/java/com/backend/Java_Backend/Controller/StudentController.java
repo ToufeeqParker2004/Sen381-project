@@ -1,5 +1,9 @@
 package com.backend.Java_Backend.Controller;
 
+import com.backend.Java_Backend.DTO.CreateStudentDTO;
+import com.backend.Java_Backend.DTO.StudentDTO;
+import com.backend.Java_Backend.DTO.StudentWithModuleDTO;
+import com.backend.Java_Backend.DTO.UpdateStudentDTO;
 import com.backend.Java_Backend.Models.Modules;
 import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Models.StudentTopicSubscription;
@@ -21,92 +25,57 @@ import java.util.Optional;
 @RequestMapping("/student")
 public class StudentController {
 
-    private final StudentService studentService;
-    private final StudentTopicSubscriptionService service;
+
+
     @Autowired
-    public StudentController(StudentService studentService,StudentTopicSubscriptionService stService) {
-        this.studentService = studentService;
-        this.service = stService;
-    }
+    private StudentService studentService;
 
-    // Get all students
     @GetMapping
-    public List<Student> getAllStudents() {
-        return studentService.getAllStudents();
+    public ResponseEntity<List<StudentDTO>> getAllStudents() {
+        List<StudentDTO> students = studentService.getAllStudents();
+        return ResponseEntity.ok(students);
     }
 
-    // Get student by ID
     @GetMapping("/{id}")
-    public ResponseEntity<Student> getStudentById(@PathVariable int id) {
-        Optional<Student> student = studentService.getStudentById(id);
-        return student.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    // Create new student
-    @PostMapping
-    public Student createStudent(@RequestBody Student student) {
-        return studentService.saveStudent(student);
-    }
-
-    // Update student
-    @PutMapping("/{id}")
-    public ResponseEntity<Student> updateStudent(@PathVariable int id, @RequestBody Student updatedStudent) {
-        return studentService.getStudentById(id).map(student -> {
-            student.setName(updatedStudent.getName());
-            student.setEmail(updatedStudent.getEmail());
-            student.setPhone_number(updatedStudent.getPhone_number());
-            student.setBio(updatedStudent.getBio());
-            student.setPassword(updatedStudent.getPassword());
-            return ResponseEntity.ok(studentService.saveStudent(student));
-        }).orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    // Delete student
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteStudent(@PathVariable int id) {
-        if (studentService.getStudentById(id).isPresent()) {
-            studentService.deleteStudent(id);
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.notFound().build();
-    }
-
-    // Find student by email
-    @GetMapping("/search")
-    public ResponseEntity<Student> getStudentByEmail(@RequestParam String email) {
-        Student student = studentService.getStudentByEmail(email);
-        return student != null ? ResponseEntity.ok(student) : ResponseEntity.notFound().build();
-    }
-    // Get modules for a student
-    @GetMapping("/{studentId}/modules")
-    public ResponseEntity<List<Modules>> getModules(@PathVariable int studentId) {
-        List<Modules> modules = studentService.getModulesForStudent(studentId);
-        if (modules.isEmpty()) {
+    public ResponseEntity<StudentDTO> getStudentById(@PathVariable Integer id) {
+        StudentDTO student = studentService.getStudentById(id);
+        if (student == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(modules);
-    }
-    // Subscribe a student to a topic
-    @PostMapping("/subscribe")
-    public StudentTopicSubscription subscribe(@RequestBody Student student,
-                                              @RequestBody Topic topic) {
-        return service.subscribe(student, topic);
+        return ResponseEntity.ok(student);
     }
 
-    // Get topics for a student
-    @GetMapping("/student/{studentId}/topics")
-    public ResponseEntity<List<Topic>> getTopicsForStudent(@PathVariable int studentId) {
-        List<Topic> topics = service.getTopicsForStudent(studentId);
-        if (topics.isEmpty()) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(topics);
+    @GetMapping("/{id}/modules")
+    public ResponseEntity<StudentWithModuleDTO> getStudentWithModules(@PathVariable Integer id) {
+        StudentWithModuleDTO student = studentService.getStudentWithModules(id);
+        if (student == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(student);
     }
 
-    // Get students subscribed to a topic
-    @GetMapping("/topic/{topicId}/students")
-    public ResponseEntity<List<Student>> getStudentsForTopic(@PathVariable int topicId) {
-        List<Student> students = service.getStudentsForTopic(topicId);
-        if (students.isEmpty()) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(students);
+    @PostMapping
+    public ResponseEntity<StudentDTO> createStudent(@RequestBody CreateStudentDTO createDTO) {
+        StudentDTO student = studentService.createStudent(createDTO);
+        return ResponseEntity.ok(student);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<StudentDTO> updateStudent(@PathVariable Integer id, @RequestBody UpdateStudentDTO updateDTO) {
+        StudentDTO student = studentService.updateStudent(id, updateDTO);
+        if (student == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(student);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteStudent(@PathVariable Integer id) {
+        boolean deleted = studentService.deleteStudent(id);
+        if (!deleted) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.noContent().build();
     }
 
     // Student login
@@ -128,10 +97,10 @@ public class StudentController {
             String studentIdStr = (String) authentication.getPrincipal();
             int studentId = Integer.parseInt(studentIdStr);
 
-            Optional<Student> studentOpt = studentService.getStudentById(studentId);
+            StudentDTO studentOpt = studentService.getStudentById(studentId);
 
-            if (studentOpt.isPresent()) {
-                return ResponseEntity.ok(studentOpt.get());
+            if (studentOpt != null) {
+                return ResponseEntity.ok(studentOpt);
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Collections.singletonMap("error", "Student not found"));

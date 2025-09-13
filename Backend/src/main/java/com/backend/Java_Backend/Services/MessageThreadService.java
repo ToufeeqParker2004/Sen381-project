@@ -1,71 +1,66 @@
 package com.backend.Java_Backend.Services;
 
-
-import com.backend.Java_Backend.Models.Message;
+import com.backend.Java_Backend.DTO.MessageThreadDTO;
+import com.backend.Java_Backend.DTO.DTOMapper;
 import com.backend.Java_Backend.Models.MessageThread;
-import com.backend.Java_Backend.Models.ThreadParticipant;
-import com.backend.Java_Backend.Repository.MessageRepository;
 import com.backend.Java_Backend.Repository.MessageThreadRepository;
-import com.backend.Java_Backend.Repository.ThreadParticipantRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class MessageThreadService {
+    private final MessageThreadRepository messageThreadRepository;
+    private final DTOMapper dtoMapper;
 
-    private final com.backend.Java_Backend.Repository.MessageThreadRepository threadRepo;
-    private final com.backend.Java_Backend.Repository.MessageRepository messageRepo;
-    private final com.backend.Java_Backend.Repository.ThreadParticipantRepository participantRepo;
-
-    public MessageThreadService(MessageThreadRepository threadRepo,
-                                MessageRepository messageRepo,
-                                ThreadParticipantRepository participantRepo) {
-        this.threadRepo = threadRepo;
-        this.messageRepo = messageRepo;
-        this.participantRepo = participantRepo;
+    public MessageThreadService(MessageThreadRepository messageThreadRepository, DTOMapper dtoMapper) {
+        this.messageThreadRepository = messageThreadRepository;
+        this.dtoMapper = dtoMapper;
     }
 
-    public MessageThread createThread() {
-        MessageThread thread = new MessageThread();
+    @Transactional
+    public MessageThreadDTO createThread(MessageThreadDTO threadDTO) {
+        MessageThread thread = dtoMapper.toMessageThreadEntity(threadDTO);
         thread.setThreadId(UUID.randomUUID());
-        thread.setCreated_at(Timestamp.valueOf(java.time.LocalDateTime.now()));
-        return threadRepo.save(thread);
+        thread.setCreated_at(Timestamp.from(Instant.now()));
+        MessageThread saved = messageThreadRepository.save(thread);
+        return dtoMapper.toMessageThreadDTO(saved);
     }
 
-    public Optional<MessageThread> getThread(UUID threadID) {
-        return threadRepo.findById(threadID);
+    public MessageThreadDTO getThread(UUID threadId) {
+        return messageThreadRepository.findById(threadId)
+                .map(dtoMapper::toMessageThreadDTO)
+                .orElseThrow(() -> new IllegalArgumentException("Thread not found"));
     }
 
-    public List<Message> getMessages(UUID threadID) {
-        return messageRepo.findByThread_ThreadId(threadID);
+    public List<MessageThreadDTO> getAllThreads() {
+        return messageThreadRepository.findAll()
+                .stream()
+                .map(dtoMapper::toMessageThreadDTO)
+                .collect(Collectors.toList());
     }
 
-    public Optional<ThreadParticipant> getParticipants(UUID threadID,Integer studentId) {
-        return participantRepo.findById_ThreadIdAndId_StudentId(threadID,studentId);
-    }
-    public MessageThread createThread(MessageThread thread) {
-        return threadRepo.save(thread);
-    }
-
-    public Optional<MessageThread> getThreadById(UUID threadId) {
-        return threadRepo.findByThreadId(threadId);
+    @Transactional
+    public MessageThreadDTO updateThread(UUID threadId, MessageThreadDTO threadDTO) {
+        MessageThread thread = messageThreadRepository.findById(threadId)
+                .orElseThrow(() -> new IllegalArgumentException("Thread not found"));
+        thread.setCreated_at(threadDTO.getCreatedAt() != null ? threadDTO.getCreatedAt() : thread.getCreated_at());
+        MessageThread updated = messageThreadRepository.save(thread);
+        return dtoMapper.toMessageThreadDTO(updated);
     }
 
-    public List<MessageThread> getAllThreads() {
-        return threadRepo.findAll();
+    @Transactional
+    public void deleteThread(UUID threadId) {
+        if (!messageThreadRepository.existsById(threadId)) {
+            throw new IllegalArgumentException("Thread not found");
+        }
+        messageThreadRepository.deleteById(threadId);
     }
-
-    public boolean deleteThread(UUID threadId) {
-        if (!threadRepo.existsById(threadId)) return false;
-        threadRepo.deleteById(threadId);
-        return true;
-    }
-
-
 }
 
 

@@ -1,60 +1,94 @@
 package com.backend.Java_Backend.Services;
 
-import com.backend.Java_Backend.Models.Modules;
-import com.backend.Java_Backend.Models.Student;
+import com.backend.Java_Backend.DTO.TutorDTO;
 import com.backend.Java_Backend.Models.Tutor;
-import com.backend.Java_Backend.Models.TutorModule;
-import com.backend.Java_Backend.Repository.StudentRepository;
-import com.backend.Java_Backend.Repository.TutorModuleRepository;
 import com.backend.Java_Backend.Repository.TutorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class TutorService {
-    private final TutorRepository tutorRepository;
-    private final TutorModuleRepository tutorModuleRepository;
     @Autowired
-    public TutorService(TutorRepository tutorRepository,TutorModuleRepository tutorModuleRepository) {
-        this.tutorRepository = tutorRepository;
-        this.tutorModuleRepository = tutorModuleRepository;
-    }
+    private TutorRepository repository;
 
-    // Get all students
-    public List<Tutor> getAllTutors() {
-        return tutorRepository.findAll();
-    }
-
-    // Get a student by ID
-    public Optional<Tutor> getTutorById(int id) {
-        return tutorRepository.findById(id);
-    }
-
-    // Save or update a student
-    public Tutor saveTutor(Tutor tutor) {
-        return tutorRepository.save(tutor);
-    }
-
-    // Delete a student by ID
-    public void deleteTutor(int id) {
-        tutorRepository.deleteById(id);
-    }
-    public List<Modules> getModulesForTutor(int tutorId) {
-        List<TutorModule> assignments = tutorModuleRepository.findByTutorId(tutorId);
-        List<Modules> modules = new ArrayList<>();
-        for (TutorModule tm : assignments) {
-            modules.add(tm.getModule());
+    public TutorDTO create(TutorDTO dto) {
+        if (dto.getStudentId() == 0) {
+            throw new IllegalArgumentException("Student ID must be provided");
         }
-        return modules;
+
+        Tutor tutor = new Tutor();
+        tutor.setCreated_at(Timestamp.from(Instant.now()));
+        tutor.setStudent_id(dto.getStudentId());
+
+        try {
+            tutor = repository.save(tutor);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create tutor: " + e.getMessage(), e);
+        }
+
+        return new TutorDTO(tutor.getId(), tutor.getCreated_at(), tutor.getStudent_id(), List.of());
     }
 
-    public TutorModule assignModule(Tutor tutor, Modules module) {
-        TutorModule tm = new TutorModule(tutor, module);
-        return tutorModuleRepository.save(tm);
+    public List<TutorDTO> findAll() {
+        return repository.findAll().stream()
+                .map(tutor -> new TutorDTO(tutor.getId(), tutor.getCreated_at(), tutor.getStudent_id(),
+                        tutor.getTutorModules() != null ?
+                                tutor.getTutorModules().stream().map(tm -> tm.getModule().getId()).collect(Collectors.toList()) :
+                                List.of()))
+                .collect(Collectors.toList());
     }
 
+    public TutorDTO findById(int id) {
+        Tutor tutor = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Tutor not found with ID: " + id));
+        return new TutorDTO(tutor.getId(), tutor.getCreated_at(), tutor.getStudent_id(),
+                tutor.getTutorModules() != null ?
+                        tutor.getTutorModules().stream().map(tm -> tm.getModule().getId()).collect(Collectors.toList()) :
+                        List.of());
+    }
+
+    public List<TutorDTO> findByStudentId(int studentId) {
+        return repository.findByStudent_id(studentId).stream()
+                .map(tutor -> new TutorDTO(tutor.getId(), tutor.getCreated_at(), tutor.getStudent_id(),
+                        tutor.getTutorModules() != null ?
+                                tutor.getTutorModules().stream().map(tm -> tm.getModule().getId()).collect(Collectors.toList()) :
+                                List.of()))
+                .collect(Collectors.toList());
+    }
+
+    public TutorDTO update(int id, TutorDTO dto) {
+        Tutor tutor = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Tutor not found with ID: " + id));
+        if (dto.getCreatedAt() != null) {
+            tutor.setCreated_at(dto.getCreatedAt());
+        }
+        if (dto.getStudentId() != 0) {
+            tutor.setStudent_id(dto.getStudentId());
+        }
+        try {
+            tutor = repository.save(tutor);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update tutor: " + e.getMessage(), e);
+        }
+        return new TutorDTO(tutor.getId(), tutor.getCreated_at(), tutor.getStudent_id(),
+                tutor.getTutorModules() != null ?
+                        tutor.getTutorModules().stream().map(tm -> tm.getModule().getId()).collect(Collectors.toList()) :
+                        List.of());
+    }
+
+    public void delete(int id) {
+        if (!repository.existsById(id)) {
+            throw new RuntimeException("Tutor not found with ID: " + id);
+        }
+        try {
+            repository.deleteById(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete tutor: " + e.getMessage(), e);
+        }
+    }
 }

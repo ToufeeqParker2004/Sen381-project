@@ -6,10 +6,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-@Repository
-public interface StudentTopicSubcriptionRepository extends JpaRepository<StudentTopicSubscription, StudentTopicSubscriptionId> {
-    List<StudentTopicSubscription> findByStudentId(int studentId);
+import java.util.Optional;
 
+@Repository
+public interface StudentTopicSubscriptionRepository extends JpaRepository<StudentTopicSubscription, StudentTopicSubscriptionId> {
+    List<StudentTopicSubscription> findByStudentId(int studentId);
     List<StudentTopicSubscription> findByTopicId(int topicId);
+    Optional<StudentTopicSubscription> findById(StudentTopicSubscriptionId id);
 
 }

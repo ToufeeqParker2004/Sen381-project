@@ -11,9 +11,6 @@ import java.util.Optional;
 import java.util.UUID;
 @Repository
 public interface ThreadParticipantRepository extends JpaRepository<ThreadParticipant, ThreadParticipantId> {
-//    // Find all participants by threadID
-//    List<ThreadParticipant> findByThread_ThreadId(UUID threadId);
-
-    // Optional: find a specific participant in a thread
-    Optional<ThreadParticipant> findById_ThreadIdAndId_StudentId(UUID threadId, Integer studentId);
+    List<ThreadParticipant> findByIdThreadId(UUID threadId);
+    List<ThreadParticipant> findByIdStudentId(Integer studentId);
 }

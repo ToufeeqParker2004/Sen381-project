@@ -1,9 +1,11 @@
 package com.backend.Java_Backend.Controller;
 
+import com.backend.Java_Backend.DTO.StudentTutorSubscriptionDTO;
 import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Models.Tutor;
 import com.backend.Java_Backend.Models.StudentTutorSubscription;
 import com.backend.Java_Backend.Services.StudentTutorSubscriptionService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,33 +15,43 @@ import java.util.List;
 @RequestMapping("/student-tutor")
 public class StudentTutorSubscriptionController {
 
-    private final StudentTutorSubscriptionService service;
+    @Autowired
+    private StudentTutorSubscriptionService service;
 
-    public StudentTutorSubscriptionController(StudentTutorSubscriptionService service) {
-        this.service = service;
+    @PostMapping
+    public ResponseEntity<StudentTutorSubscriptionDTO> create(@RequestBody StudentTutorSubscriptionDTO dto) {
+        return ResponseEntity.ok(service.create(dto));
     }
 
-    // Subscribe a student to a tutor
-    @PostMapping("/subscribe")
-    public StudentTutorSubscription subscribe(@RequestBody Student student,
-                                              @RequestBody Tutor tutor) {
-        return service.subscribe(student, tutor);
+    @GetMapping
+    public ResponseEntity<List<StudentTutorSubscriptionDTO>> findAll() {
+        return ResponseEntity.ok(service.findAll());
     }
 
-    // Get tutors for a student
-    @GetMapping("/student/{studentId}/tutors")
-    public ResponseEntity<List<Tutor>> getTutorsForStudent(@PathVariable int studentId) {
-        List<Tutor> tutors = service.getTutorsForStudent(studentId);
-        if (tutors.isEmpty()) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(tutors);
+    @GetMapping("/{studentId}/{tutorId}")
+    public ResponseEntity<StudentTutorSubscriptionDTO> findById(@PathVariable int studentId, @PathVariable int tutorId) {
+        return ResponseEntity.ok(service.findById(studentId, tutorId));
     }
 
-    // Get students for a tutor
-    @GetMapping("/tutor/{tutorId}/students")
-    public ResponseEntity<List<Student>> getStudentsForTutor(@PathVariable int tutorId) {
-        List<Student> students = service.getStudentsForTutor(tutorId);
-        if (students.isEmpty()) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(students);
+    @GetMapping("/student/{studentId}")
+    public ResponseEntity<List<StudentTutorSubscriptionDTO>> findByStudentId(@PathVariable int studentId) {
+        return ResponseEntity.ok(service.findByStudentId(studentId));
+    }
+
+    @GetMapping("/tutor/{tutorId}")
+    public ResponseEntity<List<StudentTutorSubscriptionDTO>> findByTutorId(@PathVariable int tutorId) {
+        return ResponseEntity.ok(service.findByTutorId(tutorId));
+    }
+
+    @PutMapping("/{studentId}/{tutorId}")
+    public ResponseEntity<StudentTutorSubscriptionDTO> update(@PathVariable int studentId, @PathVariable int tutorId, @RequestBody StudentTutorSubscriptionDTO dto) {
+        return ResponseEntity.ok(service.update(studentId, tutorId, dto));
+    }
+
+    @DeleteMapping("/{studentId}/{tutorId}")
+    public ResponseEntity<Void> delete(@PathVariable int studentId, @PathVariable int tutorId) {
+        service.delete(studentId, tutorId);
+        return ResponseEntity.noContent().build();
     }
 }
 

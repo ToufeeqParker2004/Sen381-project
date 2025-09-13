@@ -1,90 +1,110 @@
 package com.backend.Java_Backend.Controller;
 
-import com.backend.Java_Backend.Models.Message;
-import com.backend.Java_Backend.Models.MessageThread;
-import com.backend.Java_Backend.Models.ThreadParticipant;
-import com.backend.Java_Backend.Services.MessageThreadService;
+import com.backend.Java_Backend.DTO.MessageDTO;
+import com.backend.Java_Backend.DTO.MessageThreadDTO;
+import com.backend.Java_Backend.DTO.ThreadParticipantDTO;
 import com.backend.Java_Backend.Services.MessageService;
+import com.backend.Java_Backend.Services.MessageThreadService;
 import com.backend.Java_Backend.Services.ThreadParticipantService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Timestamp;
-import java.util.*;
+import java.util.List;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/threads")
+@RequestMapping("/messaging")
 public class MessageController {
-
-    private final MessageThreadService threadService;
     private final MessageService messageService;
-    private final ThreadParticipantService participantService;
+    private final MessageThreadService messageThreadService;
+    private final ThreadParticipantService threadParticipantService;
 
-    public MessageController(MessageThreadService threadService,
-                             MessageService messageService,
-                             ThreadParticipantService participantService) {
-        this.threadService = threadService;
+    public MessageController(MessageService messageService, MessageThreadService messageThreadService, ThreadParticipantService threadParticipantService) {
         this.messageService = messageService;
-        this.participantService = participantService;
+        this.messageThreadService = messageThreadService;
+        this.threadParticipantService = threadParticipantService;
     }
 
-    // Create a new thread
-    @PostMapping
-    public MessageThread createThread() {
-        return threadService.createThread();
+    // Message Endpoints
+    //posting a messasage in DTO format
+    @PostMapping("/messages")
+    public ResponseEntity<MessageDTO> createMessage(@RequestBody MessageDTO messageDTO) {
+        return ResponseEntity.ok(messageService.createMessage(messageDTO));
     }
 
-    @PostMapping("/{threadID}/participants")
-    public ThreadParticipant addParticipant(@PathVariable UUID threadID,
-                                            @RequestParam int userId) {
-        return participantService.addParticipant(threadID, userId);
+    @GetMapping("/messages/{id}")
+    public ResponseEntity<MessageDTO> getMessage(@PathVariable UUID id) {
+        return ResponseEntity.ok(messageService.getMessage(id));
     }
 
-    // Create message
-    @PostMapping("/{threadId}/messages")
-    public ResponseEntity<Message> createMessage(@RequestBody Message message) {
-        return messageService.createMessage(message)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.badRequest().build());
+    @GetMapping("/messages/thread/{threadId}")
+    public ResponseEntity<List<MessageDTO>> getMessagesByThreadId(@PathVariable UUID threadId) {
+        return ResponseEntity.ok(messageService.getMessagesByThreadId(threadId));
     }
 
-    // Get all messages
-    @GetMapping
-    public ResponseEntity<List<Message>> getAllMessages() {
-        return ResponseEntity.ok(messageService.getAllMessages());
+    @PutMapping("/messages/{id}")
+    public ResponseEntity<MessageDTO> updateMessage(@PathVariable UUID id, @RequestBody MessageDTO messageDTO) {
+        return ResponseEntity.ok(messageService.updateMessage(id, messageDTO));
     }
 
-    // Get message by ID
-    @GetMapping("/{id}")
-    public ResponseEntity<Message> getMessageById(@PathVariable UUID id) {
-        return messageService.getMessageById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    // Get messages by threadId
-    @GetMapping("/thread/{threadId}")
-    public ResponseEntity<List<Message>> getMessagesByThreadId(@PathVariable UUID threadId) {
-        List<Message> messages = messageService.getMessagesByThreadId(threadId);
-        if (messages.isEmpty()) return ResponseEntity.noContent().build();
-        return ResponseEntity.ok(messages);
-    }
-
-    // Update message
-    @PutMapping("/{id}")
-    public ResponseEntity<Message> updateMessage(@PathVariable UUID id, @RequestBody Message updated) {
-        return messageService.updateMessage(id, updated)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    // Delete message
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/messages/{id}")
     public ResponseEntity<Void> deleteMessage(@PathVariable UUID id) {
-        boolean deleted = messageService.deleteMessage(id);
-        if (!deleted) return ResponseEntity.notFound().build();
+        messageService.deleteMessage(id);
         return ResponseEntity.noContent().build();
     }
 
+    // MessageThread Endpoints
+    @PostMapping("/threads")
+    public ResponseEntity<MessageThreadDTO> createThread(@RequestBody MessageThreadDTO threadDTO) {
+        return ResponseEntity.ok(messageThreadService.createThread(threadDTO));
+    }
+
+    @GetMapping("/threads/{threadId}")
+    public ResponseEntity<MessageThreadDTO> getThread(@PathVariable UUID threadId) {
+        return ResponseEntity.ok(messageThreadService.getThread(threadId));
+    }
+
+    @GetMapping("/threads")
+    public ResponseEntity<List<MessageThreadDTO>> getAllThreads() {
+        return ResponseEntity.ok(messageThreadService.getAllThreads());
+    }
+
+    @PutMapping("/threads/{threadId}")
+    public ResponseEntity<MessageThreadDTO> updateThread(@PathVariable UUID threadId, @RequestBody MessageThreadDTO threadDTO) {
+        return ResponseEntity.ok(messageThreadService.updateThread(threadId, threadDTO));
+    }
+
+    @DeleteMapping("/threads/{threadId}")
+    public ResponseEntity<Void> deleteThread(@PathVariable UUID threadId) {
+        messageThreadService.deleteThread(threadId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ThreadParticipant Endpoints
+    @PostMapping("/participants")
+    public ResponseEntity<ThreadParticipantDTO> addParticipant(@RequestBody ThreadParticipantDTO participantDTO) {
+        return ResponseEntity.ok(threadParticipantService.addParticipant(participantDTO));
+    }
+
+    @GetMapping("/participants/thread/{threadId}")
+    public ResponseEntity<List<ThreadParticipantDTO>> getParticipantsByThreadId(@PathVariable UUID threadId) {
+        return ResponseEntity.ok(threadParticipantService.getParticipantsByThreadId(threadId));
+    }
+
+    @GetMapping("/participants/student/{studentId}")
+    public ResponseEntity<List<ThreadParticipantDTO>> getParticipantsByStudentId(@PathVariable Integer studentId) {
+        return ResponseEntity.ok(threadParticipantService.getParticipantsByStudentId(studentId));
+    }
+
+    @PutMapping("/participants/{threadId}/{studentId}")
+    public ResponseEntity<ThreadParticipantDTO> updateParticipant(@PathVariable UUID threadId, @PathVariable Integer studentId, @RequestBody ThreadParticipantDTO participantDTO) {
+        return ResponseEntity.ok(threadParticipantService.updateParticipant(threadId, studentId, participantDTO));
+    }
+
+    @DeleteMapping("/participants/{threadId}/{studentId}")
+    public ResponseEntity<Void> deleteParticipant(@PathVariable UUID threadId, @PathVariable Integer studentId) {
+        threadParticipantService.deleteParticipant(threadId, studentId);
+        return ResponseEntity.noContent().build();
+    }
 }
 

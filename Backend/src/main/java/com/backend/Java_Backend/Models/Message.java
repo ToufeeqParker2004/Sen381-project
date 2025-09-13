@@ -15,7 +15,7 @@ public class Message {
     private UUID id;
 
     @Column(name = "sender_id")
-    private Long senderId; // could also be a @ManyToOne to Student
+    private int senderId; // could also be a @ManyToOne to Student
     @Column(name = "message_text")
     private String content;
     @Column(name = "created_at")
@@ -50,11 +50,11 @@ public class Message {
     }
 
 
-    public Long getSenderId() {
+    public int getSenderId() {
         return senderId;
     }
 
-    public void setSenderId(Long senderId) {
+    public void setSenderId(int senderId) {
         this.senderId = senderId;
     }
 

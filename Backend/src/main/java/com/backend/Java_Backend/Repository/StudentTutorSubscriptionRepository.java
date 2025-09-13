@@ -11,6 +11,5 @@ import java.util.List;
 public interface StudentTutorSubscriptionRepository extends JpaRepository<StudentTutorSubscription, StudentTutorSubscriptionId> {
 
     List<StudentTutorSubscription> findByStudentId(int studentId);
-
     List<StudentTutorSubscription> findByTutorId(int tutorId);
 }
