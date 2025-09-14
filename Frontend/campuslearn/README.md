@@ -1,5 +1,6 @@
 Tutor Platform Frontend
-This is the frontend for the Tutor Platform, built using React. The platform provides students, tutors, and administrators with an interactive interface to manage courses, communication, events, and resources.
+
+This is the front end of the Tutor Platform, which was built using React. The platform provides students, tutors, and administrators with an interactive interface to manage courses, communication, events, and resources.
 
 🚀 Getting Started
 To set up the project locally:
