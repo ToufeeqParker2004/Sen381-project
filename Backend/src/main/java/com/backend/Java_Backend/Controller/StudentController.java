@@ -4,10 +4,7 @@ import com.backend.Java_Backend.DTO.CreateStudentDTO;
 import com.backend.Java_Backend.DTO.StudentDTO;
 import com.backend.Java_Backend.DTO.StudentWithModuleDTO;
 import com.backend.Java_Backend.DTO.UpdateStudentDTO;
-import com.backend.Java_Backend.Models.Modules;
-import com.backend.Java_Backend.Models.Student;
-import com.backend.Java_Backend.Models.StudentTopicSubscription;
-import com.backend.Java_Backend.Models.Topic;
+import com.backend.Java_Backend.Models.*;
 import com.backend.Java_Backend.Security.JwtUtil;
 import com.backend.Java_Backend.Services.StudentService;
 import com.backend.Java_Backend.Services.StudentTopicSubscriptionService;
@@ -80,16 +77,17 @@ public class StudentController {
 
     // Student login
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestParam String email, @RequestParam String password) {
-        String token = studentService.login(email, password);
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        String token = studentService.login(request.getEmail(), request.getPassword());
 
         if (token == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Incorrect email or password");
         }
 
-        return ResponseEntity.ok(token); // returns JWT
+        return ResponseEntity.ok(token); // JWT token as plain text
     }
+
 
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(Authentication authentication) {
