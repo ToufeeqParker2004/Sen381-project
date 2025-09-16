@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import {jwtDecode} from 'jwt-decode';
 
 interface User {
   id: string;
-  name: string;
+  name?: string;
   email: string;
   avatar?: string;
   isAdmin: boolean;
@@ -22,9 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
@@ -35,36 +34,55 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check credentials
-    if (email === 'test@gmail.com' && password === 'testing') {
-      setUser({
-        id: '1',
-        name: 'John Student',
-        email: 'test@gmail.com',
-        isAdmin: true,  // Full access for test user
-        isTutor: true,  // Full access for test user
-        tutorApplicationStatus: 'approved'
+  const fetchProfile = async (token: string) => {
+    try {
+      const res = await fetch('http://localhost:9090/student/profile', {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      return true;
+      if (!res.ok) return;
+      const profile: User = await res.json();
+      setUser(profile);
+    } catch (err) {
+      console.error('Failed to fetch profile', err);
     }
-    return false;
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) fetchProfile(token);
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const res = await fetch('http://localhost:9090/student/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!res.ok) return false;
+
+      const token = await res.text();
+      localStorage.setItem('authToken', token);
+
+      await fetchProfile(token); // fetch full profile immediately
+
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    }
   };
 
   const logout = () => {
+    localStorage.removeItem('authToken');
     setUser(null);
   };
 
   const updateUser = (updates: Partial<User>) => {
-    if (user) {
-      setUser({ ...user, ...updates });
-    }
+    if (user) setUser({ ...user, ...updates });
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     login,
     logout,

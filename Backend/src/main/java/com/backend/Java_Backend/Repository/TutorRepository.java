@@ -13,4 +13,8 @@ public interface TutorRepository extends JpaRepository<Tutor,Integer> {
     @Query("SELECT t FROM Tutor t WHERE t.student_id = :student_id")
     List<Tutor> findByStudent_id(@Param("student_id") int student_id);
 
+    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END " +
+            "FROM Tutor t WHERE t.student_id = :studentId")
+    boolean existsByStudentId(@Param("studentId") int studentId);
+
 }
