@@ -15,7 +15,7 @@ public class JavaBackendApplication implements WebMvcConfigurer {
 	@Override
 	public void addCorsMappings(CorsRegistry registry) {
 		registry.addMapping("/**")
-				.allowedOrigins("http://localhost:8081") // your frontend
+				.allowedOrigins("http://localhost:8081","http://localhost:8080") // your frontend
 				.allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
 				.allowedHeaders("*")  // allow Authorization header
 				.exposedHeaders("Authorization"); // optional if backend sets Authorization
