@@ -40,8 +40,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
-      const profile: User = await res.json();
-      setUser(profile);
+
+      const profileData = await res.json();
+
+      setUser(prev => ({
+        ...prev,
+        name: profileData.name,
+        avatar: profileData.avatar,
+        tutorApplicationStatus: profileData.tutorApplicationStatus || 'none',
+      }));
     } catch (err) {
       console.error('Failed to fetch profile', err);
     }
@@ -49,8 +56,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
-    if (token) fetchProfile(token);
+    if (token) initializeUser(token);
   }, []);
+
+  const initializeUser = async (token: string) => {
+    try {
+      const decoded = jwtDecode<{ sub: string; email: string; roles: string[] }>(token);
+
+      // Set initial user flags from JWT roles
+      setUser({
+        id: decoded.sub,
+        email: decoded.email,
+        name: '', // will be filled after profile fetch
+        avatar: '', // will be filled after profile fetch
+        isAdmin: decoded.roles.includes('ADMIN'),
+        isTutor: decoded.roles.includes('TUTOR'),
+        tutorApplicationStatus: 'none', // default until profile fetch
+      });
+
+      // Fetch additional profile info from backend
+      await fetchProfile(token);
+    } catch (err) {
+      console.error('Failed to decode token', err);
+    }
+  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -64,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = await res.text();
       localStorage.setItem('authToken', token);
 
-      await fetchProfile(token); // fetch full profile immediately
+      await initializeUser(token);
 
       return true;
     } catch (err) {

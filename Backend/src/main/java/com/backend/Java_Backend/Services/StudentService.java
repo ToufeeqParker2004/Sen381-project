@@ -94,6 +94,7 @@ public class StudentService {
         // Determine roles
         List<String> roles = new ArrayList<>();
         roles.add("STUDENT");
+        roles.add("ADMIN");
 
         if (!tutorRepository.findByStudent_id(student.getId()).isEmpty()) {
             roles.add("TUTOR");
