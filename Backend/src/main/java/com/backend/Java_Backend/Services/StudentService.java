@@ -5,6 +5,7 @@ import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Repository.StudentRepository;
 import com.backend.Java_Backend.Repository.TutorRepository;
 import com.backend.Java_Backend.Security.JwtUtil;
+import com.backend.Java_Backend.Security.PasswordHasher;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -86,8 +87,8 @@ public class StudentService {
             return null; // email not found
         }
 
-        // if (!passwordEncoder.matches(password, student.getPassword())) { return null; }
-        if (!student.getPassword().equals(password)) { // current plaintext check
+        String hashedPassword = PasswordHasher.hashPassword(password);
+        if (!student.getPassword().equals(hashedPassword)) {
             return null;
         }
 

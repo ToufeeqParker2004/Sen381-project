@@ -12,7 +12,7 @@ public class JwtUtil {
     private static final String SECRET = "Wwyt0QbrvrHhJfmdNruwkeWfe7gpnzdCoLZD1K5CopyVHQFwUsTfB2Qp45IftLrAWPG10D+APp5Wi0few2Qbjw==";
     private static final long EXPIRATION_TIME = 3600_000; // 1 hour
 
-    // ✨ Overloaded method to handle roles
+    // Overloaded method to handle roles
     public static String generateToken(int studentId, String email, List<String> roles) {
         return JWT.create()
                 .withSubject(String.valueOf(studentId))
