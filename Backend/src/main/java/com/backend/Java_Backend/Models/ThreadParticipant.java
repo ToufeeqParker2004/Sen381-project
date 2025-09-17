@@ -30,7 +30,21 @@ public class ThreadParticipant {
     public ThreadParticipantId getId() { return id; }
     public void setId(ThreadParticipantId id) { this.id = id; }
 
+    public MessageThread getThread() {
+        return thread;
+    }
 
+    public void setThread(MessageThread thread) {
+        this.thread = thread;
+    }
+
+    public Student getStudent() {
+        return student;
+    }
+
+    public void setStudent(Student student) {
+        this.student = student;
+    }
 }
 
 

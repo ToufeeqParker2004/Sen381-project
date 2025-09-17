@@ -1,5 +1,6 @@
 package com.backend.Java_Backend.Models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
@@ -10,6 +11,7 @@ public class ForumPost {
     @Id
     @GeneratedValue
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     UUID id;
     @Column(name = "author_id")
     int authorId;
@@ -18,6 +20,7 @@ public class ForumPost {
     @Column(name = "attachments")
     String[] attatchments;
     int upvotes;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     Timestamp created_at;
 
     public ForumPost() {}
