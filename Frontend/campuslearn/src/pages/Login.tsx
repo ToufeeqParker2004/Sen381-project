@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff } from 'lucide-react';
+import MicrosoftLoginModal from '@/components/ui/MicrosoftLoginModal';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showMicrosoftModal, setShowMicrosoftModal] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { login } = useAuth();
@@ -46,6 +48,23 @@ const Login = () => {
     }
     
     setIsLoading(false);
+  };
+
+  const handleMicrosoftLogin = () => {
+    setShowMicrosoftModal(true);
+  };
+
+  const handleMicrosoftSuccess = async () => {
+    // Simulate Microsoft login success
+    const success = await login('microsoft@belgiumcampus.edu', 'microsoft');
+    
+    if (success) {
+      toast({
+        title: 'Microsoft Login Successful',
+        description: 'Welcome to CampusLearn!',
+      });
+      navigate('/');
+    }
   };
 
   return (
@@ -155,6 +174,7 @@ const Login = () => {
               type="button"
               variant="outline"
               className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-50 flex items-center justify-center space-x-2"
+              onClick={handleMicrosoftLogin}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zM24 11.4H12.6V0H24v11.4z"/>
@@ -162,12 +182,16 @@ const Login = () => {
               <span>Microsoft Belgium Campus</span>
             </Button>
 
-            <div className="text-center text-xs text-gray-500 mt-6">
-              <p>Demo: test@gmail.com / testing</p>
-            </div>
+            
           </div>
         </div>
       </div>
+
+      <MicrosoftLoginModal
+        isOpen={showMicrosoftModal}
+        onClose={() => setShowMicrosoftModal(false)}
+        onSuccess={handleMicrosoftSuccess}
+      />
     </div>
   );
 };

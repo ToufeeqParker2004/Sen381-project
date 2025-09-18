@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import {jwtDecode} from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 interface User {
   id: string;
@@ -63,18 +63,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const decoded = jwtDecode<{ sub: string; email: string; roles: string[] }>(token);
 
-      // Set initial user flags from JWT roles
       setUser({
         id: decoded.sub,
         email: decoded.email,
-        name: '', // will be filled after profile fetch
-        avatar: '', // will be filled after profile fetch
+        name: '',
+        avatar: '',
         isAdmin: decoded.roles.includes('ADMIN'),
         isTutor: decoded.roles.includes('TUTOR'),
-        tutorApplicationStatus: 'none', // default until profile fetch
+        tutorApplicationStatus: 'none',
       });
 
-      // Fetch additional profile info from backend
       await fetchProfile(token);
     } catch (err) {
       console.error('Failed to decode token', err);
@@ -83,6 +81,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      // 🔹 Special-case Microsoft demo login (no backend)
+      if (email === 'microsoft@belgiumcampus.edu' && password === 'microsoft') {
+        setUser({
+          id: 'microsoft',
+          name: 'Microsoft User',
+          email,
+          avatar: '',
+          isAdmin: true,
+          isTutor: true,
+          tutorApplicationStatus: 'approved',
+        });
+        return true;
+      }
+
+      // 🔹 Normal backend login
       const res = await fetch('http://localhost:9090/student/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
