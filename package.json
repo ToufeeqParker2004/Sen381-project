@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "i": "^0.3.7",
+    "jwt-decode": "^4.0.0"
+  }
+}

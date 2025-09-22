@@ -3,11 +3,14 @@ package com.backend.Java_Backend.Services;
 import com.backend.Java_Backend.DTO.*;
 import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Repository.StudentRepository;
+import com.backend.Java_Backend.Repository.TutorRepository;
 import com.backend.Java_Backend.Security.JwtUtil;
+import com.backend.Java_Backend.Security.PasswordHasher;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -15,11 +18,17 @@ import java.util.stream.Collectors;
 @Service
 public class StudentService {
 
-    @Autowired
-    private StudentRepository studentRepository;
+    private final StudentRepository studentRepository;
+    private final ModelMapper modelMapper;
+    private final TutorRepository tutorRepository;
 
-    @Autowired
-    private ModelMapper modelMapper;
+    public StudentService(StudentRepository studentRepository,
+                          ModelMapper modelMapper,
+                          TutorRepository tutorRepository) {
+        this.studentRepository = studentRepository;
+        this.modelMapper = modelMapper;
+        this.tutorRepository = tutorRepository;
+    }
 
     public List<StudentDTO> getAllStudents() {
         return studentRepository.findAll().stream()
@@ -70,21 +79,29 @@ public class StudentService {
         return optionalStudent.map(student -> modelMapper.map(student, StudentDTO.class)).orElse(null);
     }
 
-    //Student login for auth
+    // Student login for auth
     public String login(String email, String password) {
-        // Get student directly
-        Student student = studentRepository.findByEmail(email);
 
+        Student student = studentRepository.findByEmail(email);
         if (student == null) {
             return null; // email not found
         }
 
-        // Plaintext password check
-        if (!student.getPassword().equals(password)) {
-            return null; // wrong password
+        String hashedPassword = PasswordHasher.hashPassword(password);
+        if (!student.getPassword().equals(hashedPassword)) {
+            return null;
         }
 
-        // Generate JWT token
-        return JwtUtil.generateToken(student.getId(), student.getEmail());
+        // Determine roles
+        List<String> roles = new ArrayList<>();
+        roles.add("STUDENT");
+        //roles.add("ADMIN");
+
+        if (!tutorRepository.findByStudent_id(student.getId()).isEmpty()) {
+            roles.add("TUTOR");
+        }
+
+        // Generate JWT token with roles
+        return JwtUtil.generateToken(student.getId(), student.getEmail(), roles);
     }
 }

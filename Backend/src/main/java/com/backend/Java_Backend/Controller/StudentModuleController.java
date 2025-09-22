@@ -6,6 +6,7 @@ import com.backend.Java_Backend.DTO.UpdateStudentModuleDTO;
 import com.backend.Java_Backend.Services.StudentModuleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,8 +24,10 @@ public class StudentModuleController {
         return ResponseEntity.ok(studentModules);
     }
 
-    @GetMapping("/student/{studentId}")
-    public ResponseEntity<List<StudentModuleDTO>> getStudentModulesByStudentId(@PathVariable Integer studentId) {
+    @GetMapping("/student")
+    public ResponseEntity<List<StudentModuleDTO>> getStudentModulesByStudentId(Authentication authentication) {
+        String studentIdStr = (String) authentication.getPrincipal();
+        int studentId = Integer.parseInt(studentIdStr);
         List<StudentModuleDTO> studentModules = studentModuleService.getStudentModulesByStudentId(studentId);
         return ResponseEntity.ok(studentModules);
     }

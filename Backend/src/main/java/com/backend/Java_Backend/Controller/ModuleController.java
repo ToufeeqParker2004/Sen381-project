@@ -8,6 +8,7 @@ import com.backend.Java_Backend.Models.Modules;
 import com.backend.Java_Backend.Services.ModuleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,9 +27,12 @@ public class ModuleController {
         return ResponseEntity.ok(modules);
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ModuleDTO> getModuleById(@PathVariable Integer id) {
-        ModuleDTO module = moduleService.getModuleById(id);
+    // fix for modules did in wrong controller lol
+    @GetMapping("/student")
+    public ResponseEntity<ModuleDTO> getModuleById(Authentication authentication) {
+        String studentIdStr = (String) authentication.getPrincipal();
+        int studentId = Integer.parseInt(studentIdStr);
+        ModuleDTO module = moduleService.getModuleById(studentId);
         if (module == null) {
             return ResponseEntity.notFound().build();
         }
