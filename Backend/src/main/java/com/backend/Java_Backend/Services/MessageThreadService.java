@@ -49,7 +49,7 @@ public class MessageThreadService {
     public MessageThreadDTO updateThread(UUID threadId, MessageThreadDTO threadDTO) {
         MessageThread thread = messageThreadRepository.findById(threadId)
                 .orElseThrow(() -> new IllegalArgumentException("Thread not found"));
-        thread.setCreated_at(threadDTO.getCreatedAt() != null ? threadDTO.getCreatedAt() : thread.getCreated_at());
+        thread.setCreated_at(threadDTO.getCreated_at() != null ? threadDTO.getCreated_at() : thread.getCreated_at());
         MessageThread updated = messageThreadRepository.save(thread);
         return dtoMapper.toMessageThreadDTO(updated);
     }

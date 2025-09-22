@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +44,7 @@ public class ForumController {
     // Create new Forum Post
     @PostMapping
     public ResponseEntity<?> createForumPost(@RequestBody ForumPost forumPost) {
+        forumPost.setCreated_at(Timestamp.from(Instant.now()));
         boolean allowed = moderationService.isPostAllowed(forumPost.getContent());
 
         if (!allowed) {
@@ -62,7 +65,7 @@ public class ForumController {
             forumPost.setContent(updatedPost.getContent());
             forumPost.setAttatchments(updatedPost.getAttatchments());
             forumPost.setUpvotes(updatedPost.getUpvotes());
-            forumPost.setCreated_at(updatedPost.getCreated_at());
+            forumPost.setCreated_at(Timestamp.from(Instant.now()));
             return ResponseEntity.ok(forumPostService.saveForumPost(forumPost));
         }).orElseGet(() -> ResponseEntity.notFound().build());
     }

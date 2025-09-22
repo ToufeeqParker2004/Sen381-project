@@ -1,6 +1,7 @@
 package com.backend.Java_Backend.Models;
 
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
@@ -13,8 +14,9 @@ public class MessageThread {
 
     @Id
     @Column(name = "id", columnDefinition = "uuid")
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private UUID threadId;
-
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Timestamp created_at;
 
     public Timestamp getCreated_at() {

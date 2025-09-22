@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/tutors")
+@RequestMapping("/tutors")
 public class TutorController {
     @Autowired
     private TutorService service;

@@ -1,5 +1,6 @@
 package com.backend.Java_Backend.Models;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
 import java.sql.Timestamp;
@@ -10,6 +11,7 @@ public class LearningMaterial {
     @Id
     @GeneratedValue
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     UUID id;
     int topic_id;
     int module_id;
@@ -17,6 +19,7 @@ public class LearningMaterial {
     String title;
     String document_type;
     String file_url;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     Timestamp created_at;
     String[] tags;
 

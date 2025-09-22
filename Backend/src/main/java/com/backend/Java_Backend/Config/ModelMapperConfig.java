@@ -1,6 +1,7 @@
 package com.backend.Java_Backend.Config;
 
 import com.backend.Java_Backend.DTO.*;
+import com.backend.Java_Backend.Models.MessageThread;
 import com.backend.Java_Backend.Models.Modules;
 import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Models.StudentModule;
@@ -112,7 +113,6 @@ public class ModelMapperConfig {
             });
 
             // CreateStudentModuleDTO to StudentModule
-            // Create an empty TypeMap to avoid implicit mappings
             modelMapper.createTypeMap(CreateStudentModuleDTO.class, StudentModule.class);
 
             // UpdateStudentModuleDTO to StudentModule

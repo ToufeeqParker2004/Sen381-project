@@ -9,6 +9,8 @@ import com.backend.Java_Backend.Services.ThreadParticipantService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -56,6 +58,8 @@ public class MessageController {
     // MessageThread Endpoints
     @PostMapping("/threads")
     public ResponseEntity<MessageThreadDTO> createThread(@RequestBody MessageThreadDTO threadDTO) {
+        threadDTO.setThreadId(UUID.randomUUID());
+        threadDTO.setCreated_at(Timestamp.from(Instant.now()));
         return ResponseEntity.ok(messageThreadService.createThread(threadDTO));
     }
 
@@ -71,6 +75,7 @@ public class MessageController {
 
     @PutMapping("/threads/{threadId}")
     public ResponseEntity<MessageThreadDTO> updateThread(@PathVariable UUID threadId, @RequestBody MessageThreadDTO threadDTO) {
+        threadDTO.setCreated_at(Timestamp.from(Instant.now()));
         return ResponseEntity.ok(messageThreadService.updateThread(threadId, threadDTO));
     }
 
@@ -83,6 +88,7 @@ public class MessageController {
     // ThreadParticipant Endpoints
     @PostMapping("/participants")
     public ResponseEntity<ThreadParticipantDTO> addParticipant(@RequestBody ThreadParticipantDTO participantDTO) {
+
         return ResponseEntity.ok(threadParticipantService.addParticipant(participantDTO));
     }
 

@@ -1,23 +1,23 @@
 package com.backend.Java_Backend.DTO;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.sql.Timestamp;
-import java.util.List;
 import java.util.UUID;
 
 public class MessageThreadDTO {
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private UUID threadId;
-    private Timestamp createdAt;
-    private List<Integer> participantIds;
-    private List<UUID> messageIds;
+    private Timestamp created_at;
+
 
     public MessageThreadDTO() {
     }
 
-    public MessageThreadDTO(UUID threadId, Timestamp createdAt, List<Integer> participantIds, List<UUID> messageIds) {
+    public MessageThreadDTO(UUID threadId, Timestamp created_at) {
         this.threadId = threadId;
-        this.createdAt = createdAt;
-        this.participantIds = participantIds;
-        this.messageIds = messageIds;
+        this.created_at = created_at;
+
     }
 
     // Getters and setters
@@ -29,27 +29,13 @@ public class MessageThreadDTO {
         this.threadId = threadId;
     }
 
-    public Timestamp getCreatedAt() {
-        return createdAt;
+    public Timestamp getCreated_at() {
+        return created_at;
     }
 
-    public void setCreatedAt(Timestamp createdAt) {
-        this.createdAt = createdAt;
+    public void setCreated_at(Timestamp created_at) {
+        this.created_at = created_at;
     }
 
-    public List<Integer> getParticipantIds() {
-        return participantIds;
-    }
 
-    public void setParticipantIds(List<Integer> participantIds) {
-        this.participantIds = participantIds;
-    }
-
-    public List<UUID> getMessageIds() {
-        return messageIds;
-    }
-
-    public void setMessageIds(List<UUID> messageIds) {
-        this.messageIds = messageIds;
-    }
 }
