@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.sql.Timestamp;
 import java.util.UUID;
+
 @Entity
 @Table(name = "forum_posts")
 public class ForumPost {
@@ -12,72 +13,46 @@ public class ForumPost {
     @GeneratedValue
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    UUID id;
+    private UUID id;
+
     @Column(name = "author_id")
-    int authorId;
-    UUID parent_post_id;
-    String content;
+    @JsonProperty("author_id")
+    private Integer authorId; // Use Integer to allow null
+
+    @Column(name = "parent_post_id")
+    @JsonProperty("parent_post_id")
+    private UUID parentPostId; // nullable
+
+    private String content;
+
     @Column(name = "attachments")
-    String[] attatchments;
-    int upvotes;
+    private String[] attachments; // nullable
+
+    private int upvotes;
+
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    Timestamp created_at;
+    private Timestamp createdAt;
 
     public ForumPost() {}
 
+    // Getters & Setters
+    public UUID getId() { return id; }
 
+    public Integer getAuthorId() { return authorId; }
+    public void setAuthorId(Integer authorId) { this.authorId = authorId; }
 
-    public UUID getId() {
-        return id;
-    }
+    public UUID getParentPostId() { return parentPostId; }
+    public void setParentPostId(UUID parentPostId) { this.parentPostId = parentPostId; }
 
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
 
+    public String[] getAttachments() { return attachments; }
+    public void setAttachments(String[] attachments) { this.attachments = attachments; }
 
-    public int getAuthorId() {
-        return authorId;
-    }
+    public int getUpvotes() { return upvotes; }
+    public void setUpvotes(int upvotes) { this.upvotes = upvotes; }
 
-    public void setAuthorId(int authorId) {
-        this.authorId = authorId;
-    }
-
-    public UUID getParent_post_id() {
-        return parent_post_id;
-    }
-
-    public void setParent_post_id(UUID parent_post_id) {
-        this.parent_post_id = parent_post_id;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-    public String[] getAttatchments() {
-        return attatchments;
-    }
-
-    public void setAttatchments(String[] attatchments) {
-        this.attatchments = attatchments;
-    }
-
-    public int getUpvotes() {
-        return upvotes;
-    }
-
-    public void setUpvotes(int upvotes) {
-        this.upvotes = upvotes;
-    }
-
-    public Timestamp getCreated_at() {
-        return created_at;
-    }
-
-    public void setCreated_at(Timestamp created_at) {
-        this.created_at = created_at;
-    }
+    public Timestamp getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 }

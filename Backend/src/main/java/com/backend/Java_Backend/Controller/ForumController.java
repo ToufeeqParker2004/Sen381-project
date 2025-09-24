@@ -11,9 +11,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/ForumPosts")
@@ -44,31 +42,34 @@ public class ForumController {
     // Create new Forum Post
     @PostMapping
     public ResponseEntity<?> createForumPost(@RequestBody ForumPost forumPost) {
-        forumPost.setCreated_at(Timestamp.from(Instant.now()));
+        forumPost.setCreatedAt(Timestamp.from(Instant.now()));
         boolean allowed = moderationService.isPostAllowed(forumPost.getContent());
 
         if (!allowed) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Post blocked by moderation due to inappropriate content.");
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Post blocked by moderation due to inappropriate content.");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
         }
+
 
         ForumPost savedPost = forumPostService.saveForumPost(forumPost);
         return ResponseEntity.ok(savedPost);
     }
 
+    /*
     // Update Forum Post
     @PutMapping("/{id}")
     public ResponseEntity<ForumPost> updateForumPost(@PathVariable UUID id, @RequestBody ForumPost updatedPost) {
         return forumPostService.getForumPostById(id).map(forumPost -> {
             forumPost.setAuthorId(updatedPost.getAuthorId());
-            forumPost.setParent_post_id(updatedPost.getParent_post_id());
+            forumPost.setParentPostId(updatedPost.getParent_post_id());
             forumPost.setContent(updatedPost.getContent());
             forumPost.setAttatchments(updatedPost.getAttatchments());
             forumPost.setUpvotes(updatedPost.getUpvotes());
             forumPost.setCreated_at(Timestamp.from(Instant.now()));
             return ResponseEntity.ok(forumPostService.saveForumPost(forumPost));
         }).orElseGet(() -> ResponseEntity.notFound().build());
-    }
+    }*/
 
     // Delete Forum Post
     @DeleteMapping("/{id}")

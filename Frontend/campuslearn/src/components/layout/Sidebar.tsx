@@ -209,7 +209,7 @@ export function Sidebar({ mode, onModeChange, className }: SidebarProps) {
               <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarImage src={user?.avatar} alt="Profile" />
                 <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center">
-                  {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  {user?.name?.split(' ').map(n => n[0]).join('') || '-'}
                 </AvatarFallback>
               </Avatar>
               {showLabels && (
