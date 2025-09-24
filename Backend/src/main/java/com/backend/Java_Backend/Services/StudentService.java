@@ -82,26 +82,31 @@ public class StudentService {
     // Student login for auth
     public String login(String email, String password) {
 
-        Student student = studentRepository.findByEmail(email);
+        Optional<Student> student = studentRepository.findByEmail(email);
         if (student == null) {
             return null; // email not found
         }
+        if (student.isPresent()) {
+            Student studentAct = student.get(); // Extract Student
+            String hashedPassword = PasswordHasher.hashPassword(password);
+            if (!studentAct.getPassword().equals(hashedPassword)) {
+                return null;
+            }
 
-        String hashedPassword = PasswordHasher.hashPassword(password);
-        if (!student.getPassword().equals(hashedPassword)) {
-            return null;
-        }
 
         // Determine roles
         List<String> roles = new ArrayList<>();
         roles.add("STUDENT");
         //roles.add("ADMIN");
 
-        if (!tutorRepository.findByStudent_id(student.getId()).isEmpty()) {
+
+        if (!tutorRepository.findByStudent_id(studentAct.getId()).isEmpty()) {
             roles.add("TUTOR");
         }
 
         // Generate JWT token with roles
-        return JwtUtil.generateToken(student.getId(), student.getEmail(), roles);
+        return JwtUtil.generateToken(studentAct.getId(), studentAct.getEmail(), roles);
+        }
+        return null;
     }
 }

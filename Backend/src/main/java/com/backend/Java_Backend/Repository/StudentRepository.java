@@ -15,7 +15,7 @@ import java.util.Optional;
 public interface StudentRepository extends JpaRepository<Student, Integer> {
     @Query("SELECT s FROM Student s LEFT JOIN FETCH s.studentModules sm LEFT JOIN FETCH sm.module WHERE s.id = :studentId")
     Student findByIdWithModules(@Param("studentId") Integer studentId);
-    Student findByEmail(String email);
+    Optional<Student> findByEmail(String email);
     List<Student> findAll();
 
 }

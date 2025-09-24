@@ -8,13 +8,16 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
+
 @Repository
 public interface StudentModuleRepository extends JpaRepository<StudentModule, StudentModuleId> {
-    @Query("SELECT sm FROM StudentModule sm WHERE sm.student.id = :studentId")
+    @Query("SELECT sm FROM StudentModule sm WHERE sm.id.studentId = :studentId")
     List<StudentModule> findByStudentId(@Param("studentId") Integer studentId);
 
-    @Query("SELECT sm FROM StudentModule sm WHERE sm.module.id = :moduleId")
+    @Query("SELECT sm FROM StudentModule sm WHERE sm.id.moduleId = :moduleId")
     List<StudentModule> findByModuleId(@Param("moduleId") Integer moduleId);
 
-    boolean existsByStudentIdAndModuleId(Integer studentId, Integer moduleId);
+    @Query("SELECT sm FROM StudentModule sm WHERE sm.id.studentId = :studentId AND sm.id.moduleId = :moduleId")
+    Optional<StudentModule> findByStudentIdAndModuleId(@Param("studentId") Integer studentId, @Param("moduleId") Integer moduleId);
 }

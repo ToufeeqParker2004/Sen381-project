@@ -1,7 +1,6 @@
 package com.backend.Java_Backend.Config;
 
 import com.backend.Java_Backend.DTO.*;
-import com.backend.Java_Backend.Models.MessageThread;
 import com.backend.Java_Backend.Models.Modules;
 import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Models.StudentModule;
@@ -109,7 +108,7 @@ public class ModelMapperConfig {
             studentModuleToDtoMap.addMappings(mapper -> {
                 mapper.map(src -> src.getStudent().getId(), StudentModuleDTO::setStudentId);
                 mapper.map(src -> src.getModule().getId(), StudentModuleDTO::setModuleId);
-                mapper.map(StudentModule::getEnrolledAt, StudentModuleDTO::setEnrolledAt);
+                mapper.map(StudentModule::getEnrolledAt, StudentModuleDTO::setEnrolled_at);
             });
 
             // CreateStudentModuleDTO to StudentModule
@@ -118,7 +117,7 @@ public class ModelMapperConfig {
             // UpdateStudentModuleDTO to StudentModule
             TypeMap<UpdateStudentModuleDTO, StudentModule> updateStudentModuleMap = modelMapper.createTypeMap(UpdateStudentModuleDTO.class, StudentModule.class);
             updateStudentModuleMap.addMappings(mapper -> {
-                mapper.map(UpdateStudentModuleDTO::getEnrolledAt, StudentModule::setEnrolledAt);
+                mapper.map(UpdateStudentModuleDTO::getEnrolled_at, StudentModule::setEnrolledAt);
             });
 
             logger.info("ModelMapper configured successfully with all mappings.");

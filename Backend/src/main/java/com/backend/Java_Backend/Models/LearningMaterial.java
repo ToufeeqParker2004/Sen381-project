@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.sql.Timestamp;
 import java.util.UUID;
+
 @Entity
 @Table(name = "learning_materials")
 public class LearningMaterial {
@@ -12,26 +13,42 @@ public class LearningMaterial {
     @GeneratedValue
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    UUID id;
-    int topic_id;
-    int module_id;
-    int uploader_id;
-    String title;
-    String document_type;
-    String file_url;
+    private UUID id;
+
+    @Column(name = "topic_id", nullable = false)
+    private int topic_id;
+
+    @Column(name = "module_id", nullable = false)
+    private int module_id;
+
+    @Column(name = "uploader_id", nullable = false)
+    private Integer uploader_id;
+
+    @Column(name = "title")
+    private String title;
+
+    @Column(name = "document_type")
+    private String document_type;
+
+    @Column(name = "file_url")
+    private String file_url;
+
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
-    Timestamp created_at;
-    String[] tags;
+    @Column(name = "created_at")
+    private Timestamp created_at;
+
+    @Column(name = "tags")
+    private String[] tags;
 
     public LearningMaterial() {}
-
-
 
     public UUID getId() {
         return id;
     }
 
-
+    public void setId(UUID id) {
+        this.id = id;
+    }
 
     public int getTopic_id() {
         return topic_id;
@@ -49,11 +66,11 @@ public class LearningMaterial {
         this.module_id = module_id;
     }
 
-    public int getUploader_id() {
+    public Integer getUploader_id() {
         return uploader_id;
     }
 
-    public void setUploader_id(int uploader_id) {
+    public void setUploader_id(Integer uploader_id) {
         this.uploader_id = uploader_id;
     }
 

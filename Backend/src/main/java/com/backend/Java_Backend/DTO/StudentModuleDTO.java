@@ -1,29 +1,18 @@
-// DTOs for StudentModule
 package com.backend.Java_Backend.DTO;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 
 public class StudentModuleDTO {
-    private int studentId;
-    private int moduleId;
-    private LocalDateTime enrolledAt;
+    private Integer studentId;
+    private Integer moduleId;
+    private Timestamp enrolled_at; // Fix typo from entrolled_at
 
-    // Constructors
     public StudentModuleDTO() {}
 
-    public StudentModuleDTO(int studentId, int moduleId, LocalDateTime enrolledAt) {
-        this.studentId = studentId;
-        this.moduleId = moduleId;
-        this.enrolledAt = enrolledAt;
-    }
-
-    // Getters and Setters
-    public int getStudentId() { return studentId; }
-    public void setStudentId(int studentId) { this.studentId = studentId; }
-
-    public int getModuleId() { return moduleId; }
-    public void setModuleId(int moduleId) { this.moduleId = moduleId; }
-
-    public LocalDateTime getEnrolledAt() { return enrolledAt; }
-    public void setEnrolledAt(LocalDateTime enrolledAt) { this.enrolledAt = enrolledAt; }
+    public Integer getStudentId() { return studentId; }
+    public void setStudentId(Integer studentId) { this.studentId = studentId; }
+    public Integer getModuleId() { return moduleId; }
+    public void setModuleId(Integer moduleId) { this.moduleId = moduleId; }
+    public Timestamp getEnrolled_at() { return enrolled_at; }
+    public void setEnrolled_at(Timestamp enrolled_at) { this.enrolled_at = enrolled_at; }
 }
