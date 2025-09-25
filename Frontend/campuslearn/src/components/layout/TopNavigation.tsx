@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
 interface TopNavigationProps {
   sidebarExpanded: boolean;
   className?: string;
@@ -19,12 +20,14 @@ export function TopNavigation({
   const [searchQuery, setSearchQuery] = useState('');
   const [hasNotifications] = useState(3); // Mock notification count
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const {user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const initials = user?.name ? user.name.split(' ').map(n => n[0]).join('') : '-'
 
   return <header className={cn('fixed top-0 z-30 h-16 border-b border-border bg-background/80 backdrop-blur-sm transition-all duration-300 ease-smooth', sidebarExpanded ? 'left-sidebar-expanded' : 'left-sidebar-collapsed', 'right-0', className)}>
       <div className="flex h-full items-center justify-between px-6">
@@ -49,16 +52,16 @@ export function TopNavigation({
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src="/api/placeholder/36/36" alt="Profile" />
-                  <AvatarFallback className="bg-secondary text-secondary-foreground">JS</AvatarFallback>
+                  <AvatarFallback className="bg-secondary text-secondary-foreground">{initials}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">John Student</p>
+                  <p className="text-sm font-medium leading-none">{user.name}</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    john@campus.edu
+                    {user.identifier}
                   </p>
                 </div>
               </DropdownMenuLabel>

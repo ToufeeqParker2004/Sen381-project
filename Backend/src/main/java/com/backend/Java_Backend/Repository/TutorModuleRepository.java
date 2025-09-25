@@ -10,5 +10,6 @@ import java.util.List;
 public interface TutorModuleRepository extends JpaRepository<TutorModule, TutorModuleId> {
     List<TutorModule> findByTutorId(int tutorId);
     List<TutorModule> findByModuleId(int moduleId);
+    void deleteByIdTutorIdAndIdModuleId(Integer tutorId, Integer moduleId);
 }
 

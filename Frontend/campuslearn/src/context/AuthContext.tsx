@@ -4,7 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 interface User {
   id: string;
   name?: string;
-  email: string;
+  identifier: string;
   avatar?: string;
   isAdmin: boolean;
   isTutor: boolean;
@@ -13,7 +13,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (identifier: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
@@ -37,11 +37,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const fetchProfile = async (token: string) => {
     try {
       const res = await fetch('http://localhost:9090/student/profile', {
-        headers: { Authorization: `Bearer ${token}` },
+        method: "GET",
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
       });
+
       if (!res.ok) return;
 
       const profileData = await res.json();
+      console.log('Profile fetched:', profileData);
 
       setUser(prev => ({
         ...prev,
@@ -54,19 +60,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) initializeUser(token);
-  }, []);
-
   const initializeUser = async (token: string) => {
     try {
       const decoded = jwtDecode<{ sub: string; email: string; roles: string[] }>(token);
 
       setUser({
         id: decoded.sub,
-        email: decoded.email,
-        name: '',
+        identifier: decoded.email,
+        name: '', // Will be replaced after fetching profile
         avatar: '',
         isAdmin: decoded.roles.includes('ADMIN'),
         isTutor: decoded.roles.includes('TUTOR'),
@@ -79,14 +80,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) initializeUser(token);
+  }, []);
+
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
-      // 🔹 Special-case Microsoft demo login (no backend)
-      if (email === 'microsoft@belgiumcampus.edu' && password === 'microsoft') {
+      // Special-case Microsoft demo login (no backend)
+      if (identifier === 'microsoft@belgiumcampus.edu' && password === 'microsoft') {
         setUser({
           id: 'microsoft',
           name: 'Microsoft User',
-          email,
+          identifier,
           avatar: '',
           isAdmin: true,
           isTutor: true,
@@ -95,15 +101,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
 
-      // 🔹 Normal backend login
+      // Normal backend login
       const res = await fetch('http://localhost:9090/student/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier, password }),
       });
+
       if (!res.ok) return false;
 
-      const token = await res.text();
+      const data = await res.json();   
+      const token = data.token;        
       localStorage.setItem('authToken', token);
 
       await initializeUser(token);

@@ -47,7 +47,7 @@ public class StudentModuleService {
             return null;
         }
 
-        if (studentModuleRepository.existsByStudentIdAndModuleId(createDTO.getStudentId(), createDTO.getModuleId())) {
+        if (studentModuleRepository.findByStudentIdAndModuleId(createDTO.getStudentId(), createDTO.getModuleId())==null) {
             return null;
         }
 

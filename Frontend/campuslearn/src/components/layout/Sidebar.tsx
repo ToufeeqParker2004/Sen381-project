@@ -46,7 +46,7 @@ export function Sidebar({ mode, onModeChange, className }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { user } = useAuth();
   const location = useLocation();
-  
+
   const isAdmin = user?.isAdmin || false;
   const isTutor = user?.isTutor || false;
 
@@ -108,12 +108,12 @@ export function Sidebar({ mode, onModeChange, className }: SidebarProps) {
             {navigationItems.map((item) => {
               if (item.adminOnly && !isAdmin) return null;
               if (item.tutorOnly && !isTutor) return null;
-              
+
               const isActive = location.pathname === item.path;
               const Icon = item.icon;
 
               const navButton = (
-                  <NavLink
+                <NavLink
                   key={item.path}
                   to={item.path}
                   className={({ isActive }) =>
@@ -209,13 +209,13 @@ export function Sidebar({ mode, onModeChange, className }: SidebarProps) {
               <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarImage src={user?.avatar} alt="Profile" />
                 <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center">
-                  {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
+                  {user?.name ? user.name.split(' ').map(n => n[0]).join('') : '-'}
                 </AvatarFallback>
               </Avatar>
               {showLabels && (
                 <div className="flex-1 truncate">
                   <p className="text-sm font-medium text-sidebar-foreground">{user?.name || 'User'}</p>
-                  <p className="text-xs text-sidebar-foreground/60">{user?.email || 'user@campus.edu'}</p>
+                  <p className="text-xs text-sidebar-foreground/60">{user?.identifier || 'user@campus.edu'}</p>
                 </div>
               )}
             </NavLink>
