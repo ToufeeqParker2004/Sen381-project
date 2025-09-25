@@ -7,12 +7,14 @@ import com.backend.Java_Backend.Services.MessageService;
 import com.backend.Java_Backend.Services.MessageThreadService;
 import com.backend.Java_Backend.Services.ThreadParticipantService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/messaging")
@@ -111,6 +113,23 @@ public class MessageController {
     public ResponseEntity<Void> deleteParticipant(@PathVariable UUID threadId, @PathVariable Integer studentId) {
         threadParticipantService.deleteParticipant(threadId, studentId);
         return ResponseEntity.noContent().build();
+    }
+
+
+    @GetMapping("/threads/student/{studentId}")
+    public ResponseEntity<List<MessageThreadDTO>> getThreadsByStudentId(@PathVariable Integer studentId, Authentication authentication) {
+        // Optional: Verify authenticated user matches studentId
+        if (!authentication.getName().equals(studentId.toString())) {
+            return ResponseEntity.status(403).build(); // Forbidden
+        }
+        List<ThreadParticipantDTO> participants = threadParticipantService.getParticipantsByStudentId(studentId);
+        List<UUID> threadIds = participants.stream()
+                .map(ThreadParticipantDTO::getThreadId)
+                .collect(Collectors.toList());
+        List<MessageThreadDTO> threads = threadIds.stream()
+                .map(threadId -> messageThreadService.getThread(threadId))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(threads);
     }
 }
 
