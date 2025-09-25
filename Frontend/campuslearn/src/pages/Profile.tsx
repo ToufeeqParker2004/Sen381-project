@@ -186,7 +186,7 @@ const Profile = () => {
                 <Input
                   id="email"
                   type="email"
-                  value={user.email}
+                  value={user.identifier}
                   disabled={!isEditing}
                   className="flex items-center gap-2"
                 />
