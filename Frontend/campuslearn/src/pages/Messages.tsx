@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { format, isToday, isYesterday, parseISO, formatDistanceToNow } from 'date-fns'; // Assume date-fns is installed
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
-import { MessageCircle, Search, Send, Phone, Video, MoreVertical, Paperclip, Smile } from 'lucide-react';
+import { MessageCircle, Search, Send, Phone, Video, MoreVertical, Paperclip, Smile, Trash, LogOut } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -61,6 +63,9 @@ export default function Messages() {
   const [isLoading, setIsLoading] = useState(false);
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteThreadId, setDeleteThreadId] = useState<string | null>(null);
+  const [deleteType, setDeleteType] = useState<'leave' | 'delete'>('leave');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Student[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
@@ -270,10 +275,23 @@ export default function Messages() {
     );
   };
 
+  const checkDuplicateOneOnOne = async (selectedUserId: number) => {
+    const selectedUserName = (await axios.get(`${STUDENTS_API_BASE_URL}/${selectedUserId}`)).data.name;
+    return conversations.some(conv => conv.role === 'Direct Chat' && conv.name === selectedUserName);
+  };
+
   const handleCreateThread = async () => {
     if (selectedUsers.length === 0) {
       toast({ title: 'Warning', description: 'Select at least one user', variant: 'destructive' });
       return;
+    }
+
+    if (selectedUsers.length === 1) {
+      const isDuplicate = await checkDuplicateOneOnOne(selectedUsers[0]);
+      if (isDuplicate) {
+        toast({ title: 'Error', description: 'Chat with this user already exists', variant: 'destructive' });
+        return;
+      }
     }
 
     try {
@@ -368,6 +386,67 @@ export default function Messages() {
     }
   };
 
+  const handleOpenDeleteConfirm = (threadId: string, type: 'leave' | 'delete') => {
+    setDeleteThreadId(threadId);
+    setDeleteType(type);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteThread = async () => {
+    if (deleteThreadId && currentUserId) {
+      try {
+        if (deleteType === 'delete') {
+          await axios.delete(`${API_BASE_URL}/threads/${deleteThreadId}`);
+          toast({ title: 'Success', description: 'Conversation deleted' });
+        } else {
+          await axios.delete(`${API_BASE_URL}/participants/${deleteThreadId}/${currentUserId}`);
+          toast({ title: 'Success', description: 'You have left the conversation' });
+        }
+        // Remove from conversations
+        setConversations(prev => prev.filter(conv => conv.id !== deleteThreadId));
+        if (selectedChat === deleteThreadId) {
+          setSelectedChat(null);
+        }
+      } catch (error) {
+        console.error('Error deleting conversation:', error);
+        toast({ title: 'Error', description: 'Failed to delete conversation', variant: 'destructive' });
+      } finally {
+        setIsDeleteConfirmOpen(false);
+        setDeleteThreadId(null);
+      }
+    }
+  };
+
+  const groupMessagesByDate = (messages: Message[]) => {
+    const groups: { date: string; messages: Message[] }[] = [];
+    let currentDate = '';
+    messages.forEach((msg) => {
+      const msgDate = format(parseISO(msg.timestamp), 'yyyy-MM-dd');
+      if (msgDate !== currentDate) {
+        currentDate = msgDate;
+        groups.push({ date: msgDate, messages: [msg] });
+      } else {
+        groups[groups.length - 1].messages.push(msg);
+      }
+    });
+    return groups;
+  };
+
+  const formatDateHeader = (date: string) => {
+    const parsedDate = parseISO(date);
+    if (isToday(parsedDate)) return 'Today';
+    if (isYesterday(parsedDate)) return 'Yesterday';
+    return format(parsedDate, 'MMMM d, yyyy');
+  };
+
+  const formatMessageTime = (timestamp: string) => {
+    return format(parseISO(timestamp), 'h:mm a');
+  };
+
+  const formatConversationTime = (timestamp: string) => {
+    return formatDistanceToNow(parseISO(timestamp), { addSuffix: true });
+  };
+
   const currentChat = conversations.find(c => c.id === selectedChat);
 
   if (!isAuthenticated) {
@@ -421,7 +500,7 @@ export default function Messages() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium truncate">{conversation.name}</h4>
-                        <span className="text-xs text-muted-foreground">{conversation.timestamp}</span>
+                        <span className="text-xs text-muted-foreground">{formatConversationTime(conversation.timestamp)}</span>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">{conversation.lastMessage}</p>
                       <p className="text-xs text-muted-foreground">{conversation.role}</p>
@@ -460,9 +539,22 @@ export default function Messages() {
                     <Button variant="ghost" size="sm">
                       <Video className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenDeleteConfirm(selectedChat, 'delete')}>
+                      <Trash className="h-4 w-4" />
                     </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenDeleteConfirm(selectedChat, 'leave')}>
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>Leave Conversation</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardHeader>
@@ -476,23 +568,32 @@ export default function Messages() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <div
-                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
-                        >
-                          {currentChat.role === 'Group Chat' && (
-                            <p className="text-xs font-semibold mb-1">{message.isOwn ? 'You' : message.senderName}</p>
-                          )}
-                          <p className="text-sm">{message.content}</p>
-                          <p className={`text-xs mt-1 ${message.isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                            {message.timestamp}
-                          </p>
+                    {groupMessagesByDate(messages).map((group, index) => (
+                      <React.Fragment key={index}>
+                        <div className="flex justify-center my-4">
+                          <Badge variant="secondary" className="px-3 py-1 text-sm">
+                            {formatDateHeader(group.date)}
+                          </Badge>
                         </div>
-                      </div>
+                        {group.messages.map((message) => (
+                          <div
+                            key={message.id}
+                            className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}
+                          >
+                            <div
+                              className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                            >
+                              {currentChat.role === 'Group Chat' && (
+                                <p className="text-xs font-semibold mb-1">{message.isOwn ? 'You' : message.senderName}</p>
+                              )}
+                              <p className="text-sm">{message.content}</p>
+                              <p className={`text-xs mt-1 ${message.isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                {formatMessageTime(message.timestamp)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </div>
                 )}
@@ -581,6 +682,26 @@ export default function Messages() {
             </Button>
             <Button onClick={handleCreateThread} disabled={selectedUsers.length === 0}>
               Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{deleteType === 'delete' ? 'Delete Conversation' : 'Leave Conversation'}</DialogTitle>
+            <DialogDescription>
+              {deleteType === 'delete' ? 'Are you sure you want to delete this conversation? This will delete it for everyone.' : 'Are you sure you want to leave this conversation?'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteThread}>
+              {deleteType === 'delete' ? 'Delete' : 'Leave'}
             </Button>
           </DialogFooter>
         </DialogContent>
