@@ -10,17 +10,19 @@ public class CreateStudentDTO {
     private String phoneNumber;
     private String bio;
     private String password;
+    private String location;
 
     // Constructors
     public CreateStudentDTO() {}
 
-    public CreateStudentDTO(Timestamp createdAt, String name, String email, String phoneNumber, String bio, String password) {
+    public CreateStudentDTO(Timestamp createdAt, String name, String email, String phoneNumber, String bio, String password,String location) {
         this.createdAt = createdAt;
         this.name = name;
         this.email = email;
         this.phoneNumber = phoneNumber;
         this.bio = bio;
         this.password = password;
+        this.location = location;
     }
 
     // Getters and Setters
@@ -41,4 +43,12 @@ public class CreateStudentDTO {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
 }

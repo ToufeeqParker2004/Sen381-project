@@ -151,51 +151,56 @@ export default function Resources() {
       </Card>
 
       <Tabs defaultValue="all" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="videos">Videos</TabsTrigger>
-          <TabsTrigger value="images">Images</TabsTrigger>
-          <TabsTrigger value="links">Links</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto">
+          <TabsTrigger value="all" className="text-xs md:text-sm">All</TabsTrigger>
+          <TabsTrigger value="documents" className="text-xs md:text-sm">Documents</TabsTrigger>
+          <TabsTrigger value="videos" className="text-xs md:text-sm">Videos</TabsTrigger>
+          <TabsTrigger value="images" className="text-xs md:text-sm">Images</TabsTrigger>
+          <TabsTrigger value="links" className="text-xs md:text-sm">Links</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-6">
-          <div className="grid gap-6">
+          <div className="grid gap-4 md:gap-6">
             {resources.map(resource => {
             const IconComponent = getResourceIcon(resource.type);
             const iconColor = getResourceColor(resource.type);
             return <Card key={resource.id} className="hover:shadow-custom-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start space-x-4">
-                      <div className={`p-3 rounded-lg bg-muted`}>
-                        <IconComponent className={`h-8 w-8 ${iconColor}`} />
+                  <CardContent className="p-4 md:p-6">
+                    <div className="flex flex-col md:flex-row md:items-start space-y-3 md:space-y-0 md:space-x-4">
+                      <div className={`p-2 md:p-3 rounded-lg bg-muted self-center md:self-start`}>
+                        <IconComponent className={`h-6 w-6 md:h-8 md:w-8 ${iconColor}`} />
                       </div>
                       
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
+                      <div className="flex-1 text-center md:text-left">
+                        <div className="flex flex-col md:flex-row md:items-start md:justify-between">
                           <div className="flex-1">
                             <Link to={`/resources/${resource.id}`} className="block hover:text-primary transition-colors">
-                              <h3 className="text-lg font-semibold mb-1 hover:underline">{resource.title}</h3>
+                              <h3 className="text-base md:text-lg font-semibold mb-1 hover:underline line-clamp-2">{resource.title}</h3>
                             </Link>
-                            <p className="text-muted-foreground mb-3">{resource.description}</p>
+                            <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{resource.description}</p>
                             
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {resource.tags.map(tag => <Badge key={tag} variant="outline" className="text-xs">
+                            <div className="flex flex-wrap justify-center md:justify-start gap-1 mb-3">
+                              {resource.tags.slice(0, 3).map(tag => <Badge key={tag} variant="outline" className="text-xs">
                                   #{tag}
                                 </Badge>)}
+                              {resource.tags.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{resource.tags.length - 3} more
+                                </Badge>
+                              )}
                             </div>
                             
-                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                              <span>by {resource.author}</span>
-                              <div className="flex items-center">
+                            <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-2 text-xs md:text-sm text-muted-foreground space-y-1 md:space-y-0">
+                              <span className="text-center md:text-left">by {resource.author}</span>
+                              <div className="flex items-center justify-center md:justify-start">
                                 <Star className="mr-1 h-3 w-3 fill-current text-warning" />
                                 {resource.rating}
                               </div>
-                              <div className="flex items-center">
+                              <div className="flex items-center justify-center md:justify-start">
                                 <Download className="mr-1 h-3 w-3" />
                                 {resource.downloads} downloads
                               </div>
-                              <span>{resource.size}</span>
+                              <span className="text-center md:text-left">{resource.size}</span>
                             </div>
                           </div>
                           

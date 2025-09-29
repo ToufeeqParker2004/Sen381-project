@@ -119,28 +119,28 @@ export default function Forum() {
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-4">
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-4">
         {/* Main Content */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-4 md:space-y-6">
           {/* Search and Tabs */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search discussions..."
-                  className="pl-9"
+                  className="pl-9 text-sm md:text-base"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               
               <Tabs defaultValue="recent" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="recent">Recent</TabsTrigger>
-                  <TabsTrigger value="trending">Trending</TabsTrigger>
-                  <TabsTrigger value="unanswered">Unanswered</TabsTrigger>
-                  <TabsTrigger value="following">Following</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
+                  <TabsTrigger value="recent" className="text-xs md:text-sm">Recent</TabsTrigger>
+                  <TabsTrigger value="trending" className="text-xs md:text-sm">Trending</TabsTrigger>
+                  <TabsTrigger value="unanswered" className="text-xs md:text-sm">Unanswered</TabsTrigger>
+                  <TabsTrigger value="following" className="text-xs md:text-sm">Following</TabsTrigger>
                 </TabsList>
               </Tabs>
             </CardContent>
@@ -156,27 +156,27 @@ export default function Forum() {
               post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
             ).map((post) => (
               <Card key={post.id} className="hover:shadow-custom-md transition-shadow border-l-2 border-l-transparent hover:border-l-primary">
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-3">
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex items-start space-x-2 md:space-x-3">
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 text-xs text-muted-foreground mb-2 space-y-1 sm:space-y-0">
                         <span className="font-medium hover:underline cursor-pointer">{post.community}</span>
-                        <span>•</span>
+                        <span className="hidden sm:inline">•</span>
                         <span>Posted by u/{post.author}</span>
-                        <span>•</span>
+                        <span className="hidden sm:inline">•</span>
                         <span>{post.timestamp}</span>
                       </div>
 
                       <h3 
-                        className="font-medium text-foreground hover:text-primary cursor-pointer mb-2 line-clamp-2"
+                        className="font-medium text-sm md:text-base text-foreground hover:text-primary cursor-pointer mb-2 line-clamp-2"
                         onClick={() => navigate('/forum/post')}
                       >
                         {post.title}
                       </h3>
 
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{post.content}</p>
+                      <p className="text-xs md:text-sm text-muted-foreground mb-3 line-clamp-3">{post.content}</p>
 
                       <div className="flex flex-wrap gap-1 mb-3">
                         {post.tags.map((tag) => (
@@ -187,21 +187,22 @@ export default function Forum() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                      <div className="flex items-center space-x-2 md:space-x-4 text-xs text-muted-foreground">
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className="h-7 px-2 hover:bg-muted"
+                          className="h-6 md:h-7 px-1 md:px-2 hover:bg-muted"
                           onClick={() => handlePostEngage(post)}
                         >
                           <MessageCircle className="mr-1 h-3 w-3" />
-                          {post.replies} Comments
+                          <span className="hidden sm:inline">{post.replies} Comments</span>
+                          <span className="sm:hidden">{post.replies}</span>
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
+                        <Button variant="ghost" size="sm" className="h-6 md:h-7 px-1 md:px-2 hover:bg-muted">
                           <Share className="mr-1 h-3 w-3" />
-                          Share
+                          <span className="hidden sm:inline">Share</span>
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
+                        <Button variant="ghost" size="sm" className="h-6 md:h-7 px-1 md:px-2 hover:bg-muted">
                           <MoreHorizontal className="h-3 w-3" />
                         </Button>
                       </div>
@@ -213,7 +214,7 @@ export default function Forum() {
           </div>
         </div>
 
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-4 md:space-y-6">
           {/* Trending Topics */}
           <Card>
             <CardHeader>

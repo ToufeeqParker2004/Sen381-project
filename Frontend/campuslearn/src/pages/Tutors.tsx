@@ -168,15 +168,9 @@ export default function TutorsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Find Tutors</h1>
-          <p className="text-muted-foreground">Connect with expert tutors for personalized learning</p>
-        </div>
-        <Button className="bg-gradient-primary hover:opacity-90">
-          <BookOpen className="mr-2 h-4 w-4" />
-          Become a Tutor
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Find Tutors</h1>
+        <p className="text-muted-foreground">Connect with expert tutors for personalized learning</p>
       </div>
 
       {/* Search and Filters */}
@@ -221,6 +215,7 @@ export default function TutorsPage() {
       </div>
 
       {/* Tutors List */}
+
       <div className="grid gap-6">
         {filteredTutors.length === 0 ? (
           <Card>
@@ -303,7 +298,8 @@ export default function TutorsPage() {
                         Message
                       </Button>
                     </div>
-                  </div>
+                  </div
+   
                 </div>
               </CardContent>
             </Card>
