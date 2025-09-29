@@ -17,6 +17,15 @@ public class StudentDTO {
     private String phoneNumber;
 
     private String bio;
+    private String Location;
+
+    public String getLocation() {
+        return Location;
+    }
+
+    public void setLocation(String location) {
+        Location = location;
+    }
 
     public StudentDTO(int id, Timestamp createdAt, String name, String email, String phoneNumber, String bio) {
         this.id = id;

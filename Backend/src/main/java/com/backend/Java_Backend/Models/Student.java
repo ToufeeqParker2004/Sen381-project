@@ -28,6 +28,7 @@ public class Student {
     private String bio;
 
     private String password;
+    private String Location;
 
     //  link to modules
     @OneToMany(mappedBy = "student")
@@ -106,4 +107,32 @@ public class Student {
     @OneToMany(mappedBy = "student")
     public List<StudentModule> getStudentModules() { return studentModules; }
     public void setStudentModules(List<StudentModule> studentModules) { this.studentModules = studentModules; }
+
+    public String getLocation() {
+        return Location;
+    }
+
+    public void setLocation(String location) {
+        Location = location;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public List<ThreadParticipant> getThreadParticipants() {
+        return threadParticipants;
+    }
+
+    public void setThreadParticipants(List<ThreadParticipant> threadParticipants) {
+        this.threadParticipants = threadParticipants;
+    }
 }

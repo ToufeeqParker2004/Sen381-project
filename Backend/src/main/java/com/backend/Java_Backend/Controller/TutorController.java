@@ -27,7 +27,7 @@ public class TutorController {
     private TutorModuleService tutorModuleService;
 
     // Tutor endpoints
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<?> getAllTutors() {
         List<TutorDTO> tutors = tutorService.getAllTutors();
