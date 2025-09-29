@@ -68,45 +68,49 @@ export function CreatePostModal({ open, onOpenChange, userId, onPostCreated }: C
 
 
   const handlePost = async () => {
-    try {
-      const token = localStorage.getItem("authToken");
-      if (!token) return;
-      const res = await fetch("http://localhost:9090/ForumPosts", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          author_id: userId,
-          title,
-          content,
-          community,
-          tags,
-        }),
+  try {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
 
-      });
+    const res = await fetch("http://localhost:9090/ForumPosts", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        author_id: userId,
+        title,
+        content,
+        community,
+        tags,
+      }),
+    });
 
-      const data = await res.json();
+    const data = await res.json();
+    console.log(data);
 
-      if (!res.ok) {
-        alert(data.message || "Failed to create post");
-        return;
-      }
-
-      alert("Post created successfully!");
-      setTitle("");
-      setContent("");
-      setCommunity("");
-      setTags([]);
-      onOpenChange(false);
-
-      if (onPostCreated) onPostCreated(); // refresh posts in parent
-
-    } catch (err: any) {
-      alert(err.message || "Network error");
+    // Display backend message
+    if (!res.ok) {
+      // Backend might return { error: "...message..." }
+      alert(data.error || data.message || "Failed to create post");
+      return;
     }
-  };
+
+    // Success: backend might return the saved post
+    alert(data.message || "Post created successfully!");
+    setTitle("");
+    setContent("");
+    setCommunity("");
+    setTags([]);
+    onOpenChange(false);
+
+    if (onPostCreated) onPostCreated();
+
+  } catch (err: any) {
+    alert(err.message || "Network error");
+  }
+};
 
 
   return (

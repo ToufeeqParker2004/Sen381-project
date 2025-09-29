@@ -29,6 +29,28 @@ public class ForumPost {
     @Column(name = "created_at")
     private Timestamp created_at;
 
+    @Column(name = "title")
+    private String title;
+
+    @Column(name = "tags")
+    private String[] tags;
+
+    public String[] getTags() {
+        return tags;
+    }
+
+    public void setTags(String[] tags) {
+        this.tags = tags;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String Title) {
+        title = Title;
+    }
+
     // Getters and Setters
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }

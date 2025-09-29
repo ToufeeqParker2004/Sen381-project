@@ -33,6 +33,7 @@ export default function Forum() {
   const [createPostOpen, setCreatePostOpen] = useState(false);
   const [recentEngagedPosts, setRecentEngagedPosts] = useState<ForumPost[]>([]);
   const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
+  const [trendingTopics, setTrendingTopics] = useState<{ tag: string; count: number }[]>([]);
 
   // Fetch forum posts
   const fetchPosts = async () => {
@@ -50,7 +51,8 @@ export default function Forum() {
       if (!res.ok) throw new Error('Failed to fetch posts');
 
       const data: any[] = await res.json();
-      setForumPosts(data.map(post => ({
+
+      const posts = data.map(post => ({
         id: post.id,
         authorId: post.authorId,
         content: post.content,
@@ -65,7 +67,25 @@ export default function Forum() {
         community: post.community || null,
         timestamp: post.timestamp || null,
         parent_post_id: post.parent_post_id || null,
-      })));
+      }));
+
+      setForumPosts(posts);
+
+      // Calculate trending topics dynamically
+      const tagCount: Record<string, number> = {};
+      posts.forEach(post => {
+        post.tags?.forEach(tag => {
+          tagCount[tag] = (tagCount[tag] || 0) + 1;
+        });
+      });
+
+      const sortedTags = Object.entries(tagCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([tag, count]) => ({ tag, count }));
+
+      setTrendingTopics(sortedTags);
+
     } catch (err) {
       console.error(err);
     }
@@ -86,13 +106,13 @@ export default function Forum() {
 
   const clearRecentPosts = () => setRecentEngagedPosts([]);
 
-  const trendingTopics = [
-    { tag: 'finals-prep', count: 24 },
-    { tag: 'study-tips', count: 18 },
-    { tag: 'calculus', count: 15 },
-    { tag: 'programming', count: 12 },
-    { tag: 'exam-help', count: 10 },
-  ];
+  // Filtered posts based on search query or tag selection
+  const filteredPosts = forumPosts.filter(post =>
+    searchQuery === '' ||
+    post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.authorId.toString().includes(searchQuery.toLowerCase()) ||
+    post.tags?.some(tag => tag.toLowerCase() === searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -102,10 +122,10 @@ export default function Forum() {
           <h1 className="text-3xl font-bold">Community Forum</h1>
           <p className="text-muted-foreground">Connect, share knowledge, and get help from fellow students</p>
         </div>
-        <Button 
+        <Button
           className="bg-gradient-primary hover:opacity-90"
           onClick={() => setCreatePostOpen(true)}
-          disabled={!user} // Disable if user not logged in
+          disabled={!user}
         >
           <Plus className="mr-2 h-4 w-4" />
           New Post
@@ -140,60 +160,74 @@ export default function Forum() {
 
           {/* Forum Posts */}
           <div className="space-y-2">
-            {forumPosts.filter(post =>
-              searchQuery === '' ||
-              post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              post.authorId.toString().includes(searchQuery.toLowerCase())
-            ).map(post => (
-              <Card key={post.id} className="hover:shadow-custom-md transition-shadow border-l-2 border-l-transparent hover:border-l-primary">
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground mb-2">
-                        <span className="font-medium hover:underline cursor-pointer">{post.community || "Community"}</span>
-                        <span>•</span>
-                        <span>Posted by u/{post.author || "User #" + post.authorId}</span>
-                        <span>•</span>
-                        <span>{new Date(post.created_at!).toLocaleString()}</span>
-                      </div>
-
-                      <h3 
-                        className="font-medium text-foreground hover:text-primary cursor-pointer mb-2 line-clamp-2"
-                        onClick={() => navigate(`/forum/post/${post.id}`)}
-                      >
-                        {post.title || post.content.slice(0, 50) + '...'}
-                      </h3>
-
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{post.content}</p>
-
-                      {post.attatchments?.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {post.attatchments.map((att, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">📎 {att}</Badge>
-                          ))}
+            {filteredPosts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-10 border border-dashed border-muted rounded-lg bg-muted/20 text-center text-muted-foreground">
+                <p className="text-lg font-medium mb-2">No posts yet</p>
+                <p className="text-sm">Be the first to create a post in this community!</p>
+                {user && (
+                  <Button
+                    className="mt-4 bg-gradient-primary hover:opacity-90"
+                    onClick={() => setCreatePostOpen(true)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Post
+                  </Button>
+                )}
+              </div>
+            ) : (
+              filteredPosts.map(post => (
+                <Card key={post.id} className="hover:shadow-custom-md transition-shadow border-l-2 border-l-transparent hover:border-l-primary">
+                  <CardContent className="p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 text-xs text-muted-foreground mb-2">
+                          <span className="font-medium hover:underline cursor-pointer">{post.community || "Community"}</span>
+                          <span>•</span>
+                          <span>Posted by u/{post.author || "User #" + post.authorId}</span>
+                          <span>•</span>
+                          <span>{new Date(post.created_at!).toLocaleString()}</span>
                         </div>
-                      )}
 
-                      {/* Actions */}
-                      <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                        <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted" onClick={() => handlePostEngage(post)}>
-                          <MessageCircle className="mr-1 h-3 w-3" />
-                          {post.replies || 0} Comments
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
-                          <Share className="mr-1 h-3 w-3" />
-                          Share
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
-                          <MoreHorizontal className="h-3 w-3" />
-                        </Button>
-                        <span>{post.upvotes || 0} upvotes</span>
+                        <h3
+                          className="font-medium text-foreground hover:text-primary cursor-pointer mb-2 line-clamp-2"
+                          onClick={() => navigate(`/forum/post/${post.id}`)}
+                        >
+                          {post.title || post.content.slice(0, 50) + '...'}
+                        </h3>
+
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{post.content}</p>
+
+                        {post.tags?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {post.tags.map((tag, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                #{tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                          <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted" onClick={() => handlePostEngage(post)}>
+                            <MessageCircle className="mr-1 h-3 w-3" />
+                            {post.replies || 0} Comments
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
+                            <Share className="mr-1 h-3 w-3" />
+                            Share
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                          <span>{post.upvotes || 0} upvotes</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
 
@@ -204,17 +238,24 @@ export default function Forum() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
                 <TrendingUp className="mr-2 h-4 w-4" />
-                Trending Topics
+                Trending Topics by tag
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {trendingTopics.map(topic => (
-                <div key={topic.tag} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => setSearchQuery(topic.tag)}>
-                  <span className="text-sm font-medium">#{topic.tag}</span>
-                  <Badge variant="outline" className="text-xs">{topic.count}</Badge>
-                </div>
-              ))}
+              {trendingTopics.length > 0 ? (
+                trendingTopics.map(topic => (
+                  <div
+                    key={topic.tag}
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                    onClick={() => setSearchQuery(topic.tag)}
+                  >
+                    <span className="text-sm font-medium">#{topic.tag}</span>
+                    <Badge variant="outline" className="text-xs">{topic.count}</Badge>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center">No trending topics yet</p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -222,11 +263,11 @@ export default function Forum() {
 
       {/* Render CreatePostModal only if user exists */}
       {user && (
-        <CreatePostModal 
-          open={createPostOpen} 
-          onOpenChange={setCreatePostOpen} 
-          userId={Number(user.id)}  
-          onPostCreated={handlePostCreated} 
+        <CreatePostModal
+          open={createPostOpen}
+          onOpenChange={setCreatePostOpen}
+          userId={Number(user.id)}
+          onPostCreated={handlePostCreated}
         />
       )}
     </div>
