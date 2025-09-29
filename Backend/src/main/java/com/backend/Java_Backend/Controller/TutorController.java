@@ -27,6 +27,7 @@ public class TutorController {
     private TutorModuleService tutorModuleService;
 
     // Tutor endpoints
+
     @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<?> getAllTutors() {
