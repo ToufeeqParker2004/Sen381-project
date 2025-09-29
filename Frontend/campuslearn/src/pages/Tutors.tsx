@@ -142,32 +142,40 @@ export default function Tutors() {
       </Card>
 
       {/* Tutors List */}
-      <div className="grid gap-6">
+      <div className="grid gap-4 md:gap-6">
         {filteredTutors.map((tutor) => (
           <Card key={tutor.id} className="hover:shadow-custom-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-start space-x-4">
-                <Avatar className="h-20 w-20">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex flex-col md:flex-row md:items-start space-y-3 md:space-y-0 md:space-x-4">
+                <Avatar className="h-16 w-16 md:h-20 md:w-20 self-center md:self-start">
                   <AvatarImage src={tutor.image} />
-                  <AvatarFallback className="text-xl">{tutor.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback className="text-lg md:text-xl">{tutor.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-xl font-semibold">{tutor.name}</h3>
-                      <p className="text-muted-foreground mt-1">{tutor.bio}</p>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {tutor.subjects.map((subject) => (
+                <div className="flex-1 text-center md:text-left">
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-lg md:text-xl font-semibold">{tutor.name}</h3>
+                      <p className="text-muted-foreground text-sm md:text-base mt-1 line-clamp-2">{tutor.bio}</p>
+                      
+                      {/* Subjects - More compact on mobile */}
+                      <div className="flex flex-wrap justify-center md:justify-start gap-1 mt-2">
+                        {tutor.subjects.slice(0, 3).map((subject) => (
                           <Badge key={subject} variant="outline" className="text-xs">
                             {subject}
                           </Badge>
                         ))}
+                        {tutor.subjects.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{tutor.subjects.length - 3} more
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="mt-4">
+                  {/* Specialties - Only on desktop or collapsed on mobile */}
+                  <div className="mt-3 hidden md:block">
                     <h4 className="text-sm font-medium text-muted-foreground mb-2">Specialties:</h4>
                     <div className="flex flex-wrap gap-1">
                       {tutor.specialties.map((specialty) => (
@@ -178,16 +186,17 @@ export default function Tutors() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-6 mt-4 text-sm text-muted-foreground">
-                    <div className="flex items-center">
+                  {/* Stats - More compact layout */}
+                  <div className="flex flex-col md:flex-row md:items-center md:space-x-6 mt-3 md:mt-4 text-xs md:text-sm text-muted-foreground space-y-1 md:space-y-0">
+                    <div className="flex items-center justify-center md:justify-start">
                       <Star className="mr-1 h-3 w-3 fill-current text-warning" />
                       {tutor.rating} ({tutor.sessions} sessions)
                     </div>
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-center md:justify-start">
                       <MapPin className="mr-1 h-3 w-3" />
                       {tutor.location}
                     </div>
-                    <div className="flex items-center">
+                    <div className="flex items-center justify-center md:justify-start">
                       <Clock className="mr-1 h-3 w-3" />
                       {tutor.availability}
                     </div>
