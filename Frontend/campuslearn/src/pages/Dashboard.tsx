@@ -23,10 +23,10 @@ export default function Dashboard() {
     { label: 'Tutoring Hours', value: '42', icon: Users, color: 'text-warning' },
   ];
 
-  const recentCourses = [
-    { name: 'Advanced Mathematics', tutor: 'Dr. Sarah Wilson', progress: 78, nextSession: '2:00 PM Today' },
-    { name: 'Computer Science 101', tutor: 'Prof. Mike Chen', progress: 92, nextSession: '10:00 AM Tomorrow' },
-    { name: 'Physics Fundamentals', tutor: 'Dr. Emma Rodriguez', progress: 65, nextSession: '3:30 PM Friday' },
+  const recentMessages = [
+    { name: 'Dr. Sarah Wilson', message: 'Great progress on your calculus homework!', time: '2 hours ago', unread: true },
+    { name: 'Prof. Mike Chen', message: 'Don\'t forget about the project deadline tomorrow', time: '4 hours ago', unread: false },
+    { name: 'Study Group Chat', message: 'Meeting at 3 PM in the library today', time: '6 hours ago', unread: true },
   ];
 
   const upcomingEvents = [
@@ -64,32 +64,35 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-        {/* Recent Courses */}
+        {/* Recent Messages */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
-              <BookOpen className="mr-2 h-5 w-5" />
-              Recent Courses
+              <MessageSquare className="mr-2 h-5 w-5" />
+              Recent Messages
             </CardTitle>
-            <CardDescription>Your active learning sessions</CardDescription>
+            <CardDescription>Your latest conversations</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recentCourses.map((course, index) => (
+            {recentMessages.map((message, index) => (
               <div key={index} className="p-3 md:p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 space-y-1 sm:space-y-0">
                   <div className="flex-1">
-                    <h4 className="font-medium text-sm md:text-base">{course.name}</h4>
-                    <p className="text-xs md:text-sm text-muted-foreground">with {course.tutor}</p>
+                    <div className="flex items-center space-x-2">
+                      <h4 className="font-medium text-sm md:text-base">{message.name}</h4>
+                      {message.unread && (
+                        <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      )}
+                    </div>
+                    <p className="text-xs md:text-sm text-muted-foreground line-clamp-1">{message.message}</p>
                   </div>
-                  <Badge variant="secondary" className="text-xs self-start sm:self-auto">
-                    {course.progress}%
-                  </Badge>
+                  <span className="text-xs text-muted-foreground self-start sm:self-auto">
+                    {message.time}
+                  </span>
                 </div>
-                <Progress value={course.progress} className="mb-2" />
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs md:text-sm space-y-1 sm:space-y-0">
-                  <span className="text-muted-foreground">Next: {course.nextSession}</span>
-                  <Button variant="ghost" size="sm" className="h-auto p-0 self-start sm:self-auto">
-                    Continue <ChevronRight className="ml-1 h-3 w-3" />
+                <div className="flex justify-end">
+                  <Button variant="ghost" size="sm" className="h-auto p-0">
+                    Reply <ChevronRight className="ml-1 h-3 w-3" />
                   </Button>
                 </div>
               </div>
