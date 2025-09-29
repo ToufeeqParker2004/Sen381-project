@@ -32,8 +32,9 @@ public class ModelMapperConfig {
                 mapper.map(Student::getCreatedAt, StudentDTO::setCreatedAt);
                 mapper.map(Student::getName, StudentDTO::setName);
                 mapper.map(Student::getEmail, StudentDTO::setEmail);
-                mapper.map(Student::getPhone_number, StudentDTO::setPhoneNumber);
+                mapper.map(Student::getPhoneNumber, StudentDTO::setPhoneNumber); // FIXED: getPhone_number → getPhoneNumber
                 mapper.map(Student::getBio, StudentDTO::setBio);
+                mapper.map(Student::getLocation, StudentDTO::setLocation); // Added missing location mapping
             });
 
             // Student to StudentWithModulesDTO
@@ -43,7 +44,7 @@ public class ModelMapperConfig {
                 mapper.map(Student::getCreatedAt, StudentWithModuleDTO::setCreatedAt);
                 mapper.map(Student::getName, StudentWithModuleDTO::setName);
                 mapper.map(Student::getEmail, StudentWithModuleDTO::setEmail);
-                mapper.map(Student::getPhone_number, StudentWithModuleDTO::setPhoneNumber);
+                mapper.map(Student::getPhoneNumber, StudentWithModuleDTO::setPhoneNumber); // FIXED: getPhone_number → getPhoneNumber
                 mapper.map(Student::getBio, StudentWithModuleDTO::setBio);
                 mapper.skip(StudentWithModuleDTO::setModules);
             });
@@ -54,9 +55,10 @@ public class ModelMapperConfig {
                 mapper.map(CreateStudentDTO::getCreatedAt, Student::setCreatedAt);
                 mapper.map(CreateStudentDTO::getName, Student::setName);
                 mapper.map(CreateStudentDTO::getEmail, Student::setEmail);
-                mapper.map(CreateStudentDTO::getPhoneNumber, Student::setPhone_number);
+                mapper.map(CreateStudentDTO::getPhoneNumber, Student::setPhoneNumber); // FIXED: setPhone_number → setPhoneNumber
                 mapper.map(CreateStudentDTO::getBio, Student::setBio);
                 mapper.map(CreateStudentDTO::getPassword, Student::setPassword);
+                mapper.map(CreateStudentDTO::getLocation, Student::setLocation); // Added missing location mapping
             });
 
             // UpdateStudentDTO to Student
@@ -64,8 +66,9 @@ public class ModelMapperConfig {
             updateStudentMap.addMappings(mapper -> {
                 mapper.map(UpdateStudentDTO::getName, Student::setName);
                 mapper.map(UpdateStudentDTO::getEmail, Student::setEmail);
-                mapper.map(UpdateStudentDTO::getPhoneNumber, Student::setPhone_number);
+                mapper.map(UpdateStudentDTO::getPhoneNumber, Student::setPhoneNumber); // FIXED: setPhone_number → setPhoneNumber
                 mapper.map(UpdateStudentDTO::getBio, Student::setBio);
+                mapper.map(UpdateStudentDTO::getLocation, Student::setLocation); // Added missing location mapping
             });
 
             // Modules to ModuleDTO

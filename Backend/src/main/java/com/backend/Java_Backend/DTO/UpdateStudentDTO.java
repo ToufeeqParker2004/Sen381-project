@@ -7,7 +7,7 @@ public class UpdateStudentDTO {
     private String phoneNumber;
     private String bio;
     // Password not included for update; if needed, add separately
-    private  String Location;
+    private  String location;
     // Constructors
     public UpdateStudentDTO() {}
 
@@ -32,10 +32,10 @@ public class UpdateStudentDTO {
     public void setBio(String bio) { this.bio = bio; }
 
     public String getLocation() {
-        return Location;
+        return location;
     }
 
     public void setLocation(String location) {
-        Location = location;
+        this.location = location;
     }
 }

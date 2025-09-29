@@ -10,7 +10,7 @@ public class CreateStudentDTO {
     private String phoneNumber;
     private String bio;
     private String password;
-    private String Location;
+    private String location;
 
     // Constructors
     public CreateStudentDTO() {}
@@ -22,7 +22,7 @@ public class CreateStudentDTO {
         this.phoneNumber = phoneNumber;
         this.bio = bio;
         this.password = password;
-        this.Location = location;
+        this.location = location;
     }
 
     // Getters and Setters
@@ -45,10 +45,10 @@ public class CreateStudentDTO {
     public void setPassword(String password) { this.password = password; }
 
     public String getLocation() {
-        return Location;
+        return location;
     }
 
     public void setLocation(String location) {
-        Location = location;
+        this.location = location;
     }
 }
