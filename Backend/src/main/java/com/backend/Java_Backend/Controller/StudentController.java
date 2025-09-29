@@ -28,7 +28,7 @@ public class StudentController {
     @Autowired
     private AuthService authService; // Inject AuthService for unified login
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or (hasAnyRole('STUDENT', 'TUTOR'))")
     @GetMapping
     public ResponseEntity<List<StudentDTO>> getAllStudents() {
         List<StudentDTO> students = studentService.getAllStudents();
