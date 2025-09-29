@@ -93,15 +93,9 @@ export default function Tutors() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Find Tutors</h1>
-          <p className="text-muted-foreground">Connect with expert tutors for personalized learning</p>
-        </div>
-        <Button className="bg-gradient-primary hover:opacity-90">
-          <BookOpen className="mr-2 h-4 w-4" />
-          Become a Tutor
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Find Tutors</h1>
+        <p className="text-muted-foreground">Connect with expert tutors for personalized learning</p>
       </div>
 
       {/* Search and Filters */}
@@ -186,12 +180,8 @@ export default function Tutors() {
                     </div>
                   </div>
                   
-                  {/* Stats - More compact layout */}
+                   {/* Stats - More compact layout */}
                   <div className="flex flex-col md:flex-row md:items-center md:space-x-6 mt-3 md:mt-4 text-xs md:text-sm text-muted-foreground space-y-1 md:space-y-0">
-                    <div className="flex items-center justify-center md:justify-start">
-                      <Star className="mr-1 h-3 w-3 fill-current text-warning" />
-                      {tutor.rating} ({tutor.sessions} sessions)
-                    </div>
                     <div className="flex items-center justify-center md:justify-start">
                       <MapPin className="mr-1 h-3 w-3" />
                       {tutor.location}
@@ -202,16 +192,9 @@ export default function Tutors() {
                     </div>
                   </div>
                   
-                  <div className="flex space-x-3 mt-6">
+                  <div className="flex justify-center md:justify-start mt-6">
                     <Button className="bg-gradient-primary hover:opacity-90">
-                      Book Session
-                    </Button>
-                    <Button variant="outline">
-                      View Profile
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      Message
+                      Request Tutor
                     </Button>
                   </div>
                 </div>
