@@ -298,7 +298,7 @@ export default function TutorsPage() {
                         Message
                       </Button>
                     </div>
-                  </div
+                  </div>
    
                 </div>
               </CardContent>
