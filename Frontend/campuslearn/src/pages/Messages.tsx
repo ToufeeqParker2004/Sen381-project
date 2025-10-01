@@ -101,6 +101,7 @@ export default function Messages() {
   useEffect(() => {
     if (currentUserId) {
       const fetchThreads = async () => {
+        setIsLoading(true);
         try {
           const response = await axios.get(`${API_BASE_URL}/threads/student/${currentUserId}`);
           const threads = response.data;
@@ -154,6 +155,8 @@ export default function Messages() {
         } catch (error) {
           console.error('Error fetching threads:', error);
           // Don't toast every poll
+        } finally {
+          setIsLoading(false);
         }
       };
       fetchThreads();
@@ -504,9 +507,19 @@ export default function Messages() {
               <CardContent className="p-0">
                 <div className="space-y-1 overflow-y-auto h-[calc(100vh-200px)]">
                   {isLoading ? (
-                    <div>Loading conversations...</div>
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center">
+                        <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+                        <h3 className="text-lg font-semibold mb-2">Loading conversations...</h3>
+                      </div>
+                    </div>
                   ) : conversations.length === 0 ? (
-                    <div>No conversations yet.</div>
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center">
+                        <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No conversations yet.</h3>
+                      </div>
+                    </div>
                   ) : (
                     conversations.map((conversation) => (
                       <div
@@ -700,9 +713,19 @@ export default function Messages() {
             <CardContent className="p-0">
               <div className="space-y-1 max-h-96 overflow-y-auto">
                 {isLoading ? (
-                  <div>Loading conversations...</div>
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+                      <h3 className="text-lg font-semibold mb-2">Loading conversations...</h3>
+                    </div>
+                  </div>
                 ) : conversations.length === 0 ? (
-                  <div>No conversations yet.</div>
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No conversations yet.</h3>
+                    </div>
+                  </div>
                 ) : (
                   conversations.map((conversation) => (
                     <div
@@ -789,6 +812,13 @@ export default function Messages() {
                       <div className="text-center">
                         <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
                         <h3 className="text-lg font-semibold mb-2">Loading messages...</h3>
+                      </div>
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center">
+                        <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No messages yet</h3>
                       </div>
                     </div>
                   ) : (
