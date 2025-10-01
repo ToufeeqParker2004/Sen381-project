@@ -122,20 +122,7 @@ Using the formula:
       {/* Main Post */}
       <Card className="border-l-2 border-l-primary">
         <CardContent className="p-6">
-          <div className="flex items-start space-x-4">
-            {/* Voting */}
-            <div className="flex flex-col items-center space-y-2 min-w-[40px]">
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:text-orange-500">
-                <ArrowUp className="h-5 w-5" />
-              </Button>
-              <span className="text-lg font-bold text-muted-foreground">
-                {post.upvotes - post.downvotes}
-              </span>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:text-blue-500">
-                <ArrowDown className="h-5 w-5" />
-              </Button>
-            </div>
-
+          <div className="flex items-start">
             {/* Content */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-3">
@@ -144,15 +131,6 @@ Using the formula:
                 <span>Posted by u/{post.author}</span>
                 <span>•</span>
                 <span>{post.timestamp}</span>
-                {post.isPinned && (
-                  <>
-                    <span>•</span>
-                    <div className="flex items-center text-green-600">
-                      <Pin className="h-3 w-3 mr-1" />
-                      <span>Pinned</span>
-                    </div>
-                  </>
-                )}
               </div>
 
               <h1 className="text-2xl font-bold text-foreground mb-4">
@@ -227,20 +205,7 @@ Using the formula:
         {comments.map((comment) => (
           <Card key={comment.id}>
             <CardContent className="p-4">
-              <div className="flex items-start space-x-3">
-                {/* Voting */}
-                <div className="flex flex-col items-center space-y-1 min-w-[30px]">
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:text-orange-500">
-                    <ArrowUp className="h-3 w-3" />
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    {comment.upvotes - comment.downvotes}
-                  </span>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:text-blue-500">
-                    <ArrowDown className="h-3 w-3" />
-                  </Button>
-                </div>
-
+              <div className="flex items-start">
                 {/* Comment Content */}
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 text-xs text-muted-foreground mb-2">

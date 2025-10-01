@@ -17,6 +17,15 @@ public class StudentDTO {
     private String phoneNumber;
 
     private String bio;
+    private String location;
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location; // Fix the assignment
+    }
 
     public StudentDTO(int id, Timestamp createdAt, String name, String email, String phoneNumber, String bio) {
         this.id = id;

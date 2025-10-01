@@ -455,9 +455,25 @@ export default function Messages() {
 
   const currentChat = conversations.find(c => c.id === selectedChat);
 
-  if (!isAuthenticated) {
-    return <div>Redirecting to login...</div>;
-  }
+  const handleChatSelection = (chatId: number) => {
+    setSelectedChat(chatId);
+    if (isMobile) {
+      setMobileView('chat');
+    }
+  };
+
+  const handleBackToConversations = () => {
+    if (isMobile) {
+      setMobileView('conversations');
+    }
+  };
+
+  const handleSendMessage = () => {
+    if (messageText.trim()) {
+      // Add message logic here
+      setMessageText('');
+    }
+  };
 
   return (
     <div className="space-y-6">
