@@ -33,7 +33,11 @@ public class MessageService {
         message.setTimestamp(Timestamp.from(Instant.now()));
         messageThreadRepository.findById(messageDTO.getThreadId())
                 .ifPresentOrElse(
-                        message::setThread,
+                        thread -> {
+                            message.setThread(thread);
+                            thread.setCreated_at(Timestamp.from(Instant.now())); // Update thread timestamp
+                            messageThreadRepository.save(thread);
+                        },
                         () -> { throw new IllegalArgumentException("Thread not found"); }
                 );
         Message saved = messageRepository.save(message);
