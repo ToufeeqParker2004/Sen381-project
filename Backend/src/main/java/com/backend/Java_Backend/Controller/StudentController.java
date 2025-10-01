@@ -35,7 +35,7 @@ public class StudentController {
         return ResponseEntity.ok(students);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or (hasAnyRole('STUDENT', 'TUTOR') and hasPermission(#id, 'Student', 'own'))")
+    //@PreAuthorize("hasRole('ADMIN') or (hasAnyRole('STUDENT', 'TUTOR') and hasPermission(#id, 'Student', 'own'))")
     @GetMapping("/{id}")
     public ResponseEntity<?> getStudentById(@PathVariable Integer id) {
         StudentDTO student = studentService.getStudentById(id);

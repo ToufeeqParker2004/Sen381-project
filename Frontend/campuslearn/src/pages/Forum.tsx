@@ -47,6 +47,7 @@ export default function Forum() {
       if (!res.ok) throw new Error("Failed to fetch posts");
 
       const data: any[] = await res.json();
+      let authorName = null;
 
       // Fetch comments count for each post
       const postsWithReplies = await Promise.all(
@@ -64,6 +65,25 @@ export default function Forum() {
             console.error(err);
           }
 
+          try {
+            const user = await fetch(`http://localhost:9090/student/${post.authorId}`, {
+              method: "GET",
+              headers:
+              {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+            
+            if (user.ok) {
+              const userData = await user.json();
+              authorName = userData.name;
+            }
+
+          } catch (error) {
+            console.log(error);
+          }
+
           return {
             id: post.id,
             authorId: post.authorId,
@@ -72,7 +92,7 @@ export default function Forum() {
             upvotes: post.upvotes || 0,
             created_at: post.created_at || new Date().toISOString(),
             title: post.title || null,
-            author: post.author || null,
+            author: authorName || null,
             tags: post.tags || [],
             replies,
             downvotes: post.downvotes || 0,
