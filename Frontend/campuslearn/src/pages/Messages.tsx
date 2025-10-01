@@ -453,9 +453,7 @@ export default function Messages() {
     return formatDistanceToNow(parseISO(timestamp), { addSuffix: true });
   };
 
-  const currentChat = conversations.find(c => c.id === selectedChat);
-
-  const handleChatSelection = (chatId: number) => {
+  const handleChatSelection = (chatId: string) => {
     setSelectedChat(chatId);
     if (isMobile) {
       setMobileView('chat');
@@ -468,12 +466,11 @@ export default function Messages() {
     }
   };
 
-  const handleSendMessage = () => {
-    if (messageText.trim()) {
-      // Add message logic here
-      setMessageText('');
-    }
-  };
+  const currentChat = conversations.find(c => c.id === selectedChat);
+
+  if (!isAuthenticated) {
+    return <div>Redirecting to login...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -515,10 +512,7 @@ export default function Messages() {
                       <div
                         key={conversation.id}
                         className="flex items-center p-4 cursor-pointer transition-colors hover:bg-muted/50 active:bg-muted"
-                        onClick={() => {
-                          setSelectedChat(conversation.id);
-                          setMobileView('chat');
-                        }}
+                        onClick={() => handleChatSelection(conversation.id)}
                       >
                         <div className="relative mr-3">
                           <Avatar className="h-12 w-12">
@@ -562,10 +556,7 @@ export default function Messages() {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      onClick={() => {
-                        setMobileView('conversations');
-                        setSelectedChat(null);
-                      }}
+                      onClick={handleBackToConversations}
                       className="p-2"
                     >
                       <ArrowLeft className="h-5 w-5" />
@@ -587,9 +578,22 @@ export default function Messages() {
                       <Button variant="ghost" size="sm">
                         <Video className="h-5 w-5" />
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="h-5 w-5" />
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenDeleteConfirm(selectedChat, 'delete')}>
+                        <Trash className="h-5 w-5" />
                       </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleOpenDeleteConfirm(selectedChat, 'leave')}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            <span>Leave Conversation</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardHeader>
