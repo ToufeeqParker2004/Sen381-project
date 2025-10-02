@@ -1,292 +1,318 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreatePostModal } from '@/components/ui/CreatePostModal';
-import {
-  MessageSquare,
-  Search,
-  Plus,
-  TrendingUp,
-  Clock,
-  Users,
-  ThumbsUp,
-  ThumbsDown,
-  MessageCircle,
-  Pin,
-  ArrowUp,
-  ArrowDown,
-  Share,
-  MoreHorizontal,
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { CreatePostModal } from "@/components/ui/CreatePostModal";
+import { MessageCircle, Search, Plus, TrendingUp, Share, MoreHorizontal, X } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+
+interface ForumPost {
+  id: string;
+  authorId: number;
+  parent_post_id?: string | null;
+  content: string;
+  attatchments?: string[];
+  upvotes?: number;
+  created_at?: string;
+  title?: string | null;
+  author?: string | null;
+  tags?: string[];
+  replies?: number;
+  downvotes?: number;
+  community?: string | null;
+  timestamp?: string | null;
+}
 
 export default function Forum() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState("");
   const [createPostOpen, setCreatePostOpen] = useState(false);
-  const [recentEngagedPosts, setRecentEngagedPosts] = useState<any[]>([]);
+  const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
+  const [trendingTopics, setTrendingTopics] = useState<{ tag: string; count: number }[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const forumPosts = [
-    {
-      id: 1,
-      title: 'Help with Calculus Integration by Parts',
-      content: 'I\'m struggling with integration by parts. Can someone explain the u-dv method?',
-      author: 'Sarah Johnson',
-      avatar: '/api/placeholder/40/40',
-      timestamp: '2 hours ago',
-      category: 'Mathematics',
-      replies: 8,
-      upvotes: 12,
-      downvotes: 2,
-      isPinned: true,
-      tags: ['calculus', 'integration', 'help'],
-      community: 'r/Mathematics'
-    },
-    {
-      id: 2,
-      title: 'Best Resources for Data Structures Practice',
-      content: 'Looking for good websites or books to practice data structures problems.',
-      author: 'Mike Chen',
-      avatar: '/api/placeholder/40/40',
-      timestamp: '4 hours ago',
-      category: 'Computer Science',
-      replies: 15,
-      upvotes: 23,
-      downvotes: 1,
-      isPinned: false,
-      tags: ['data-structures', 'resources', 'practice'],
-      community: 'r/ComputerScience'
-    },
-    {
-      id: 3,
-      title: 'Study Group for Organic Chemistry Final',
-      content: 'Anyone interested in forming a study group for the upcoming org chem final?',
-      author: 'Emma Rodriguez',
-      avatar: '/api/placeholder/40/40',
-      timestamp: '6 hours ago',
-      category: 'Chemistry',
-      replies: 6,
-      upvotes: 9,
-      downvotes: 0,
-      isPinned: false,
-      tags: ['chemistry', 'study-group', 'finals'],
-      community: 'r/Chemistry'
-    },
-  ];
+  const token = localStorage.getItem("authToken");
 
-  // Handle post engagement tracking
-  const handlePostEngage = (post: any) => {
-    const newEngagement = {
-      ...post,
-      engagedAt: new Date().toISOString(),
-    };
-    
-    setRecentEngagedPosts(prev => {
-      const filtered = prev.filter(p => p.id !== post.id);
-      return [newEngagement, ...filtered].slice(0, 5);
-    });
+  const fetchPosts = async () => {
+    if (!token) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:9090/ForumPosts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch posts");
+
+      const data: any[] = await res.json();
+      let authorName = null;
+
+      // Fetch comments count for each post
+      const postsWithReplies = await Promise.all(
+        data.map(async (post) => {
+          let replies = 0;
+          try {
+            const resComments = await fetch(`http://localhost:9090/api/comments/post/${post.id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (resComments.ok) {
+              const comments = await resComments.json();
+              replies = comments.length;
+            }
+          } catch (err) {
+            console.error(err);
+          }
+
+          try {
+            const user = await fetch(`http://localhost:9090/student/${post.authorId}`, {
+              method: "GET",
+              headers:
+              {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+            
+            if (user.ok) {
+              const userData = await user.json();
+              authorName = userData.name;
+            }
+
+          } catch (error) {
+            console.log(error);
+          }
+
+          return {
+            id: post.id,
+            authorId: post.authorId,
+            content: post.content,
+            attatchments: post.attatchments || [],
+            upvotes: post.upvotes || 0,
+            created_at: post.created_at || new Date().toISOString(),
+            title: post.title || null,
+            author: authorName || null,
+            tags: post.tags || [],
+            replies,
+            downvotes: post.downvotes || 0,
+            community: post.community || null,
+            timestamp: post.timestamp || null,
+            parent_post_id: post.parent_post_id || null,
+          };
+        })
+      );
+
+      setForumPosts(postsWithReplies);
+
+      // Trending topics
+      const tagCount: Record<string, number> = {};
+      postsWithReplies.forEach((post) => {
+        post.tags?.forEach((tag) => {
+          tagCount[tag] = (tagCount[tag] || 0) + 1;
+        });
+      });
+
+      const sortedTags = Object.entries(tagCount)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([tag, count]) => ({ tag, count }));
+
+      setTrendingTopics(sortedTags);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const clearRecentPosts = () => {
-    setRecentEngagedPosts([]);
-  };
+  useEffect(() => {
+    fetchPosts();
+  }, []);
 
-  const trendingTopics = [
-    { tag: 'finals-prep', count: 24 },
-    { tag: 'study-tips', count: 18 },
-    { tag: 'calculus', count: 15 },
-    { tag: 'programming', count: 12 },
-    { tag: 'exam-help', count: 10 },
-  ];
+  const handlePostCreated = () => fetchPosts();
+
+  const filteredPosts = forumPosts.filter(
+    (post) =>
+      searchQuery === "" ||
+      post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.authorId.toString().includes(searchQuery.toLowerCase()) ||
+      post.tags?.some((tag) => tag.toLowerCase() === searchQuery.toLowerCase())
+  );
+
+  const resetFilter = () => setSearchQuery("");
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Community Forum</h1>
-          <p className="text-muted-foreground">Connect, share knowledge, and get help from fellow students</p>
+          <p className="text-muted-foreground">
+            Connect, share knowledge, and get help from fellow students
+          </p>
         </div>
-        <Button 
+        <Button
           className="bg-gradient-primary hover:opacity-90"
           onClick={() => setCreatePostOpen(true)}
+          disabled={!user}
         >
           <Plus className="mr-2 h-4 w-4" />
           New Post
         </Button>
       </div>
 
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-4">
-        {/* Main Content */}
-        <div className="lg:col-span-3 space-y-4 md:space-y-6">
-          {/* Search and Tabs */}
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search discussions..."
-                  className="pl-9 text-sm md:text-base"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              
-              <Tabs defaultValue="recent" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-auto">
-                  <TabsTrigger value="recent" className="text-xs md:text-sm">Recent</TabsTrigger>
-                  <TabsTrigger value="trending" className="text-xs md:text-sm">Trending</TabsTrigger>
-                  <TabsTrigger value="unanswered" className="text-xs md:text-sm">Unanswered</TabsTrigger>
-                  <TabsTrigger value="following" className="text-xs md:text-sm">Following</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </CardContent>
-          </Card>
-
-          {/* Forum Posts */}
-          <div className="space-y-2">
-            {forumPosts.filter(post => 
-              searchQuery === '' || 
-              post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              post.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              post.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-            ).map((post) => (
-              <Card key={post.id} className="hover:shadow-custom-md transition-shadow border-l-2 border-l-transparent hover:border-l-primary">
-                <CardContent className="p-3 md:p-4">
-                  <div className="flex items-start space-x-2 md:space-x-3">
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 text-xs text-muted-foreground mb-2 space-y-1 sm:space-y-0">
-                        <span className="font-medium hover:underline cursor-pointer">{post.community}</span>
-                        <span className="hidden sm:inline">•</span>
-                        <span>Posted by u/{post.author}</span>
-                        <span className="hidden sm:inline">•</span>
-                        <span>{post.timestamp}</span>
-                      </div>
-
-                      <h3 
-                        className="font-medium text-sm md:text-base text-foreground hover:text-primary cursor-pointer mb-2 line-clamp-2"
-                        onClick={() => navigate('/forum/post')}
-                      >
-                        {post.title}
-                      </h3>
-
-                      <p className="text-xs md:text-sm text-muted-foreground mb-3 line-clamp-3">{post.content}</p>
-
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {post.tags.map((tag) => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            #{tag}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center space-x-2 md:space-x-4 text-xs text-muted-foreground">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-6 md:h-7 px-1 md:px-2 hover:bg-muted"
-                          onClick={() => handlePostEngage(post)}
-                        >
-                          <MessageCircle className="mr-1 h-3 w-3" />
-                          <span className="hidden sm:inline">{post.replies} Comments</span>
-                          <span className="sm:hidden">{post.replies}</span>
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-6 md:h-7 px-1 md:px-2 hover:bg-muted">
-                          <Share className="mr-1 h-3 w-3" />
-                          <span className="hidden sm:inline">Share</span>
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-6 md:h-7 px-1 md:px-2 hover:bg-muted">
-                          <MoreHorizontal className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+      {/* Search & Reset */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search posts..."
+            className="pl-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
-
-        <div className="lg:col-span-1 space-y-4 md:space-y-6">
-          {/* Trending Topics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <TrendingUp className="mr-2 h-4 w-4" />
-                Trending Topics
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {trendingTopics.map((topic) => (
-                <div 
-                  key={topic.tag} 
-                  className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                  onClick={() => setSearchQuery(topic.tag)}
-                >
-                  <span className="text-sm font-medium">#{topic.tag}</span>
-                  <Badge variant="outline" className="text-xs">
-                    {topic.count}
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          {/* Recent Engaged Posts */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Recent Activity</CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-primary hover:text-primary/80"
-                onClick={clearRecentPosts}
-              >
-                Clear
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {recentEngagedPosts.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No recent activity. Engage with posts to see them here.
-                </p>
-              ) : (
-                recentEngagedPosts.map((post) => (
-                  <div key={`${post.id}-${post.engagedAt}`} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors">
-                    <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-1 text-xs text-muted-foreground mb-1">
-                        <span className="font-medium">{post.community}</span>
-                        <span>•</span>
-                        <span>{post.timestamp}</span>
-                      </div>
-                      <h4 className="text-sm font-medium line-clamp-2 mb-2">
-                        {post.title}
-                      </h4>
-                      <div className="flex items-center space-x-3 text-xs text-muted-foreground">
-                        <span>{post.upvotes - post.downvotes} upvotes</span>
-                        <span>{post.replies} comments</span>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 px-3 flex items-center gap-1"
+          onClick={resetFilter}
+        >
+          <X className="h-4 w-4" />
+          Reset
+        </Button>
       </div>
 
-      <CreatePostModal 
-        open={createPostOpen} 
-        onOpenChange={setCreatePostOpen}
-      />
+      {/* Loading indicator */}
+      {loading ? (
+        <div className="flex items-center justify-center py-10 text-muted-foreground">
+          Loading posts...
+        </div>
+      ) : (
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Forum Posts - Left */}
+          <div className="flex-1 space-y-2">
+            {filteredPosts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-10 border border-dashed border-muted rounded-lg bg-muted/20 text-center text-muted-foreground">
+                <p className="text-lg font-medium mb-2">No posts yet</p>
+                <p className="text-sm">Be the first to create a post in this community!</p>
+                {user && (
+                  <Button
+                    className="mt-4 bg-gradient-primary hover:opacity-90"
+                    onClick={() => setCreatePostOpen(true)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Post
+                  </Button>
+                )}
+              </div>
+            ) : (
+              filteredPosts.map((post) => (
+                <Card
+                  key={post.id}
+                  className="hover:shadow-custom-md transition-shadow border-l-2 border-l-transparent hover:border-l-primary"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 text-xs text-muted-foreground mb-2">
+                          <span className="font-medium hover:underline cursor-pointer">
+                            {post.community || "Community"}
+                          </span>
+                          <span>•</span>
+                          <span>Posted by u/{post.author || "User #" + post.authorId}</span>
+                          <span>•</span>
+                          <span>{new Date(post.created_at!).toLocaleString()}</span>
+                        </div>
+
+                        <h3
+                          className="font-medium text-foreground hover:text-primary cursor-pointer mb-2 line-clamp-2"
+                          onClick={() => navigate(`/forum/post/${post.id}`)}
+                        >
+                          {post.title || post.content.slice(0, 50) + "..."}
+                        </h3>
+
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{post.content}</p>
+
+                        {post.tags?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {post.tags.map((tag, idx) => (
+                              <Badge key={idx} variant="outline" className="text-xs">
+                                #{tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 hover:bg-muted"
+                            onClick={() => navigate(`/forum/post/${post.id}`)}
+                          >
+                            <MessageCircle className="mr-1 h-3 w-3" />
+                            {post.replies || 0} Comments
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
+                            <Share className="mr-1 h-3 w-3" />
+                            Share
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                          <span>{post.upvotes || 0} upvotes</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Sidebar - Trending Topics */}
+          <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Trending Topics by tag
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {trendingTopics.length > 0 ? (
+                  trendingTopics.map((topic) => (
+                    <div
+                      key={topic.tag}
+                      className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => setSearchQuery(topic.tag)}
+                    >
+                      <span className="text-sm font-medium">#{topic.tag}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {topic.count}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center">No trending topics yet</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Create Post Modal */}
+      {user && (
+        <CreatePostModal
+          open={createPostOpen}
+          onOpenChange={setCreatePostOpen}
+          userId={Number(user.id)}
+          onPostCreated={handlePostCreated}
+        />
+      )}
     </div>
   );
 }
