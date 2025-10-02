@@ -29,7 +29,7 @@ export const useTutors = () => {
                 return { 
                   ...tutor, 
                   student: { 
-                    id: parseInt(tutor.studentId),
+                    id: tutor.studentId,
                     name: 'Unknown Tutor',
                     email: '',
                     bio: 'No bio available',
