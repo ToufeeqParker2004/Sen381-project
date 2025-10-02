@@ -288,14 +288,8 @@ export default function TutorsPage() {
                     
                     <div className="flex space-x-3 mt-6">
                       <Button className="bg-gradient-primary hover:opacity-90">
-                        Book Session
-                      </Button>
-                      <Button variant="outline">
-                        View Profile
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        Message
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Apply for Tutor
                       </Button>
                     </div>
                   </div>

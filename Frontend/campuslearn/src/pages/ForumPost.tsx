@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Share, MoreHorizontal } from "lucide-react";
+import { MessageCircle, Share, MoreHorizontal, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 interface Comment {
@@ -31,6 +31,7 @@ interface ForumPostType {
 export default function ForumPost() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [post, setPost] = useState<ForumPostType | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -157,6 +158,16 @@ export default function ForumPost() {
 
   return (
     <div className="space-y-6">
+      {/* Back Button */}
+      <Button 
+        variant="ghost" 
+        onClick={() => navigate('/forum')}
+        className="mb-4"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Forum
+      </Button>
+
       {/* Post */}
       <Card className="hover:shadow-custom-md transition-shadow border-l-2 border-l-transparent hover:border-l-primary">
         <CardContent className="p-6">
