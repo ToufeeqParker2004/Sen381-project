@@ -132,9 +132,11 @@ export default function ForumPost() {
           body: newComment,
         }
       );
-
-      if (!res.ok) throw new Error("Failed to post comment");
       const comment = await res.json();
+      if (!res.ok) {
+        alert(comment.error || comment.message || "Failed to create post");
+        return;
+      }
 
       setComments([
         ...comments,
