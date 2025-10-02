@@ -9,6 +9,8 @@ interface User {
   isAdmin: boolean;
   isTutor: boolean;
   tutorApplicationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+  location?: string;
+  phoneNumber?:string;
 }
 
 interface AuthContextType {
@@ -54,6 +56,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: profileData.name,
         avatar: profileData.avatar,
         tutorApplicationStatus: profileData.tutorApplicationStatus || 'none',
+        location: profileData.location,
+        phoneNumber: profileData.phoneNumber,
       }));
     } catch (err) {
       console.error('Failed to fetch profile', err);

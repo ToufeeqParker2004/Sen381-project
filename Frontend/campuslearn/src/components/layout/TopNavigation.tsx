@@ -23,7 +23,7 @@ export function TopNavigation({
   const [searchQuery, setSearchQuery] = useState('');
   const [hasNotifications] = useState(3); // Mock notification count
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -86,16 +86,16 @@ export function TopNavigation({
               <Button variant="ghost" className="relative h-8 w-8 md:h-10 md:w-10 rounded-full p-0">
                 <Avatar className="h-8 w-8 md:h-9 md:w-9">
                   <AvatarImage src="/api/placeholder/36/36" alt="Profile" />
-                  <AvatarFallback className="bg-secondary text-secondary-foreground text-xs md:text-sm">JS</AvatarFallback>
+                  <AvatarFallback className="bg-secondary text-secondary-foreground text-xs md:text-sm">{user?.name?.split(' ').map(n => n[0]).join('') || 'U'}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-48 md:w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">John Student</p>
+                  <p className="text-sm font-medium leading-none">{user.name}</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    john@campus.edu
+                    {user?.identifier || "-"}
                   </p>
                 </div>
               </DropdownMenuLabel>

@@ -196,7 +196,7 @@ const Profile = () => {
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input
                   id="phone"
-                  placeholder="+27 (0) 11 123-4567"
+                  placeholder={user.phoneNumber ? user.phoneNumber.toString() : "e.g., +1234567890"}
                   disabled={!isEditing}
                 />
               </div>
@@ -205,7 +205,7 @@ const Profile = () => {
                 <Label htmlFor="location">Campus Location</Label>
                 <Input
                   id="location"
-                  placeholder="Pretoria Campus"
+                  placeholder={user.location || "e.g., Main Campus, City Campus"}
                   disabled={!isEditing}
                 />
               </div>
