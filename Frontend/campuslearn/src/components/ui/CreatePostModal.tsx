@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -18,31 +17,34 @@ import {
   Strikethrough,
   Superscript,
   Type,
-  Link,
-  Image,
+  Link as LinkIcon,
+  Image as ImageIcon,
   List,
   ListOrdered,
   Code,
   Quote,
   MoreHorizontal,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface CreatePostModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  userId: number;
+  onPostCreated?: () => void;
 }
 
-export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
+export function CreatePostModal({ open, onOpenChange, userId, onPostCreated }: CreatePostModalProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [community, setCommunity] = useState('');
   const [postType, setPostType] = useState('text');
+  const [link, setLink] = useState('');
+  const [media, setMedia] = useState<File | null>(null);
 
   const communities = [
     'Mathematics',
-    'Computer Science', 
+    'Computer Science',
     'Chemistry',
     'Physics',
     'General Discussion',
@@ -55,8 +57,8 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
     { icon: Strikethrough, label: 'Strikethrough' },
     { icon: Superscript, label: 'Superscript' },
     { icon: Type, label: 'Text' },
-    { icon: Link, label: 'Link' },
-    { icon: Image, label: 'Image' },
+    { icon: LinkIcon, label: 'Link' },
+    { icon: ImageIcon, label: 'Image' },
     { icon: List, label: 'Bullet List' },
     { icon: ListOrdered, label: 'Numbered List' },
     { icon: Code, label: 'Code Block' },
@@ -64,15 +66,58 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
     { icon: MoreHorizontal, label: 'More' },
   ];
 
-  const handleSaveDraft = () => {
-    // For now, we'll just show an alert. In a real app, this would save to backend
-    alert('To save drafts, you need to connect to Supabase for backend storage.');
-  };
+  const handlePost = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) return;
 
-  const handlePost = () => {
-    // For now, we'll just show an alert. In a real app, this would post to backend
-    alert('To create posts, you need to connect to Supabase for backend storage.');
-    onOpenChange(false);
+      const payload: any = {
+        author_id: userId,
+        title,
+        content,
+        community,
+        tags,
+        postType,
+      };
+
+      if (postType === 'link') {
+        payload.link = link;
+      }
+
+      if (postType === 'images' && media) {
+        // for now just send filename; adjust later for upload
+        payload.mediaName = media.name;
+      }
+
+      const res = await fetch("http://localhost:9090/ForumPosts", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || data.message || "Failed to create post");
+        return;
+      }
+
+      alert(data.message || "Post created successfully!");
+      setTitle("");
+      setContent("");
+      setCommunity("");
+      setTags([]);
+      setLink("");
+      setMedia(null);
+      onOpenChange(false);
+
+      if (onPostCreated) onPostCreated();
+
+    } catch (err: any) {
+      alert(err.message || "Network error");
+    }
   };
 
   return (
@@ -80,10 +125,6 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex flex-row items-center justify-between shrink-0 pb-4">
           <DialogTitle className="text-2xl">Create post</DialogTitle>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <span>Drafts</span>
-            <Badge variant="secondary" className="bg-warning text-warning-foreground">1</Badge>
-          </div>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col space-y-4 overflow-hidden min-h-0">
@@ -103,103 +144,77 @@ export function CreatePostModal({ open, onOpenChange }: CreatePostModalProps) {
 
           {/* Post Type Tabs */}
           <Tabs value={postType} onValueChange={setPostType} className="w-full shrink-0">
-            <TabsList className="grid w-full grid-cols-4 bg-muted/50">
+            <TabsList className="grid w-full grid-cols-3 bg-muted/50">
               <TabsTrigger value="text">Text</TabsTrigger>
               <TabsTrigger value="images">Images & Video</TabsTrigger>
               <TabsTrigger value="link">Link</TabsTrigger>
-              <TabsTrigger value="poll">Poll</TabsTrigger>
             </TabsList>
 
+            {/* Text Tab */}
             <TabsContent value="text" className="flex-1 flex flex-col space-y-4 overflow-hidden min-h-0">
-              {/* Title */}
-              <div className="space-y-2 shrink-0">
-                <Input
-                  placeholder="Title*"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="text-lg"
-                  maxLength={300}
-                />
-                <div className="text-right text-xs text-muted-foreground">
-                  {title.length}/300
-                </div>
-              </div>
-
-              {/* Tags */}
               <Input
-                placeholder="Add tags"
-                className="shrink-0"
+                placeholder="Title*"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-lg"
+                maxLength={300}
               />
-
-              {/* Content Editor */}
+              <Input
+                placeholder="Add tags (comma separated)"
+                value={tags.join(",")}
+                onChange={(e) => setTags(e.target.value.split(",").map(tag => tag.trim()))}
+              />
               <div className="flex-1 flex flex-col border rounded-lg overflow-hidden min-h-0">
-                {/* Formatting Toolbar */}
                 <div className="flex items-center space-x-1 p-2 border-b bg-muted/30 shrink-0 overflow-x-auto">
                   {formatButtons.map((button, index) => (
-                    <Button
-                      key={index}
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 shrink-0"
-                      title={button.label}
-                    >
+                    <Button key={index} variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0" title={button.label}>
                       <button.icon className="h-4 w-4" />
                     </Button>
                   ))}
-                  <div className="ml-auto shrink-0">
-                    <Button variant="ghost" size="sm" className="text-xs whitespace-nowrap">
-                      Switch to Markdown Editor
-                    </Button>
-                  </div>
                 </div>
-
-                {/* Content Area */}
-                <div className="flex-1 overflow-hidden">
-                  <Textarea
-                    placeholder="Body text (optional)"
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    className="h-full w-full border-0 resize-none focus-visible:ring-0 rounded-none"
-                  />
-                </div>
+                <Textarea
+                  placeholder="Body text (optional)"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="h-full w-full border-0 resize-none focus-visible:ring-0 rounded-none"
+                />
               </div>
             </TabsContent>
 
-            <TabsContent value="images" className="flex-1 overflow-hidden">
-              <div className="h-full flex items-center justify-center border-2 border-dashed border-muted rounded-lg">
-                <div className="text-center space-y-2">
-                  <Image className="h-12 w-12 mx-auto text-muted-foreground" />
-                  <p className="text-muted-foreground">Drag & drop images or videos</p>
-                  <Button variant="outline">Browse Files</Button>
-                </div>
-              </div>
+            {/* Images & Video Tab */}
+            <TabsContent value="images" className="flex flex-col space-y-4">
+              <Input
+                placeholder="Title*"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-lg"
+              />
+              <Input
+                type="file"
+                accept="image/*,video/*"
+                onChange={(e) => setMedia(e.target.files ? e.target.files[0] : null)}
+              />
             </TabsContent>
 
-            <TabsContent value="link" className="flex-1 overflow-auto">
-              <div className="space-y-4">
-                <Input placeholder="URL" />
-                <Textarea placeholder="Description (optional)" className="min-h-[200px]" />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="poll" className="flex-1 overflow-auto">
-              <div className="space-y-4">
-                <Input placeholder="Poll question" />
-                <div className="space-y-2">
-                  <Input placeholder="Option 1" />
-                  <Input placeholder="Option 2" />
-                  <Button variant="outline" size="sm">Add Option</Button>
-                </div>
-              </div>
+            {/* Link Tab */}
+            <TabsContent value="link" className="flex flex-col space-y-4">
+              <Input
+                placeholder="Title*"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-lg"
+              />
+              <Input
+                placeholder="Paste a link"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+              />
             </TabsContent>
           </Tabs>
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3 pt-4 border-t shrink-0">
-            <Button variant="outline" onClick={handleSaveDraft}>
-              Save Draft
-            </Button>
-            <Button 
+            <Button
               onClick={handlePost}
               disabled={!title.trim() || !community}
               className="bg-gradient-primary hover:opacity-90"
