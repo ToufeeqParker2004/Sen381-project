@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,24 @@ export default function AITutor() {
   ]);
   const [inputValue, setInputValue] = useState('');
 
+  useEffect(() => {
+    // Load Botpress webchat scripts
+    const script1 = document.createElement('script');
+    script1.src = 'https://cdn.botpress.cloud/webchat/v3.3/inject.js';
+    script1.async = true;
+    document.body.appendChild(script1);
+
+    const script2 = document.createElement('script');
+    script2.src = 'https://files.bpcontent.cloud/2025/10/02/21/20251002214522-9HK61HZW.js';
+    script2.defer = true;
+    document.body.appendChild(script2);
+
+    return () => {
+      document.body.removeChild(script1);
+      document.body.removeChild(script2);
+    };
+  }, []);
+
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
 
@@ -61,8 +79,8 @@ export default function AITutor() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="text-center space-y-2">
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <div className="text-center space-y-3 mb-8">
         <div className="flex items-center justify-center space-x-2">
           <Bot className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold">AI Tutor</h1>
@@ -73,7 +91,9 @@ export default function AITutor() {
         </p>
       </div>
 
-      <Card className="h-[600px] flex flex-col">
+      <div id="bp-embedded-webchat" className="w-full h-[700px] rounded-lg"></div>
+
+      <Card className="h-[600px] flex flex-col hidden">
         <CardHeader className="border-b bg-muted/50">
           <CardTitle className="flex items-center space-x-2">
             <Bot className="h-5 w-5 text-primary" />
