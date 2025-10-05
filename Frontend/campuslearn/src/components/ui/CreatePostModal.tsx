@@ -18,7 +18,6 @@ import {
   Superscript,
   Type,
   Link as LinkIcon,
-  Image as ImageIcon,
   List,
   ListOrdered,
   Code,
@@ -33,22 +32,26 @@ interface CreatePostModalProps {
   onPostCreated?: () => void;
 }
 
-export function CreatePostModal({ open, onOpenChange, userId, onPostCreated }: CreatePostModalProps) {
+export function CreatePostModal({
+  open,
+  onOpenChange,
+  userId,
+  onPostCreated,
+}: CreatePostModalProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [community, setCommunity] = useState('');
   const [postType, setPostType] = useState('text');
   const [link, setLink] = useState('');
-  const [media, setMedia] = useState<File | null>(null);
 
   const communities = [
-    'Mathematics',
-    'Computer Science',
-    'Chemistry',
-    'Physics',
-    'General Discussion',
-    'Study Groups'
+    'General Discussions',
+    '1st Years',
+    '2nd Years',
+    '3rd Years',
+    'Software Engineering stream',
+    'Data Science stream',
   ];
 
   const formatButtons = [
@@ -58,7 +61,6 @@ export function CreatePostModal({ open, onOpenChange, userId, onPostCreated }: C
     { icon: Superscript, label: 'Superscript' },
     { icon: Type, label: 'Text' },
     { icon: LinkIcon, label: 'Link' },
-    { icon: ImageIcon, label: 'Image' },
     { icon: List, label: 'Bullet List' },
     { icon: ListOrdered, label: 'Numbered List' },
     { icon: Code, label: 'Code Block' },
@@ -68,55 +70,63 @@ export function CreatePostModal({ open, onOpenChange, userId, onPostCreated }: C
 
   const handlePost = async () => {
     try {
-      const token = localStorage.getItem("authToken");
+      const token = localStorage.getItem('authToken');
       if (!token) return;
+
+      let finalContent = content;
+
+      // Handle link posts
+      if (postType === 'link') {
+        if (!link.trim()) {
+          alert('Please paste a valid link before posting.');
+          return;
+        }
+
+        try {
+          new URL(link);
+        } catch {
+          alert('Invalid URL format.');
+          return;
+        }
+
+        finalContent = `🔗 ${link}`;
+      }
 
       const payload: any = {
         author_id: userId,
         title,
-        content,
+        content: finalContent,
         community,
         tags,
         postType,
       };
 
-      if (postType === 'link') {
-        payload.link = link;
-      }
-
-      if (postType === 'images' && media) {
-        // for now just send filename; adjust later for upload
-        payload.mediaName = media.name;
-      }
-
-      const res = await fetch("http://localhost:9090/ForumPosts", {
-        method: "POST",
+      const res = await fetch('http://localhost:9090/ForumPosts', {
+        method: 'POST',
         headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || data.message || "Failed to create post");
+        alert(data.error || data.message || 'Failed to create post');
         return;
       }
 
-      alert(data.message || "Post created successfully!");
-      setTitle("");
-      setContent("");
-      setCommunity("");
+      alert(data.message || 'Post created successfully!');
+      setTitle('');
+      setContent('');
+      setCommunity('');
       setTags([]);
-      setLink("");
-      setMedia(null);
+      setLink('');
       onOpenChange(false);
 
       if (onPostCreated) onPostCreated();
-
     } catch (err: any) {
-      alert(err.message || "Network error");
+      alert(err.message || 'Network error');
     }
   };
 
@@ -144,14 +154,16 @@ export function CreatePostModal({ open, onOpenChange, userId, onPostCreated }: C
 
           {/* Post Type Tabs */}
           <Tabs value={postType} onValueChange={setPostType} className="w-full shrink-0">
-            <TabsList className="grid w-full grid-cols-3 bg-muted/50">
+            <TabsList className="grid w-full grid-cols-2 bg-muted/50">
               <TabsTrigger value="text">Text</TabsTrigger>
-              <TabsTrigger value="images">Images & Video</TabsTrigger>
               <TabsTrigger value="link">Link</TabsTrigger>
             </TabsList>
 
             {/* Text Tab */}
-            <TabsContent value="text" className="flex-1 flex flex-col space-y-4 overflow-hidden min-h-0">
+            <TabsContent
+              value="text"
+              className="flex-1 flex flex-col space-y-4 overflow-hidden min-h-0"
+            >
               <Input
                 placeholder="Title*"
                 value={title}
@@ -161,13 +173,21 @@ export function CreatePostModal({ open, onOpenChange, userId, onPostCreated }: C
               />
               <Input
                 placeholder="Add tags (comma separated)"
-                value={tags.join(",")}
-                onChange={(e) => setTags(e.target.value.split(",").map(tag => tag.trim()))}
+                value={tags.join(',')}
+                onChange={(e) =>
+                  setTags(e.target.value.split(',').map((tag) => tag.trim()))
+                }
               />
               <div className="flex-1 flex flex-col border rounded-lg overflow-hidden min-h-0">
                 <div className="flex items-center space-x-1 p-2 border-b bg-muted/30 shrink-0 overflow-x-auto">
                   {formatButtons.map((button, index) => (
-                    <Button key={index} variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0" title={button.label}>
+                    <Button
+                      key={index}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 shrink-0"
+                      title={button.label}
+                    >
                       <button.icon className="h-4 w-4" />
                     </Button>
                   ))}
@@ -181,28 +201,20 @@ export function CreatePostModal({ open, onOpenChange, userId, onPostCreated }: C
               </div>
             </TabsContent>
 
-            {/* Images & Video Tab */}
-            <TabsContent value="images" className="flex flex-col space-y-4">
-              <Input
-                placeholder="Title*"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-lg"
-              />
-              <Input
-                type="file"
-                accept="image/*,video/*"
-                onChange={(e) => setMedia(e.target.files ? e.target.files[0] : null)}
-              />
-            </TabsContent>
-
-            {/* Link Tab */}
+            {/* Link Tab (now supports tags) */}
             <TabsContent value="link" className="flex flex-col space-y-4">
               <Input
                 placeholder="Title*"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="text-lg"
+              />
+              <Input
+                placeholder="Add tags (comma separated)"
+                value={tags.join(',')}
+                onChange={(e) =>
+                  setTags(e.target.value.split(',').map((tag) => tag.trim()))
+                }
               />
               <Input
                 placeholder="Paste a link"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, SidebarMode } from './Sidebar';
 import { TopNavigation } from './TopNavigation';
+import { PersistentMusicPlayer } from '@/components/ui/PersistentMusicPlayer';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -80,6 +81,8 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </div>
       </main>
+      
+      <PersistentMusicPlayer />
     </div>
   );
 }

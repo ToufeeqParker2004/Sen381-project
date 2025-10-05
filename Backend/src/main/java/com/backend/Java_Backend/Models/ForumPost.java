@@ -35,6 +35,17 @@ public class ForumPost {
     @Column(name = "tags")
     private String[] tags;
 
+    @Column(name = "community")
+    private String community;
+
+    public String getCommunity() {
+        return community;
+    }
+
+    public void setCommunity(String community) {
+        this.community = community;
+    }
+
     public String[] getTags() {
         return tags;
     }
