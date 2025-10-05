@@ -116,7 +116,7 @@ public class TutorController {
         return ResponseEntity.ok(tutorModules);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasPermission(#tutorId, 'Tutor', 'own')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{tutorId}/modules")
     public ResponseEntity<?> getTutorModulesByTutorId(@PathVariable Integer tutorId) {
         TutorWithModulesDTO result = tutorModuleService.findByTutorIdWithDetails(tutorId);
