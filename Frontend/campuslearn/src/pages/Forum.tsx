@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { CreatePostModal } from "@/components/ui/CreatePostModal";
-import { MessageCircle, Search, Plus, TrendingUp, Share, MoreHorizontal, X } from "lucide-react";
+import { MessageCircle, Search, Plus, TrendingUp, Share, MoreHorizontal, X, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 interface ForumPost {
@@ -28,14 +28,21 @@ interface ForumPost {
 export default function Forum() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // --- UI State ---
   const [searchQuery, setSearchQuery] = useState("");
   const [createPostOpen, setCreatePostOpen] = useState(false);
+
+  // --- Data State ---
   const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
   const [trendingTopics, setTrendingTopics] = useState<{ tag: string; count: number }[]>([]);
+  const [communities, setCommunities] = useState<string[]>([]);
+  const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const token = localStorage.getItem("authToken");
 
+  // --- Fetch Posts ---
   const fetchPosts = async () => {
     if (!token) return;
 
@@ -49,7 +56,6 @@ export default function Forum() {
       const data: any[] = await res.json();
       let authorName = null;
 
-      // Fetch comments count for each post
       const postsWithReplies = await Promise.all(
         data.map(async (post) => {
           let replies = 0;
@@ -66,20 +72,17 @@ export default function Forum() {
           }
 
           try {
-            const user = await fetch(`http://localhost:9090/student/${post.authorId}`, {
+            const userRes = await fetch(`http://localhost:9090/student/${post.authorId}`, {
               method: "GET",
-              headers:
-              {
+              headers: {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
               },
             });
-            
-            if (user.ok) {
-              const userData = await user.json();
+            if (userRes.ok) {
+              const userData = await userRes.json();
               authorName = userData.name;
             }
-
           } catch (error) {
             console.log(error);
           }
@@ -105,7 +108,7 @@ export default function Forum() {
 
       setForumPosts(postsWithReplies);
 
-      // Trending topics
+      // Trending Topics by Tag
       const tagCount: Record<string, number> = {};
       postsWithReplies.forEach((post) => {
         post.tags?.forEach((tag) => {
@@ -119,6 +122,12 @@ export default function Forum() {
         .map(([tag, count]) => ({ tag, count }));
 
       setTrendingTopics(sortedTags);
+
+      // Unique Communities for filter dropdown
+      const uniqueCommunities = Array.from(
+        new Set(postsWithReplies.map((post) => post.community).filter(Boolean))
+      ) as string[];
+      setCommunities(uniqueCommunities);
     } catch (err) {
       console.error(err);
     } finally {
@@ -132,15 +141,24 @@ export default function Forum() {
 
   const handlePostCreated = () => fetchPosts();
 
-  const filteredPosts = forumPosts.filter(
-    (post) =>
+  // --- Filter Logic ---
+  const filteredPosts = forumPosts.filter((post) => {
+    const matchesSearch =
       searchQuery === "" ||
       post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       post.authorId.toString().includes(searchQuery.toLowerCase()) ||
-      post.tags?.some((tag) => tag.toLowerCase() === searchQuery.toLowerCase())
-  );
+      post.tags?.some((tag) => tag.toLowerCase() === searchQuery.toLowerCase());
 
-  const resetFilter = () => setSearchQuery("");
+    const matchesCommunity =
+      !selectedCommunity || post.community?.toLowerCase() === selectedCommunity.toLowerCase();
+
+    return matchesSearch && matchesCommunity;
+  });
+
+  const resetFilter = () => {
+    setSearchQuery("");
+    setSelectedCommunity(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -162,7 +180,7 @@ export default function Forum() {
         </Button>
       </div>
 
-      {/* Search & Reset */}
+      {/* Search + Reset */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -184,14 +202,14 @@ export default function Forum() {
         </Button>
       </div>
 
-      {/* Loading indicator */}
+      {/* Loading */}
       {loading ? (
         <div className="flex items-center justify-center py-10 text-muted-foreground">
           Loading posts...
         </div>
       ) : (
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Forum Posts - Left */}
+          {/* Posts Section */}
           <div className="flex-1 space-y-2">
             {filteredPosts.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-10 border border-dashed border-muted rounded-lg bg-muted/20 text-center text-muted-foreground">
@@ -272,8 +290,9 @@ export default function Forum() {
             )}
           </div>
 
-          {/* Sidebar - Trending Topics */}
+          {/* Sidebar */}
           <div className="w-full lg:w-80 flex-shrink-0 space-y-6">
+            {/* Trending Topics */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center">
@@ -296,7 +315,44 @@ export default function Forum() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center">No trending topics yet</p>
+                  <p className="text-sm text-muted-foreground text-center">
+                    No trending topics yet
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Filter by Community */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <Users className="mr-2 h-4 w-4" />
+                  Filter by Community
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {communities.length > 0 ? (
+                  communities.map((community) => (
+                    <div
+                      key={community}
+                      className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
+                        selectedCommunity === community
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted/50"
+                      }`}
+                      onClick={() =>
+                        setSelectedCommunity(
+                          selectedCommunity === community ? null : community
+                        )
+                      }
+                    >
+                      <span className="text-sm font-medium">{community}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center">
+                    No communities yet
+                  </p>
                 )}
               </CardContent>
             </Card>
