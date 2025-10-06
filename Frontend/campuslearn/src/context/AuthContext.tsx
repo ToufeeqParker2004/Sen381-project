@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
-interface User {
+export interface User {
   id: string;
   name?: string;
   identifier: string;
+  email?: string;
   avatar?: string;
   isAdmin: boolean;
   isTutor: boolean;
@@ -71,6 +72,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser({
         id: decoded.sub,
         identifier: decoded.email,
+        email: decoded.email,
         name: '', // Will be replaced after fetching profile
         avatar: '',
         isAdmin: decoded.roles.includes('ADMIN'),
@@ -132,9 +134,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
   };
 
-  const updateUser = (updates: Partial<User>) => {
-    if (user) setUser({ ...user, ...updates });
-  };
+  const updateUser = async (updates: Partial<User>) => {
+  if (!user) return;
+  
+  const mergedUpdates: Partial<User> = { ...user, ...updates };
+
+  try {
+    const res = await fetch(`http://localhost:9090/student/${user.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      },
+      body: JSON.stringify(mergedUpdates),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || 'Failed to update user');
+    }
+
+    const updatedUser = await res.json();
+    setUser(updatedUser); // update frontend state with fresh data from backend
+  } catch (error: any) {
+    console.error('Error updating user:', error.message);
+  }
+};
+
+
 
   const value: AuthContextType = {
     user,

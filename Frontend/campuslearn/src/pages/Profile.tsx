@@ -9,7 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { User, Mail, Phone, MapPin, GraduationCap, LogOut, Upload } from 'lucide-react';
+import { User as UserIcon, Mail, Phone, MapPin, GraduationCap, LogOut, Upload } from 'lucide-react';
+import type { User } from '@/context/AuthContext';
+
+
+
 
 const Profile = () => {
   const { user, logout, updateUser } = useAuth();
@@ -60,16 +64,29 @@ const Profile = () => {
   };
 
   const handleSaveProfile = () => {
-    if (photoPreview) {
-      updateUser({ avatar: profilePhoto });
-    }
+    const firstNameInput = (document.getElementById('firstName') as HTMLInputElement).value;
+    const lastNameInput = (document.getElementById('lastName') as HTMLInputElement).value;
+    const emailInput = (document.getElementById('email') as HTMLInputElement).value;
+    const phoneInput = (document.getElementById('phone') as HTMLInputElement).value;
+    const locationInput = (document.getElementById('location') as HTMLInputElement).value;
+
+    const updates: Partial<User> = {
+      name: `${firstNameInput} ${lastNameInput}`.trim(),
+      email: emailInput,
+      phoneNumber: phoneInput,
+      location: locationInput,
+    };
+
+    updateUser(updates); // context handles merging now
+
     setIsEditing(false);
-    setPhotoPreview('');
     toast({
       title: 'Profile Updated',
       description: 'Your profile has been successfully updated.',
     });
   };
+
+
 
   const handleTutorApplication = () => {
     updateUser({ tutorApplicationStatus: 'pending' });
@@ -83,7 +100,7 @@ const Profile = () => {
     if (user?.isTutor) {
       return <Badge variant="secondary" className="bg-green-100 text-green-800">Active Tutor</Badge>;
     }
-    
+
     switch (user?.tutorApplicationStatus) {
       case 'pending':
         return <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">Application Pending</Badge>;
@@ -115,9 +132,10 @@ const Profile = () => {
         <Card className="shadow-custom-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+              <UserIcon className="h-5 w-5" />
               Personal Information
             </CardTitle>
+
             <CardDescription>
               Manage your account details and preferences
             </CardDescription>
@@ -186,7 +204,7 @@ const Profile = () => {
                 <Input
                   id="email"
                   type="email"
-                  value={user.identifier}
+                  value={user.email}
                   disabled={!isEditing}
                   className="flex items-center gap-2"
                 />
@@ -196,8 +214,9 @@ const Profile = () => {
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input
                   id="phone"
-                  placeholder={user.phoneNumber ? user.phoneNumber.toString() : "e.g., +1234567890"}
+                  defaultValue={user.phoneNumber || ''}
                   disabled={!isEditing}
+                  placeholder="e.g., +1234567890"
                 />
               </div>
 
@@ -205,10 +224,12 @@ const Profile = () => {
                 <Label htmlFor="location">Campus Location</Label>
                 <Input
                   id="location"
-                  placeholder={user.location || "e.g., Main Campus, City Campus"}
+                  defaultValue={user.location || ''}
                   disabled={!isEditing}
+                  placeholder="e.g., Main Campus, City Campus"
                 />
               </div>
+
             </div>
 
             <div className="flex gap-2">
@@ -219,9 +240,17 @@ const Profile = () => {
                     setIsEditing(false);
                     setPhotoPreview('');
                     setProfilePhoto(user.avatar || '');
+
+                    // Reset input fields to user state
+                    (document.getElementById('firstName') as HTMLInputElement).value = user.name.split(' ')[0] || '';
+                    (document.getElementById('lastName') as HTMLInputElement).value = user.name.split(' ')[1] || '';
+                    (document.getElementById('email') as HTMLInputElement).value = user.email || '';
+                    (document.getElementById('phone') as HTMLInputElement).value = user.phoneNumber || '';
+                    (document.getElementById('location') as HTMLInputElement).value = user.location || '';
                   }}>
                     Cancel
                   </Button>
+
                 </>
               ) : (
                 <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
@@ -251,7 +280,7 @@ const Profile = () => {
                       id="subjects"
                       placeholder="e.g., Mathematics, Computer Science, Physics"
                       value={tutorApplication.subjects}
-                      onChange={(e) => setTutorApplication({...tutorApplication, subjects: e.target.value})}
+                      onChange={(e) => setTutorApplication({ ...tutorApplication, subjects: e.target.value })}
                     />
                   </div>
 
@@ -261,7 +290,7 @@ const Profile = () => {
                       id="qualifications"
                       placeholder="List your relevant qualifications and certifications"
                       value={tutorApplication.qualifications}
-                      onChange={(e) => setTutorApplication({...tutorApplication, qualifications: e.target.value})}
+                      onChange={(e) => setTutorApplication({ ...tutorApplication, qualifications: e.target.value })}
                     />
                   </div>
 
@@ -271,7 +300,7 @@ const Profile = () => {
                       id="experience"
                       placeholder="Describe your teaching or tutoring experience"
                       value={tutorApplication.experience}
-                      onChange={(e) => setTutorApplication({...tutorApplication, experience: e.target.value})}
+                      onChange={(e) => setTutorApplication({ ...tutorApplication, experience: e.target.value })}
                     />
                   </div>
 
@@ -281,7 +310,7 @@ const Profile = () => {
                       id="availability"
                       placeholder="When are you available to tutor? (days, times, etc.)"
                       value={tutorApplication.availability}
-                      onChange={(e) => setTutorApplication({...tutorApplication, availability: e.target.value})}
+                      onChange={(e) => setTutorApplication({ ...tutorApplication, availability: e.target.value })}
                     />
                   </div>
 
@@ -293,11 +322,11 @@ const Profile = () => {
                 <div className="text-center py-8">
                   {getTutorStatusBadge()}
                   <p className="mt-2 text-muted-foreground">
-                    {user.tutorApplicationStatus === 'pending' && 
+                    {user.tutorApplicationStatus === 'pending' &&
                       "Your application is being reviewed. We'll notify you once it's processed."}
-                    {user.tutorApplicationStatus === 'approved' && 
+                    {user.tutorApplicationStatus === 'approved' &&
                       "Your application has been approved! You can now access the tutor dashboard."}
-                    {user.tutorApplicationStatus === 'rejected' && 
+                    {user.tutorApplicationStatus === 'rejected' &&
                       "Your application was not approved at this time. You can reapply in 30 days."}
                   </p>
                 </div>
