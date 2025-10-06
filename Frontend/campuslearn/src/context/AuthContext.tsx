@@ -136,8 +136,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateUser = async (updates: Partial<User>) => {
   if (!user) return;
-  
-  const mergedUpdates: Partial<User> = { ...user, ...updates };
+
+  // Ensure tutor rights are preserved if not explicitly updated
+  const mergedUpdates: Partial<User> = {
+    ...user,
+    ...updates,
+    isTutor: updates.isTutor ?? user.isTutor,
+    tutorApplicationStatus: updates.tutorApplicationStatus ?? user.tutorApplicationStatus,
+  };
 
   try {
     const res = await fetch(`http://localhost:9090/student/${user.id}`, {
@@ -155,11 +161,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const updatedUser = await res.json();
-    setUser(updatedUser); // update frontend state with fresh data from backend
+
+    // Merge backend response with frontend state to preserve tutor info
+    setUser(prev => ({
+      ...prev!,
+      ...updatedUser,
+      isTutor: updatedUser.isTutor ?? prev!.isTutor,
+      tutorApplicationStatus: updatedUser.tutorApplicationStatus ?? prev!.tutorApplicationStatus,
+    }));
   } catch (error: any) {
     console.error('Error updating user:', error.message);
   }
 };
+
 
 
 
