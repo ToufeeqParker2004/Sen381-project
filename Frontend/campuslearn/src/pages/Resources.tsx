@@ -192,14 +192,6 @@ export default function Resources() {
                             
                             <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-2 text-xs md:text-sm text-muted-foreground space-y-1 md:space-y-0">
                               <span className="text-center md:text-left">by {resource.author}</span>
-                              <div className="flex items-center justify-center md:justify-start">
-                                <Star className="mr-1 h-3 w-3 fill-current text-warning" />
-                                {resource.rating}
-                              </div>
-                              <div className="flex items-center justify-center md:justify-start">
-                                <Download className="mr-1 h-3 w-3" />
-                                {resource.downloads} downloads
-                              </div>
                               <span className="text-center md:text-left">{resource.size}</span>
                             </div>
                           </div>
