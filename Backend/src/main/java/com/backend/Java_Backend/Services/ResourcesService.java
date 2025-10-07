@@ -92,7 +92,7 @@ public class ResourcesService {
     }
 
     public LearningMaterialSearchResponse searchByLearningMaterialId(UUID materialId) {
-        List<Resources> resources = resourcesRepository.findByLearningMaterialsID(materialId);
+        List<Resources> resources = resourcesRepository.findByLearning_MaterialsID(materialId);
         List<ResourceMatchForLearningMaterialDTO> matches = new ArrayList<>();
         for (Resources res : resources) {
             ResourceMatchForLearningMaterialDTO match = new ResourceMatchForLearningMaterialDTO();

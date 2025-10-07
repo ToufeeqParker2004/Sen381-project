@@ -7,7 +7,7 @@ import java.sql.Timestamp;
 import java.util.UUID;
 
 @Entity
-@Table(name = "Events")
+@Table(name = "events")
 public class Events {
     @Id
     @GeneratedValue

@@ -1,19 +1,19 @@
 package com.backend.Java_Backend.Models;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 import java.util.UUID;
 
 @Entity
+@Table(name = "resources")
 public class Resources {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     int id;
+    @Column(name = "student_id")
     int studentId;
     UUID Learning_MaterialsID;
+    @Column(name = "tutor_id")
     int tutorID;
 
     public Resources() {
