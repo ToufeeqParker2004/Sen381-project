@@ -34,19 +34,19 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-const navigationItems = [
+const navigationItems = [ 
   { icon: Home, label: 'Dashboard', path: '/' },
   { icon: Calendar, label: 'Events', path: '/events' },
-  { icon: BookOpen, label: 'Tutors', path: '/tutors' },
+  { icon: BookOpen, label: 'Tutors', path: '/tutors', studentOnly: true },
   { icon: MessageSquare, label: 'Forum', path: '/forum' },
-  { icon: MessageCircle, label: 'Messages', path: '/messages' },
   { icon: FileText, label: 'My Resources', path: '/resources' },
-  { icon: Calendar, label: 'Calendar', path: '/calendar' },
-  { icon: Bot, label: 'AI Tutor', path: '/ai-tutor' },
-  { icon: HelpCircle, label: 'FAQ', path: '/faq' },
+  { icon: HelpCircle, label: 'FAQ', path: '/faq', studentOnly: true  },
   { icon: LayoutDashboard, label: 'Tutor Dashboard', path: '/tutor', tutorOnly: true },
   { icon: Upload, label: 'Content Upload', path: '/tutor/content', tutorOnly: true },
   { icon: Users, label: 'My Students', path: '/tutor/students', tutorOnly: true },
+  { icon: Calendar, label: 'Calendar', path: '/calendar' },
+  { icon: MessageCircle, label: 'Messages', path: '/messages' },
+  { icon: Bot, label: 'AI Tutor', path: '/ai-tutor' },
   { icon: Settings, label: 'Admin Panel', path: '/admin', adminOnly: true },
 ];
 
@@ -57,6 +57,7 @@ export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpe
   
   const isAdmin = user?.isAdmin || false;
   const isTutor = user?.isTutor || false;
+  
 
   const isExpanded = isMobile ? isOpen : (mode === 'expanded' || (mode === 'hover' && isHovered));
   const showLabels = isExpanded;
@@ -124,6 +125,7 @@ export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpe
             {navigationItems.map((item) => {
               if (item.adminOnly && !isAdmin) return null;
               if (item.tutorOnly && !isTutor) return null;
+               if (item.studentOnly && (isAdmin || isTutor)) return null; // Hide student-only items from admins and tutors
               
               const isActive = location.pathname === item.path;
               const Icon = item.icon;
