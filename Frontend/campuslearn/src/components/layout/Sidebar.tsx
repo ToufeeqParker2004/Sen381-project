@@ -13,6 +13,9 @@ import {
   ChevronRight,
   Bot,
   HelpCircle,
+  LayoutDashboard,
+  Upload,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -41,7 +44,9 @@ const navigationItems = [
   { icon: Calendar, label: 'Calendar', path: '/calendar' },
   { icon: Bot, label: 'AI Tutor', path: '/ai-tutor' },
   { icon: HelpCircle, label: 'FAQ', path: '/faq' },
-  { icon: BookOpen, label: 'Tutor Dashboard', path: '/tutor', tutorOnly: true },
+  { icon: LayoutDashboard, label: 'Tutor Dashboard', path: '/tutor', tutorOnly: true },
+  { icon: Upload, label: 'Content Upload', path: '/tutor/content', tutorOnly: true },
+  { icon: Users, label: 'My Students', path: '/tutor/students', tutorOnly: true },
   { icon: Settings, label: 'Admin Panel', path: '/admin', adminOnly: true },
 ];
 
