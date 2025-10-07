@@ -20,6 +20,7 @@ import Admin from "./pages/Admin";
 import Tutor from "./pages/Tutor";
 import ContentUpload from "./pages/tutor/ContentUpload";
 import MyStudents from "./pages/tutor/MyStudents";
+import MyEvents from "./pages/tutor/MyEvents";
 import FAQ from "./pages/FAQ";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -64,6 +65,7 @@ const AppRoutes = () => {
         <Route path="/tutor" element={<Tutor />} />
         <Route path="/tutor/content" element={<ContentUpload />} />
         <Route path="/tutor/students" element={<MyStudents />} />
+        <Route path="/tutor/events" element={<MyEvents />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </MainLayout>

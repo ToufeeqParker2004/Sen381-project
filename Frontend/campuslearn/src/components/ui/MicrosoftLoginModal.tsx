@@ -60,7 +60,7 @@ const MicrosoftLoginModal: React.FC<MicrosoftLoginModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogOverlay className="bg-[#e5e5e5] bg-opacity-95" />
-      <DialogContent className="sm:max-w-md p-0 border-0 shadow-lg bg-transparent">
+      <DialogContent className="sm:max-w-md p-0 border-0 shadow-none bg-transparent [&>button]:hidden">
         <div className="flex flex-col items-center justify-center min-h-[600px] space-y-4">
           {/* Main Login Card */}
           <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-sm">

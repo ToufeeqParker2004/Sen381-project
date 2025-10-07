@@ -35,18 +35,26 @@ interface SidebarProps {
 }
 
 const navigationItems = [ 
-  { icon: Home, label: 'Dashboard', path: '/' },
-  { icon: Calendar, label: 'Events', path: '/events' },
+  // Student navigation
+  { icon: Home, label: 'Dashboard', path: '/', studentOnly: true },
+  { icon: Calendar, label: 'Events', path: '/events', studentOnly: true },
   { icon: BookOpen, label: 'Tutors', path: '/tutors', studentOnly: true },
-  { icon: MessageSquare, label: 'Forum', path: '/forum' },
-  { icon: FileText, label: 'My Resources', path: '/resources' },
+  { icon: FileText, label: 'My Resources', path: '/resources' , studentOnly: true },
   { icon: HelpCircle, label: 'FAQ', path: '/faq', studentOnly: true  },
+  
+  // Tutor navigation
   { icon: LayoutDashboard, label: 'Tutor Dashboard', path: '/tutor', tutorOnly: true },
-  { icon: Upload, label: 'Content Upload', path: '/tutor/content', tutorOnly: true },
   { icon: Users, label: 'My Students', path: '/tutor/students', tutorOnly: true },
-  { icon: Calendar, label: 'Calendar', path: '/calendar' },
+  { icon: Calendar, label: 'My Events', path: '/tutor/events', tutorOnly: true },
+  { icon: Upload, label: 'Content Upload', path: '/tutor/content', tutorOnly: true },
+  
+  // Shared navigation
   { icon: MessageCircle, label: 'Messages', path: '/messages' },
+  { icon: MessageSquare, label: 'Forum', path: '/forum' },
+  { icon: Calendar, label: 'Calendar', path: '/calendar' },
   { icon: Bot, label: 'AI Tutor', path: '/ai-tutor' },
+  
+  // Admin navigation
   { icon: Settings, label: 'Admin Panel', path: '/admin', adminOnly: true },
 ];
 
