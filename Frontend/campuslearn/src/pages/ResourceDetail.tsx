@@ -131,31 +131,26 @@ function useFriendStatus(friendID) {
 React Hooks provide a more direct API to the React concepts you already know. They offer a powerful way to compose behavior and share stateful logic between components.
   `
 };
-
 export default function ResourceDetail() {
-  const { id } = useParams();
-  
+  const {
+    id
+  } = useParams();
+
   // In a real app, you'd fetch the resource based on the ID
   const resource = mockResource;
-
   const getRatingStars = (rating: number) => {
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
-    
     for (let i = 0; i < fullStars; i++) {
       stars.push(<Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
     }
-    
     if (hasHalfStar) {
       stars.push(<Star key="half" className="h-4 w-4 text-yellow-400" />);
     }
-    
     return stars;
   };
-
-  return (
-    <div className="space-y-6 pb-32">
+  return <div className="space-y-6 pb-32">
       {/* Header */}
       <div className="flex items-center space-x-4">
         <Button variant="outline" size="sm" asChild>
@@ -189,12 +184,10 @@ export default function ResourceDetail() {
         
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            {resource.tags.map((tag) => (
-              <Badge key={tag} variant="secondary">
+            {resource.tags.map(tag => <Badge key={tag} variant="secondary">
                 <Tag className="h-3 w-3 mr-1" />
                 {tag}
-              </Badge>
-            ))}
+              </Badge>)}
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
@@ -219,21 +212,9 @@ export default function ResourceDetail() {
       </Card>
 
       {/* Content */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Content</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="prose prose-sm max-w-none">
-            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-              {resource.content}
-            </pre>
-          </div>
-        </CardContent>
-      </Card>
+      
 
       {/* AI Chatbot Box */}
       <ChatbotBox />
-    </div>
-  );
+    </div>;
 }

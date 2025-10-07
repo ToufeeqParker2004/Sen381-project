@@ -46,54 +46,53 @@ export default function Tutor() {
     time: '1 day ago'
   }];
   return <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Tutor Dashboard</h1>
-          <p className="text-muted-foreground">Manage your tutoring sessions and track your progress</p>
-        </div>
-        <Button className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-          <Calendar className="mr-2 h-4 w-4" />
-          Schedule Session
-        </Button>
+      {/* Welcome Banner */}
+      <div className="bg-gradient-hero rounded-xl p-4 md:p-6 text-white">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">Welcome back, Tutor! 👋</h1>
+        <p className="text-white/80 text-base md:text-lg">Ready to inspire and educate your students?</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="hover:shadow-custom-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Students</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{mockStats.totalStudents}</div>
-            <p className="text-xs text-muted-foreground">+2 from last month</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-custom-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Sessions This Week</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{mockStats.sessionsThisWeek}</div>
-            <p className="text-xs text-muted-foreground">+3 from last week</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:shadow-custom-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
-            <Star className="h-4 w-4 text-muted-foreground" />
+            <Star className="h-4 w-4 text-warning fill-current" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{mockStats.averageRating}</div>
-            <p className="text-xs text-muted-foreground">+0.1 from last month</p>
           </CardContent>
         </Card>
 
-        
+        <Card className="hover:shadow-custom-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
+            <DollarSign className="h-4 w-4 text-success" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${mockStats.totalEarnings}</div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

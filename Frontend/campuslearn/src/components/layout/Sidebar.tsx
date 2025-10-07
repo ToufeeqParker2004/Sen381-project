@@ -13,6 +13,9 @@ import {
   ChevronRight,
   Bot,
   HelpCircle,
+  LayoutDashboard,
+  Upload,
+  Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,17 +34,27 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-const navigationItems = [
-  { icon: Home, label: 'Dashboard', path: '/' },
-  { icon: Calendar, label: 'Events', path: '/events' },
-  { icon: BookOpen, label: 'Tutors', path: '/tutors' },
-  { icon: MessageSquare, label: 'Forum', path: '/forum' },
+const navigationItems = [ 
+  // Student navigation
+  { icon: Home, label: 'Dashboard', path: '/', studentOnly: true },
+  { icon: Calendar, label: 'Events', path: '/events', studentOnly: true },
+  { icon: BookOpen, label: 'Tutors', path: '/tutors', studentOnly: true },
+  { icon: FileText, label: 'My Resources', path: '/resources' , studentOnly: true },
+  { icon: HelpCircle, label: 'FAQ', path: '/faq', studentOnly: true  },
+  
+  // Tutor navigation
+  { icon: LayoutDashboard, label: 'Tutor Dashboard', path: '/tutor', tutorOnly: true },
+  { icon: Users, label: 'My Students', path: '/tutor/students', tutorOnly: true },
+  { icon: Calendar, label: 'My Events', path: '/tutor/events', tutorOnly: true },
+  { icon: Upload, label: 'Content Upload', path: '/tutor/content', tutorOnly: true },
+  
+  // Shared navigation
   { icon: MessageCircle, label: 'Messages', path: '/messages' },
-  { icon: FileText, label: 'My Resources', path: '/resources' },
+  { icon: MessageSquare, label: 'Forum', path: '/forum' },
   { icon: Calendar, label: 'Calendar', path: '/calendar' },
   { icon: Bot, label: 'AI Tutor', path: '/ai-tutor' },
-  { icon: HelpCircle, label: 'FAQ', path: '/faq' },
-  { icon: BookOpen, label: 'Tutor Dashboard', path: '/tutor', tutorOnly: true },
+  
+  // Admin navigation
   { icon: Settings, label: 'Admin Panel', path: '/admin', adminOnly: true },
 ];
 
@@ -52,6 +65,7 @@ export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpe
   
   const isAdmin = user?.isAdmin || false;
   const isTutor = user?.isTutor || false;
+  
 
   const isExpanded = isMobile ? isOpen : (mode === 'expanded' || (mode === 'hover' && isHovered));
   const showLabels = isExpanded;
@@ -119,6 +133,7 @@ export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpe
             {navigationItems.map((item) => {
               if (item.adminOnly && !isAdmin) return null;
               if (item.tutorOnly && !isTutor) return null;
+               if (item.studentOnly && (isAdmin || isTutor)) return null; // Hide student-only items from admins and tutors
               
               const isActive = location.pathname === item.path;
               const Icon = item.icon;
