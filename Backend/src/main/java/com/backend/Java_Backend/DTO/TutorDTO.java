@@ -19,6 +19,10 @@ public class TutorDTO {
         this.moduleIds = moduleIds;
     }
 
+    public TutorDTO() {
+
+    }
+
     // Getters/setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }

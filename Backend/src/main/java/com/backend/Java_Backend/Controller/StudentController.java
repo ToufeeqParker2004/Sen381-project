@@ -56,7 +56,7 @@ public class StudentController {
         }
         return ResponseEntity.ok(student);
     }
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping // Open for public registration, or add @PreAuthorize("hasRole('ADMIN')") if admin-only
     public ResponseEntity<?> createStudent(@RequestBody CreateStudentDTO createDTO) {
         StudentDTO student = studentService.createStudent(createDTO);
@@ -78,7 +78,7 @@ public class StudentController {
         return ResponseEntity.ok(student);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or (hasAnyRole('STUDENT', 'TUTOR') and hasPermission(#id, 'Student', 'own'))")
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteStudent(@PathVariable Integer id) {
         boolean deleted = studentService.deleteStudent(id);
