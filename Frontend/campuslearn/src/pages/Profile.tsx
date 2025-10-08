@@ -118,7 +118,7 @@ const Profile = () => {
   useEffect(() => {
   const fetchSubscription = async () => {
     try {
-      const res = await fetch('http://localhost:9090/student/subscribed', {
+      const res = await fetch('http://localhost:9090/notifications/subscribed', {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('authToken')}`,
@@ -341,7 +341,7 @@ const Profile = () => {
                   setSubscribed(newValue); // optimistic UI
 
                   try {
-                    const response = await fetch('http://localhost:9090/student/subscribe', {
+                    const response = await fetch('http://localhost:9090/notifications/subscribe', {
                       method: 'PUT',
                       headers: {
                         'Content-Type': 'application/json',
