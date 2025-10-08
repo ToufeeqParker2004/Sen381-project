@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
 
 export type SidebarMode = 'expanded' | 'collapsed' | 'hover';
@@ -60,6 +61,7 @@ const navigationItems = [
 
 export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpen = false, onClose }: SidebarProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [viewMode, setViewMode] = useState<'student' | 'tutor'>('student');
   const { user } = useAuth();
   const location = useLocation();
   
@@ -132,8 +134,13 @@ export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpe
           <nav className="flex-1 space-y-1 p-4">
             {navigationItems.map((item) => {
               if (item.adminOnly && !isAdmin) return null;
+              
+              // Filter based on view mode
+              if (viewMode === 'student' && item.tutorOnly) return null;
+              if (viewMode === 'tutor' && item.studentOnly) return null;
+              
+              // Hide tutor items if user is not a tutor
               if (item.tutorOnly && !isTutor) return null;
-               if (item.studentOnly && (isAdmin || isTutor)) return null; // Hide student-only items from admins and tutors
               
               const isActive = location.pathname === item.path;
               const Icon = item.icon;
@@ -179,6 +186,49 @@ export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpe
 
           {/* Bottom Section */}
           <div className="border-t border-sidebar-border p-4">
+            {/* Student/Tutor Switch - Show only if user is a tutor */}
+            {isTutor && !isMobile && (
+              <div className="mb-4">
+                {showLabels ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-sidebar-foreground/60">View Mode</p>
+                    <div className="flex items-center justify-between">
+                      <span className={cn(
+                        "text-sm transition-colors",
+                        viewMode === 'student' ? "text-sidebar-foreground font-medium" : "text-sidebar-foreground/60"
+                      )}>
+                        Student
+                      </span>
+                      <Switch
+                        checked={viewMode === 'tutor'}
+                        onCheckedChange={(checked) => setViewMode(checked ? 'tutor' : 'student')}
+                      />
+                      <span className={cn(
+                        "text-sm transition-colors",
+                        viewMode === 'tutor' ? "text-sidebar-foreground font-medium" : "text-sidebar-foreground/60"
+                      )}>
+                        Tutor
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <div className="flex justify-center">
+                        <Switch
+                          checked={viewMode === 'tutor'}
+                          onCheckedChange={(checked) => setViewMode(checked ? 'tutor' : 'student')}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="ml-2">
+                      {viewMode === 'student' ? 'Switch to Tutor View' : 'Switch to Student View'}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            )}
+            
             {/* Sidebar Controls - Hide on mobile */}
             {!isMobile && (
               <div className="mb-4">
