@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { CreatePostModal } from "@/components/ui/CreatePostModal";
 import { MessageCircle, Search, Plus, TrendingUp, Share, MoreHorizontal, X, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from '@/hooks/use-toast';
 
 interface ForumPost {
   id: string;
@@ -39,6 +40,8 @@ export default function Forum() {
   const [communities, setCommunities] = useState<string[]>([]);
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const {toast} = useToast();
 
   const token = localStorage.getItem("authToken");
 
