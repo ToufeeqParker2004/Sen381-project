@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { User as UserIcon, Mail, Phone, MapPin, GraduationCap, LogOut, Upload } from 'lucide-react';
 import type { User } from '@/context/AuthContext';
+import { useEffect } from 'react';
+
 
 const Profile = () => {
   const { user, logout, updateUser } = useAuth();
@@ -25,6 +27,8 @@ const Profile = () => {
     experience: '',
     availability: ''
   });
+
+  const [subscribed, setSubscribed] = useState<boolean>(false);
 
   const handleLogout = () => {
     logout();
@@ -110,6 +114,34 @@ const Profile = () => {
   if (!user) {
     return <div>Loading...</div>;
   }
+
+  useEffect(() => {
+  const fetchSubscription = async () => {
+    try {
+      const res = await fetch('http://localhost:9090/student/subscribed', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to fetch subscription status');
+
+      const data = await res.json();
+      setSubscribed(data.subscribed ?? false); // set default false if null
+    } catch (err) {
+      console.error('Failed to fetch subscription status', err);
+      toast({
+        title: 'Error',
+        description: 'Could not fetch subscription status.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  fetchSubscription();
+}, []);
+
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -301,8 +333,47 @@ const Profile = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="email-notifications">Email Notifications</Label>
-              <input type="checkbox" id="email-notifications" defaultChecked />
+              <input
+                type="checkbox"
+                checked={subscribed}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setSubscribed(newValue); // optimistic UI
+
+                  try {
+                    const response = await fetch('http://localhost:9090/student/subscribe', {
+                      method: 'PUT',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+                      },
+                      body: JSON.stringify({ subscribed: newValue }),
+                    });
+
+                    if (!response.ok) {
+                      const errorData = await response.json();
+                      throw new Error(errorData?.error || 'Failed to update subscription');
+                    }
+
+                    toast({
+                      title: 'Success',
+                      description: `Notifications ${newValue ? 'enabled' : 'disabled'}.`,
+                    });
+                  } catch (err) {
+                    setSubscribed(!newValue); // revert on failure
+                    toast({
+                      title: 'Error',
+                      description: (err as Error).message,
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+              />
+
+
             </div>
+
+            {/*
             <div className="flex items-center justify-between">
               <Label htmlFor="push-notifications">Push Notifications</Label>
               <input type="checkbox" id="push-notifications" defaultChecked />
@@ -311,6 +382,7 @@ const Profile = () => {
               <Label htmlFor="sms-notifications">SMS Notifications</Label>
               <input type="checkbox" id="sms-notifications" />
             </div>
+            */}
           </CardContent>
         </Card>
       </div>
