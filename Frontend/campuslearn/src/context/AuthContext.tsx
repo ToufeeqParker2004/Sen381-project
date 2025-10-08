@@ -11,7 +11,7 @@ export interface User {
   isTutor: boolean;
   tutorApplicationStatus?: 'none' | 'pending' | 'approved' | 'rejected';
   location?: string;
-  phoneNumber?:string;
+  phoneNumber?: string;
 }
 
 interface AuthContextType {
@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const fetchProfile = async (token: string) => {
     try {
       const res = await fetch('http://localhost:9090/student/profile', {
-        method: "GET",
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -50,8 +50,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!res.ok) return;
 
       const profileData = await res.json();
-      console.log('Profile fetched:', profileData);
-
       setUser(prev => ({
         ...prev,
         name: profileData.name,
@@ -73,7 +71,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: decoded.sub,
         identifier: decoded.email,
         email: decoded.email,
-        name: '', // Will be replaced after fetching profile
+        name: '',
         avatar: '',
         isAdmin: decoded.roles.includes('ADMIN'),
         isTutor: decoded.roles.includes('TUTOR'),
@@ -93,7 +91,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
-      // Special-case Microsoft demo login (no backend)
       if (identifier === 'microsoft@belgiumcampus.edu' && password === 'microsoft') {
         setUser({
           id: 'microsoft',
@@ -107,7 +104,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
 
-      // Normal backend login
       const res = await fetch('http://localhost:9090/student/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,12 +112,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (!res.ok) return false;
 
-      const data = await res.json();   
-      const token = data.token;        
+      const data = await res.json();
+      const token = data.token;
       localStorage.setItem('authToken', token);
-
       await initializeUser(token);
-
       return true;
     } catch (err) {
       console.error(err);
@@ -135,47 +129,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const updateUser = async (updates: Partial<User>) => {
-  if (!user) return;
+    if (!user) return;
 
-  // Ensure tutor rights are preserved if not explicitly updated
-  const mergedUpdates: Partial<User> = {
-    ...user,
-    ...updates,
-    isTutor: updates.isTutor ?? user.isTutor,
-    tutorApplicationStatus: updates.tutorApplicationStatus ?? user.tutorApplicationStatus,
-  };
-
-  try {
-    const res = await fetch(`http://localhost:9090/student/${user.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-      },
-      body: JSON.stringify(mergedUpdates),
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.message || 'Failed to update user');
-    }
-
-    const updatedUser = await res.json();
-
-    // Merge backend response with frontend state to preserve tutor info
+    // Immediate local update (optimistic)
     setUser(prev => ({
       ...prev!,
-      ...updatedUser,
-      isTutor: updatedUser.isTutor ?? prev!.isTutor,
-      tutorApplicationStatus: updatedUser.tutorApplicationStatus ?? prev!.tutorApplicationStatus,
+      ...updates,
     }));
-  } catch (error: any) {
-    console.error('Error updating user:', error.message);
-  }
-};
 
+    try {
+      const res = await fetch(`http://localhost:9090/student/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify({
+          ...user,
+          ...updates,
+          isTutor: updates.isTutor ?? user.isTutor,
+          tutorApplicationStatus: updates.tutorApplicationStatus ?? user.tutorApplicationStatus,
+        }),
+      });
 
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Failed to update user');
+      }
 
+      const updatedUser = await res.json();
+
+      setUser(prev => ({
+        ...prev!,
+        ...updatedUser,
+        isTutor: updatedUser.isTutor ?? prev!.isTutor,
+        tutorApplicationStatus: updatedUser.tutorApplicationStatus ?? prev!.tutorApplicationStatus,
+      }));
+    } catch (error: any) {
+      console.error('Error updating user:', error.message);
+    }
+  };
 
   const value: AuthContextType = {
     user,
