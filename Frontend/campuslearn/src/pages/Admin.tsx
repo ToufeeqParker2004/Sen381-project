@@ -217,6 +217,43 @@ export default function Admin() {
     console.log('Saving record:', updatedRecord);
   };
 
+  const handleExportCSV = () => {
+    const currentTableData = databaseTables[selectedTable as keyof typeof databaseTables];
+    
+    if (!currentTableData || currentTableData.length === 0) {
+      return;
+    }
+
+    // Get headers from the first row keys
+    const headers = Object.keys(currentTableData[0]);
+    
+    // Create CSV content
+    let csvContent = headers.join(',') + '\n';
+    
+    currentTableData.forEach((row: any) => {
+      const values = headers.map(header => {
+        const value = row[header];
+        // Escape values that contain commas or quotes
+        if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+          return `"${value.replace(/"/g, '""')}"`;
+        }
+        return value;
+      });
+      csvContent += values.join(',') + '\n';
+    });
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${selectedTable}_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -224,16 +261,6 @@ export default function Admin() {
         <div>
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
           <p className="text-muted-foreground">CampusLearn™ Platform Administration</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export Data
-          </Button>
-          <Button className="bg-gradient-primary hover:opacity-90">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Button>
         </div>
       </div>
 
@@ -307,9 +334,27 @@ export default function Admin() {
                       data={modulePopularityData}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
+                      labelLine={true}
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+                        const RADIAN = Math.PI / 180;
+                        const radius = outerRadius + 25;
+                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                        
+                        return (
+                          <text 
+                            x={x} 
+                            y={y} 
+                            fill="currentColor" 
+                            textAnchor={x > cx ? 'start' : 'end'} 
+                            dominantBaseline="central"
+                            className="text-xs sm:text-sm"
+                          >
+                            {`${name}: ${(percent * 100).toFixed(0)}%`}
+                          </text>
+                        );
+                      }}
+                      outerRadius="60%"
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -368,7 +413,7 @@ export default function Admin() {
                   </CardTitle>
                   <CardDescription>View and edit database tables with CRUD functionality</CardDescription>
                 </div>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" onClick={handleExportCSV}>
                   <Download className="mr-2 h-4 w-4" />
                   Export CSV
                 </Button>
@@ -571,14 +616,8 @@ export default function Admin() {
                           <Button variant="ghost" size="sm" title="View Post">
                             <Eye className="h-3 w-3" />
                           </Button>
-                          <Button variant="ghost" size="sm" title="Edit Post">
-                            <Edit className="h-3 w-3" />
-                          </Button>
                           <Button variant="ghost" size="sm" title="Delete Post">
                             <Trash2 className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="sm" title="Flag Post">
-                            <Flag className="h-3 w-3" />
                           </Button>
                         </div>
                       </TableCell>
