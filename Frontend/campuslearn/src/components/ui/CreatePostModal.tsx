@@ -121,7 +121,8 @@ export function CreatePostModal({
         return;
       }
 
-      alert(data.message || 'Post created successfully!');
+      toast({ title: 'Success', description: data.message || 'Post created successfully!'});
+      
       setTitle('');
       setContent('');
       setCommunity('');

@@ -41,7 +41,7 @@ export default function Forum() {
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const {toast} = useToast();
+  const { toast } = useToast();
 
   const token = localStorage.getItem("authToken");
 
@@ -74,6 +74,7 @@ export default function Forum() {
             console.error(err);
           }
 
+          let authorName = null;
           try {
             const userRes = await fetch(`http://localhost:9090/student/${post.authorId}`, {
               method: "GET",
@@ -109,7 +110,13 @@ export default function Forum() {
         })
       );
 
+      postsWithReplies.sort(
+        (a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+      );
+
+
       setForumPosts(postsWithReplies);
+
 
       // Trending Topics by Tag
       const tagCount: Record<string, number> = {};
@@ -338,11 +345,10 @@ export default function Forum() {
                   communities.map((community) => (
                     <div
                       key={community}
-                      className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${
-                        selectedCommunity === community
+                      className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors ${selectedCommunity === community
                           ? "bg-primary text-primary-foreground"
                           : "hover:bg-muted/50"
-                      }`}
+                        }`}
                       onClick={() =>
                         setSelectedCommunity(
                           selectedCommunity === community ? null : community
