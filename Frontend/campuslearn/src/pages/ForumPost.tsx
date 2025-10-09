@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MessageCircle, Share, MoreHorizontal, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from '@/hooks/use-toast';
 
 interface Comment {
   id: string;
@@ -37,11 +38,12 @@ export default function ForumPost() {
   const [newComment, setNewComment] = useState("");
   const [authorName, setAuthorName] = useState<string | null>(null);
   const [loadingComments, setLoadingComments] = useState(false);
+  const { toast } = useToast();
 
   const token = localStorage.getItem("authToken");
 
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return new Date().toLocaleString(); 
+    if (!dateStr) return new Date().toLocaleString();
     const date = new Date(dateStr);
     return isNaN(date.getTime()) ? new Date().toLocaleString() : date.toLocaleString();
   };
@@ -135,7 +137,11 @@ export default function ForumPost() {
       );
       const comment = await res.json();
       if (!res.ok) {
-        alert(comment.error || comment.message || "Failed to create post");
+        toast({
+          title: 'Error',
+          description: comment.error || comment.message || "Failed to create post",
+        });
+
         return;
       }
 
@@ -159,8 +165,8 @@ export default function ForumPost() {
   return (
     <div className="space-y-6">
       {/* Back Button */}
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         onClick={() => navigate('/forum')}
         className="mb-4"
       >

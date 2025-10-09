@@ -1,9 +1,9 @@
 package com.backend.Java_Backend.Services;
 
 import com.backend.Java_Backend.Models.Notification;
-import com.backend.Java_Backend.Models.Student;
+import com.backend.Java_Backend.Models.NotificationSubscription;
 import com.backend.Java_Backend.Repository.NotificationRepository;
-import com.backend.Java_Backend.Repository.StudentRepository;
+import com.backend.Java_Backend.Repository.SubscribeNotiRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,10 +14,12 @@ import java.util.UUID;
 @Service
 public class NotificationService {
     private final NotificationRepository notificationRepository;
+    private final SubscribeNotiRepository subscribeNoti;
 
     @Autowired
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository, SubscribeNotiRepository subscribeNoti) {
         this.notificationRepository = notificationRepository;
+        this.subscribeNoti = subscribeNoti;
     }
 
     // Get all Notifications
@@ -40,5 +42,18 @@ public class NotificationService {
         notificationRepository.deleteById(id);
     }
 
+    // Upsert subscription
+    public NotificationSubscription upsertSubscription(NotificationSubscription subscription) {
+        return subscribeNoti.findByStudentID(subscription.getStudentID())
+                .map(existing -> {
+                    existing.setSubscribed(subscription.getSubscribed());
+                    return subscribeNoti.save(existing);
+                })
+                .orElseGet(() -> subscribeNoti.save(subscription));
+    }
+
+    public Optional<NotificationSubscription> getSubscription(Integer studentID) {
+        return subscribeNoti.findByStudentID(studentID);
+    }
 
 }

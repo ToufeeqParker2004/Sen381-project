@@ -6,7 +6,9 @@ import com.backend.Java_Backend.DTO.StudentDTO;
 import com.backend.Java_Backend.DTO.StudentWithModuleDTO;
 import com.backend.Java_Backend.DTO.UpdateStudentDTO;
 import com.backend.Java_Backend.DTO.LoginRequest; // Assume this exists with identifier/password
+import com.backend.Java_Backend.Models.NotificationSubscription;
 import com.backend.Java_Backend.Services.AuthService; // Use unified AuthService
+import com.backend.Java_Backend.Services.NotificationService;
 import com.backend.Java_Backend.Services.StudentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/student")
@@ -126,4 +130,6 @@ public class StudentController {
                     .body(Collections.singletonMap("error", "Something went wrong"));
         }
     }
+
+
 }

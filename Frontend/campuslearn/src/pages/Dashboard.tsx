@@ -14,8 +14,11 @@ import {
   Star,
   ChevronRight,
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Dashboard() {
+
+  const {user} = useAuth();
   const stats = [
     { label: 'Active Courses', value: '8', icon: BookOpen, color: 'text-primary' },
     { label: 'Study Sessions', value: '24', icon: Clock, color: 'text-secondary' },
@@ -39,7 +42,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Welcome Header */}
       <div className="bg-gradient-hero rounded-xl p-4 md:p-6 text-white">
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">Welcome back, John! 👋</h1>
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">Welcome back, {user?.name || 'User'} ! 👋</h1>
         <p className="text-white/80 text-base md:text-lg">Ready to continue your learning journey?</p>
       </div>
 

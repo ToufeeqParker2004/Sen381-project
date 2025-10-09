@@ -7,7 +7,6 @@ import com.backend.Java_Backend.Repository.TutorRepository;
 import com.backend.Java_Backend.Security.JwtUtil;
 import com.backend.Java_Backend.Security.PasswordHasher;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;

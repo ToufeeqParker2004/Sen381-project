@@ -24,6 +24,7 @@ import {
   Quote,
   MoreHorizontal,
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface CreatePostModalProps {
   open: boolean;
@@ -44,6 +45,7 @@ export function CreatePostModal({
   const [community, setCommunity] = useState('');
   const [postType, setPostType] = useState('text');
   const [link, setLink] = useState('');
+  const { toast } = useToast();
 
   const communities = [
     'General Discussions',
@@ -112,11 +114,15 @@ export function CreatePostModal({
 
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || data.message || 'Failed to create post');
+        toast({
+          title: 'Error',
+          description: data.error || data.message || "Failed to create post",
+        });
         return;
       }
 
-      alert(data.message || 'Post created successfully!');
+      toast({ title: 'Success', description: data.message || 'Post created successfully!'});
+      
       setTitle('');
       setContent('');
       setCommunity('');
@@ -126,7 +132,10 @@ export function CreatePostModal({
 
       if (onPostCreated) onPostCreated();
     } catch (err: any) {
-      alert(err.message || 'Network error');
+      toast({
+          title: 'Error',
+          description: err.message || 'Network error',
+        });
     }
   };
 

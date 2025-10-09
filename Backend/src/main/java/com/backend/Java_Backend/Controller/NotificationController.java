@@ -1,14 +1,15 @@
 package com.backend.Java_Backend.Controller;
 
 import com.backend.Java_Backend.Models.Notification;
+import com.backend.Java_Backend.Models.NotificationSubscription;
 import com.backend.Java_Backend.Services.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/notifications")
@@ -62,5 +63,53 @@ public class NotificationController {
         return ResponseEntity.notFound().build();
     }
 
+    @PutMapping("/subscribe")
+    public ResponseEntity<?> subscribe(@RequestBody Map<String, Boolean> payload, Authentication authentication) {
+        try {
+            Boolean subscribed = payload.get("subscribed");
+            if (subscribed == null) {
+                return ResponseEntity.badRequest().body("Missing 'subscribed' field");
+            }
+
+            // Convert userID from String to Integer
+            String studentIdStr = (String) authentication.getPrincipal();
+            Integer studentId = Integer.parseInt(studentIdStr);
+
+            NotificationSubscription subscription = notificationService.getSubscription(studentId)
+                    .orElse(new NotificationSubscription(studentId, subscribed));
+
+            subscription.setSubscribed(subscribed);
+            NotificationSubscription saved = notificationService.upsertSubscription(subscription);
+
+            return ResponseEntity.ok(saved);
+
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body("Invalid student ID");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error updating subscription: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/subscribed")
+    public ResponseEntity<?> getStatusOfSubscription(Authentication authentication) {
+        try {
+            String studentIdStr = (String) authentication.getPrincipal();
+            Integer studentId = Integer.parseInt(studentIdStr);
+
+            Optional<NotificationSubscription> optionalStatus = notificationService.getSubscription(studentId);
+            return optionalStatus
+                    .<ResponseEntity<?>>map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                            .body(Collections.singletonMap("error", "Subscription not found")));
+
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", "Invalid student ID"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Error getting subscription: " + e.getMessage()));
+        }
+    }
 
 }
