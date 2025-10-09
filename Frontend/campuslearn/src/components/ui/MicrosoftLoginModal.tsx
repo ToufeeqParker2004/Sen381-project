@@ -7,7 +7,7 @@ import { Settings } from 'lucide-react';
 interface MicrosoftLoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (email: string, password: string) => void;
 }
 
 const MicrosoftLoginModal: React.FC<MicrosoftLoginModalProps> = ({
@@ -29,15 +29,12 @@ const MicrosoftLoginModal: React.FC<MicrosoftLoginModalProps> = ({
       
       setIsLoading(true);
       
-      // Simulate loading delay
+      // Pass credentials to parent for real authentication
       setTimeout(() => {
         setIsLoading(false);
-        onSuccess();
-        onClose();
-        setEmail('');
-        setPassword('');
-        setStep('email');
-      }, 1500);
+        onSuccess(email, password);
+        handleClose();
+      }, 500);
     }
   };
 
