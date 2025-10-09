@@ -133,6 +133,8 @@ export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpe
           {/* Navigation */}
           <nav className="flex-1 space-y-1 p-4">
             {navigationItems.map((item) => {
+              // If user is admin, only show admin panel
+              if (isAdmin && !item.adminOnly) return null;
               if (item.adminOnly && !isAdmin) return null;
               
               // Filter based on view mode
@@ -142,13 +144,13 @@ export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpe
               // Hide tutor items if user is not a tutor
               if (item.tutorOnly && !isTutor) return null;
               
-              const isActive = location.pathname === item.path;
               const Icon = item.icon;
 
               const navButton = (
                   <NavLink
                   key={item.path}
                   to={item.path}
+                  end
                   className={({ isActive }) =>
                     cn(
                       'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',

@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { EditRecordDialog } from '@/components/ui/EditRecordDialog';
 import {
   Table,
   TableBody,
@@ -32,18 +33,36 @@ import {
   Trash2,
   Eye,
   AlertTriangle,
+  Database,
+  Flag,
+  MessageSquare,
+  TrendingUp,
+  FileText,
+  Download,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Activity,
+  Server,
+  Zap,
 } from 'lucide-react';
+import { LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTable, setSelectedTable] = useState('users');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<Record<string, any> | null>(null);
 
+  // System Stats
   const systemStats = [
     { label: 'Total Users', value: '2,847', change: '+12%', icon: Users, color: 'text-primary' },
-    { label: 'Active Courses', value: '156', change: '+8%', icon: BookOpen, color: 'text-secondary' },
-    { label: 'Tutoring Sessions', value: '1,243', change: '+15%', icon: BarChart3, color: 'text-success' },
-    { label: 'System Uptime', value: '99.9%', change: '0%', icon: Shield, color: 'text-warning' },
+    { label: 'Active Tutors', value: '156', change: '+8%', icon: Shield, color: 'text-secondary' },
+    { label: 'Total Topics', value: '1,243', change: '+15%', icon: MessageSquare, color: 'text-success' },
+    { label: 'API Uptime', value: '99.9%', change: '0%', icon: Server, color: 'text-warning' },
   ];
 
+  // User Management Data
   const users = [
     {
       id: 1,
@@ -70,48 +89,89 @@ export default function Admin() {
       name: 'Emma Rodriguez',
       email: 'emma.rodriguez@campus.edu',
       role: 'Tutor',
-      status: 'Pending',
+      status: 'Suspended',
       joinDate: '2023-11-10',
       lastActive: '1 day ago',
       avatar: '/api/placeholder/40/40'
     },
   ];
 
-  const courses = [
-    {
-      id: 1,
-      title: 'Advanced Calculus',
-      instructor: 'Dr. Sarah Wilson',
-      students: 24,
-      status: 'Active',
-      category: 'Mathematics',
-      created: '2023-09-01'
-    },
-    {
-      id: 2,
-      title: 'Data Structures',
-      instructor: 'Prof. Mike Chen',
-      students: 18,
-      status: 'Active',
-      category: 'Computer Science',
-      created: '2023-09-15'
-    },
-    {
-      id: 3,
-      title: 'Organic Chemistry',
-      instructor: 'Dr. Emma Rodriguez',
-      students: 12,
-      status: 'Draft',
-      category: 'Chemistry',
-      created: '2023-11-01'
-    },
+  // Database Tables Data
+  const databaseTables = {
+    users: [
+      { id: 1, name: 'John Doe', email: 'john@campus.edu', role: 'Student', status: 'Active' },
+      { id: 2, name: 'Jane Smith', email: 'jane@campus.edu', role: 'Tutor', status: 'Active' },
+      { id: 3, name: 'Bob Johnson', email: 'bob@campus.edu', role: 'Student', status: 'Active' },
+    ],
+    tutors: [
+      { id: 1, name: 'Prof. Adams', expertise: 'Mathematics', rating: 4.8, sessions: 234 },
+      { id: 2, name: 'Dr. Brown', expertise: 'Physics', rating: 4.9, sessions: 189 },
+      { id: 3, name: 'Prof. Garcia', expertise: 'Chemistry', rating: 4.7, sessions: 156 },
+    ],
+    topics: [
+      { id: 1, title: 'Linear Algebra Help', author: 'Student A', replies: 12, views: 345 },
+      { id: 2, title: 'Quantum Mechanics', author: 'Student B', replies: 8, views: 201 },
+      { id: 3, title: 'Organic Chemistry Lab', author: 'Student C', replies: 15, views: 423 },
+    ],
+    messages: [
+      { id: 1, from: 'User A', to: 'Tutor B', subject: 'Question about homework', date: '2024-01-15' },
+      { id: 2, from: 'User C', to: 'Tutor D', subject: 'Session request', date: '2024-01-14' },
+      { id: 3, from: 'User E', to: 'Tutor F', subject: 'Follow-up question', date: '2024-01-13' },
+    ],
+    reports: [
+      { id: 1, type: 'Spam', reportedBy: 'User X', target: 'Post #123', status: 'Pending' },
+      { id: 2, type: 'Harassment', reportedBy: 'User Y', target: 'User Z', status: 'Resolved' },
+      { id: 3, type: 'Inappropriate Content', reportedBy: 'User W', target: 'Post #456', status: 'Under Review' },
+    ],
+    resources: [
+      { id: 1, title: 'Calculus Notes.pdf', uploadedBy: 'Tutor A', size: '2.3 MB', downloads: 45 },
+      { id: 2, title: 'Physics Lab Manual', uploadedBy: 'Tutor B', size: '5.1 MB', downloads: 78 },
+      { id: 3, title: 'Chemistry Textbook', uploadedBy: 'Tutor C', size: '12.4 MB', downloads: 123 },
+    ],
+  };
+
+  // Errors & Alerts Data
+  const errors = [
+    { id: 1, type: 'Login Failure', user: 'john@campus.edu', message: 'Wrong password (3 attempts)', time: '10 minutes ago', severity: 'warning' },
+    { id: 2, type: 'NLP Moderation', user: 'mike@campus.edu', message: 'Inappropriate language detected', time: '1 hour ago', severity: 'high' },
+    { id: 3, type: 'API Failure', user: 'System', message: 'Payment gateway timeout', time: '2 hours ago', severity: 'critical' },
+    { id: 4, type: 'Upload Failure', user: 'sarah@campus.edu', message: 'File size exceeds limit', time: '3 hours ago', severity: 'low' },
+    { id: 5, type: 'Reported User', user: 'emma@campus.edu', message: 'Spam behavior reported', time: '5 hours ago', severity: 'high' },
   ];
 
-  const recentActivity = [
-    { action: 'New user registration', user: 'John Doe', time: '5 minutes ago', type: 'user' },
-    { action: 'Course created', user: 'Dr. Smith', time: '1 hour ago', type: 'course' },
-    { action: 'Tutoring session completed', user: 'Sarah Wilson', time: '2 hours ago', type: 'session' },
-    { action: 'Forum post reported', user: 'System', time: '3 hours ago', type: 'report' },
+  // Forum Posts Data
+  const forumPosts = [
+    { id: 1, title: 'Need help with Calculus', author: 'Student A', replies: 15, flags: 0, status: 'Active', date: '2024-01-15' },
+    { id: 2, title: 'Best study techniques?', author: 'Student B', replies: 23, flags: 2, status: 'Flagged', date: '2024-01-14' },
+    { id: 3, title: 'Physics tutoring recommendations', author: 'Student C', replies: 8, flags: 0, status: 'Active', date: '2024-01-13' },
+  ];
+
+  // Analytics Data
+  const userActivityData = [
+    { month: 'Jan', students: 400, tutors: 24 },
+    { month: 'Feb', students: 450, tutors: 28 },
+    { month: 'Mar', students: 520, tutors: 32 },
+    { month: 'Apr', students: 580, tutors: 35 },
+    { month: 'May', students: 650, tutors: 42 },
+    { month: 'Jun', students: 720, tutors: 48 },
+  ];
+
+  const modulePopularityData = [
+    { name: 'Mathematics', value: 400 },
+    { name: 'Physics', value: 300 },
+    { name: 'Chemistry', value: 200 },
+    { name: 'Biology', value: 150 },
+    { name: 'Computer Science', value: 350 },
+  ];
+
+  const COLORS = ['#000000', '#FFD500', '#FF4D4D', '#4CAF50', '#2196F3'];
+
+  // Audit Logs Data
+  const auditLogs = [
+    { id: 1, admin: 'Admin User', action: 'Suspended user', target: 'mike@campus.edu', timestamp: '2024-01-15 14:30', details: 'Violation of terms' },
+    { id: 2, admin: 'Admin User', action: 'Deleted post', target: 'Post #456', timestamp: '2024-01-15 12:15', details: 'Spam content' },
+    { id: 3, admin: 'Super Admin', action: 'Edited user role', target: 'jane@campus.edu', timestamp: '2024-01-14 09:45', details: 'Promoted to Tutor' },
+    { id: 4, admin: 'Admin User', action: 'Approved resource', target: 'Physics Notes.pdf', timestamp: '2024-01-14 08:20', details: 'Content verification' },
   ];
 
   const getStatusColor = (status: string) => {
@@ -119,62 +179,77 @@ export default function Admin() {
       case 'active':
         return 'bg-success text-success-foreground';
       case 'pending':
+      case 'under review':
         return 'bg-warning text-warning-foreground';
-      case 'draft':
+      case 'suspended':
+      case 'flagged':
+        return 'bg-destructive text-destructive-foreground';
+      case 'resolved':
+        return 'bg-success text-success-foreground';
+      default:
+        return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity.toLowerCase()) {
+      case 'critical':
+        return 'bg-destructive text-destructive-foreground';
+      case 'high':
+        return 'bg-destructive text-destructive-foreground';
+      case 'warning':
+        return 'bg-warning text-warning-foreground';
+      case 'low':
         return 'bg-muted text-muted-foreground';
       default:
         return 'bg-muted text-muted-foreground';
     }
   };
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'user':
-        return Users;
-      case 'course':
-        return BookOpen;
-      case 'session':
-        return BarChart3;
-      case 'report':
-        return AlertTriangle;
-      default:
-        return Settings;
-    }
+  const handleEditRecord = (record: Record<string, any>) => {
+    setSelectedRecord(record);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveRecord = (updatedRecord: Record<string, any>) => {
+    // Update the record in the databaseTables state
+    // In a real app, this would make an API call
+    console.log('Saving record:', updatedRecord);
   };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Admin Panel</h1>
-          <p className="text-muted-foreground">Manage users, courses, and system settings</p>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          <p className="text-muted-foreground">CampusLearn™ Platform Administration</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline">
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Analytics
+            <Download className="mr-2 h-4 w-4" />
+            Export Data
           </Button>
           <Button className="bg-gradient-primary hover:opacity-90">
             <Settings className="mr-2 h-4 w-4" />
-            System Settings
+            Settings
           </Button>
         </div>
       </div>
 
-      {/* System Stats */}
+      {/* Dashboard Overview Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {systemStats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.label}>
+            <Card key={stat.label} className="hover:shadow-custom-md transition-shadow">
               <CardContent className="flex items-center p-6">
-                <div className={`p-2 rounded-lg bg-muted mr-4`}>
+                <div className="p-3 rounded-lg bg-muted mr-4">
                   <Icon className={`h-6 w-6 ${stat.color}`} />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{stat.value}</p>
                   <p className="text-muted-foreground text-sm">{stat.label}</p>
-                  <p className="text-xs text-success">{stat.change}</p>
                 </div>
               </CardContent>
             </Card>
@@ -182,250 +257,445 @@ export default function Admin() {
         })}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="lg:col-span-2">
-          <Tabs defaultValue="users" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="users">Users</TabsTrigger>
-              <TabsTrigger value="courses">Courses</TabsTrigger>
-              <TabsTrigger value="reports">Reports</TabsTrigger>
-            </TabsList>
+      {/* Main Tabs */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="database">Database</TabsTrigger>
+          <TabsTrigger value="errors">Errors</TabsTrigger>
+          <TabsTrigger value="forum">Forum</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="audit">Audit Logs</TabsTrigger>
+        </TabsList>
 
-            <TabsContent value="users" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>User Management</CardTitle>
-                      <CardDescription>Manage platform users and their roles</CardDescription>
-                    </div>
-                    <Button size="sm">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add User
-                    </Button>
-                  </div>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search users..."
-                      className="pl-9"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Last Active</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            <div className="flex items-center space-x-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={user.avatar} />
-                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-medium">{user.name}</div>
-                                <div className="text-sm text-muted-foreground">{user.email}</div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{user.role}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(user.status)}>
-                              {user.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {user.lastActive}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-1">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+        {/* Dashboard Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  User Activity Trends
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={userActivityData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="students" stroke="#000000" strokeWidth={2} />
+                    <Line type="monotone" dataKey="tutors" stroke="#FFD500" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Module Popularity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={modulePopularityData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {modulePopularityData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="courses" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Course Management</CardTitle>
-                      <CardDescription>Manage courses and tutoring sessions</CardDescription>
-                    </div>
-                    <Button size="sm">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Course
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Course</TableHead>
-                        <TableHead>Instructor</TableHead>
-                        <TableHead>Students</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {courses.map((course) => (
-                        <TableRow key={course.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{course.title}</div>
-                              <div className="text-sm text-muted-foreground">{course.category}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{course.instructor}</TableCell>
-                          <TableCell>{course.students} students</TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(course.status)}>
-                              {course.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-1">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="reports" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Reports</CardTitle>
-                  <CardDescription>Monitor platform activity and issues</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8">
-                    <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Coming Soon</h3>
-                    <p className="text-muted-foreground">Advanced reporting features will be available here</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Recent Activity</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {recentActivity.map((activity, index) => {
-                const Icon = getActivityIcon(activity.type);
-                return (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="p-1 rounded bg-muted">
-                      <Icon className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{activity.action}</p>
-                      <p className="text-xs text-muted-foreground">{activity.user}</p>
-                      <p className="text-xs text-muted-foreground">{activity.time}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start text-sm">
-                <Users className="mr-2 h-4 w-4" />
-                Bulk User Import
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-sm">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Course Analytics
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-sm">
-                <Settings className="mr-2 h-4 w-4" />
-                System Maintenance
-              </Button>
-              <Button variant="outline" className="w-full justify-start text-sm">
-                <BarChart3 className="mr-2 h-4 w-4" />
-                Generate Report
-              </Button>
-            </CardContent>
-          </Card>
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* System Health */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">System Health</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Server className="h-5 w-5" />
+                System Health Status
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Database</span>
-                <Badge className="bg-success text-success-foreground">Healthy</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">API Services</span>
-                <Badge className="bg-success text-success-foreground">Online</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">File Storage</span>
-                <Badge className="bg-warning text-warning-foreground">Warning</Badge>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <span className="text-sm font-medium">Database</span>
+                  <Badge className="bg-success text-success-foreground">Healthy</Badge>
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <span className="text-sm font-medium">API Services</span>
+                  <Badge className="bg-success text-success-foreground">Online</Badge>
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <span className="text-sm font-medium">File Storage</span>
+                  <Badge className="bg-warning text-warning-foreground">Warning</Badge>
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <span className="text-sm font-medium">Auth System</span>
+                  <Badge className="bg-success text-success-foreground">Online</Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </TabsContent>
+
+
+        {/* Database Tools Tab */}
+        <TabsContent value="database" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="h-5 w-5" />
+                    Database Management
+                  </CardTitle>
+                  <CardDescription>View and edit database tables with CRUD functionality</CardDescription>
+                </div>
+                <Button size="sm" variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Select value={selectedTable} onValueChange={setSelectedTable}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select table" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="users">Users</SelectItem>
+                  <SelectItem value="tutors">Tutors</SelectItem>
+                  <SelectItem value="topics">Topics</SelectItem>
+                  <SelectItem value="messages">Messages</SelectItem>
+                  <SelectItem value="reports">Reports</SelectItem>
+                  <SelectItem value="resources">Resources</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {selectedTable === 'users' && (
+                      <>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </>
+                    )}
+                    {selectedTable === 'tutors' && (
+                      <>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Expertise</TableHead>
+                        <TableHead>Rating</TableHead>
+                        <TableHead>Sessions</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </>
+                    )}
+                    {selectedTable === 'topics' && (
+                      <>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Author</TableHead>
+                        <TableHead>Replies</TableHead>
+                        <TableHead>Views</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </>
+                    )}
+                    {selectedTable === 'messages' && (
+                      <>
+                        <TableHead>ID</TableHead>
+                        <TableHead>From</TableHead>
+                        <TableHead>To</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </>
+                    )}
+                    {selectedTable === 'reports' && (
+                      <>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Reported By</TableHead>
+                        <TableHead>Target</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </>
+                    )}
+                    {selectedTable === 'resources' && (
+                      <>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Uploaded By</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead>Downloads</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {databaseTables[selectedTable as keyof typeof databaseTables].map((row: any) => (
+                    <TableRow key={row.id}>
+                      <TableCell>{row.id}</TableCell>
+                      {Object.entries(row).slice(1).map(([key, value]) => (
+                        <TableCell key={key}>{String(value)}</TableCell>
+                      ))}
+                      <TableCell>
+                        <div className="flex space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            title="Edit"
+                            onClick={() => handleEditRecord(row)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" title="Delete">
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Errors & Alerts Tab */}
+        <TabsContent value="errors" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Errors & Alerts Center
+              </CardTitle>
+              <CardDescription>Monitor platform errors and security alerts</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {errors.map((error) => (
+                  <div key={error.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className={getSeverityColor(error.severity)}>
+                          {error.severity}
+                        </Badge>
+                        <span className="font-semibold">{error.type}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">{error.user}</p>
+                      <p className="text-sm">{error.message}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{error.time}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm">
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <CheckCircle className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Forum & Content Moderation Tab */}
+        <TabsContent value="forum" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Forum & Content Moderation
+              </CardTitle>
+              <CardDescription>Review, edit, or delete forum posts and learning materials</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Post Title</TableHead>
+                    <TableHead>Author</TableHead>
+                    <TableHead>Replies</TableHead>
+                    <TableHead>Flags</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {forumPosts.map((post) => (
+                    <TableRow key={post.id}>
+                      <TableCell className="font-medium">{post.title}</TableCell>
+                      <TableCell>{post.author}</TableCell>
+                      <TableCell>{post.replies}</TableCell>
+                      <TableCell>
+                        {post.flags > 0 ? (
+                          <Badge variant="destructive">{post.flags} flags</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(post.status)}>
+                          {post.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{post.date}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-1">
+                          <Button variant="ghost" size="sm" title="View Post">
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" title="Edit Post">
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" title="Delete Post">
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="sm" title="Flag Post">
+                            <Flag className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Reports & Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Reports & Analytics
+              </CardTitle>
+              <CardDescription>Platform trends and engagement metrics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">User Growth</h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <RechartsBarChart data={userActivityData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="students" fill="#000000" />
+                      <Bar dataKey="tutors" fill="#FFD500" />
+                    </RechartsBarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold mb-4">Key Metrics</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Sessions</p>
+                        <p className="text-2xl font-bold">1,234</p>
+                      </div>
+                      <Zap className="h-8 w-8 text-secondary" />
+                    </div>
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Avg Session Duration</p>
+                        <p className="text-2xl font-bold">45 min</p>
+                      </div>
+                      <Clock className="h-8 w-8 text-secondary" />
+                    </div>
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                        <p className="text-sm text-muted-foreground">User Satisfaction</p>
+                        <p className="text-2xl font-bold">4.8/5</p>
+                      </div>
+                      <CheckCircle className="h-8 w-8 text-success" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Audit Logs Tab */}
+        <TabsContent value="audit" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Audit Logs
+              </CardTitle>
+              <CardDescription>Track all admin actions for accountability</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Admin</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Target</TableHead>
+                    <TableHead>Timestamp</TableHead>
+                    <TableHead>Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {auditLogs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="font-medium">{log.admin}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{log.action}</Badge>
+                      </TableCell>
+                      <TableCell>{log.target}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{log.timestamp}</TableCell>
+                      <TableCell className="text-sm">{log.details}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Edit Record Dialog */}
+      <EditRecordDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        record={selectedRecord}
+        tableName={selectedTable}
+        onSave={handleSaveRecord}
+      />
     </div>
   );
 }
