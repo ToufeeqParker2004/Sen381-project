@@ -188,8 +188,8 @@ export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpe
 
           {/* Bottom Section */}
           <div className="border-t border-sidebar-border p-4">
-            {/* Student/Tutor Switch - Show only if user is a tutor */}
-            {isTutor && !isMobile && (
+            {/* Student/Tutor Switch - Show only if user is a tutor and not admin */}
+            {isTutor && !isAdmin && !isMobile && (
               <div className="mb-4">
                 {showLabels ? (
                   <div className="space-y-2">
