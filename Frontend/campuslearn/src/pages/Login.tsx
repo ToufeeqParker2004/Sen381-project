@@ -31,7 +31,19 @@ const Login = () => {
           title: 'Login Successful',
           description: 'Welcome to CampusLearn!',
         });
-        navigate('/');
+        
+        // Get user data to check if admin
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          const decoded = JSON.parse(atob(token.split('.')[1]));
+          if (decoded.roles && decoded.roles.includes('ADMIN')) {
+            navigate('/admin');
+          } else {
+            navigate('/');
+          }
+        } else {
+          navigate('/');
+        }
       } else {
         toast({
           title: 'Login Failed',
@@ -54,16 +66,34 @@ const Login = () => {
     setShowMicrosoftModal(true);
   };
 
-  const handleMicrosoftSuccess = async () => {
-    // Simulate Microsoft login success
-    const success = await login('microsoft@belgiumcampus.edu', 'microsoft');
+  const handleMicrosoftSuccess = async (email: string, password: string) => {
+    // Microsoft login uses real database authentication
+    const success = await login(email, password, true);
     
     if (success) {
       toast({
         title: 'Microsoft Login Successful',
         description: 'Welcome to CampusLearn!',
       });
-      navigate('/');
+      
+      // Check if user is admin and redirect accordingly
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        if (decoded.roles && decoded.roles.includes('ADMIN')) {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+      } else {
+        navigate('/');
+      }
+    } else {
+      toast({
+        title: 'Microsoft Login Failed',
+        description: 'Invalid credentials.',
+        variant: 'destructive',
+      });
     }
   };
 
