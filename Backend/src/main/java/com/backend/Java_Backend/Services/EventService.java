@@ -28,6 +28,10 @@ public class EventService {
         return eventRepository.findById(id);
     }
 
+    public List<Events> getEventsByTutorId(Long tutorId) {
+        return eventRepository.findByTutorId(tutorId);
+    }
+
     public Events updateEvent(UUID id, Events eventDetails) {
         Optional<Events> eventOptional = eventRepository.findById(id);
         if (eventOptional.isPresent()) {
@@ -36,6 +40,9 @@ public class EventService {
             event.setEnd_time(eventDetails.getEnd_time());
             event.setLocation(eventDetails.getLocation());
             event.setPresenter(eventDetails.getPresenter());
+            event.setTitle(eventDetails.getTitle());
+            event.setDate(eventDetails.getDate());
+            event.setTutor_id(eventDetails.getTutor_id());
             return eventRepository.save(event);
         }
         return null;

@@ -1,9 +1,13 @@
 package com.backend.Java_Backend.Models;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.Date;
 import java.util.UUID;
 
 @Entity
@@ -12,12 +16,27 @@ public class Events {
     @Id
     @GeneratedValue
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
-    UUID id;
-    Timestamp created_at;
-    Time start_time;
-    Time end_time;
-    String location;
-    String presenter;
+    private UUID id;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private Timestamp created_at;
+
+    @Column(name = "date")
+    private LocalDate date;
+
+    @Column(name = "start_time")
+    private LocalTime start_time;
+
+    @Column(name = "end_time")
+    private LocalTime end_time;
+
+    private String location;
+    private String presenter;
+    private String title;
+
+    @Column(name = "tutor_id")
+    private Long tutor_id;
 
     public Events() {
     }
@@ -30,6 +49,18 @@ public class Events {
         this.id = id;
     }
 
+    public Long getTutor_id() {return tutor_id;}
+
+    public void setTutor_id(Long tutor_id) { this.tutor_id = tutor_id;}
+
+    public String getTitle() {return title;}
+
+    public void setTitle(String title) {this.title = title;}
+
+    public LocalDate getDate() {return date;}
+
+    public void setDate(LocalDate date) {this.date = date;}
+
     public Timestamp getCreated_at() {
         return created_at;
     }
@@ -38,19 +69,19 @@ public class Events {
         this.created_at = created_at;
     }
 
-    public Time getStart_time() {
+    public LocalTime getStart_time() {
         return start_time;
     }
 
-    public void setStart_time(Time start_time) {
+    public void setStart_time(LocalTime start_time) {
         this.start_time = start_time;
     }
 
-    public Time getEnd_time() {
+    public LocalTime getEnd_time() {
         return end_time;
     }
 
-    public void setEnd_time(Time end_time) {
+    public void setEnd_time(LocalTime end_time) {
         this.end_time = end_time;
     }
 

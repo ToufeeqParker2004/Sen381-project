@@ -19,9 +19,13 @@ public class EventController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Events> createEvent(@RequestBody Events event) {
-        Events createdEvent = eventService.createEvent(event);
-        return ResponseEntity.ok(createdEvent);
+    public ResponseEntity<?> createEvent(@RequestBody Events event) {
+        try {
+            Events createdEvent = eventService.createEvent(event);
+            return ResponseEntity.ok(createdEvent);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     @GetMapping
@@ -57,5 +61,12 @@ public class EventController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/tutor/{tutorId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<Events>> getEventsByTutorId(@PathVariable Long tutorId) {
+        List<Events> events = eventService.getEventsByTutorId(tutorId);
+        return ResponseEntity.ok(events);
     }
 }
