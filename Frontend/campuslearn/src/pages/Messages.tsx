@@ -202,7 +202,7 @@ export default function Messages() {
   // Initial fetch and polling for threads
   useEffect(() => {
     fetchThreads();
-    const interval = setInterval(() => fetchThreads(true), 5000); // Poll every 5 seconds silently
+    const interval = setInterval(() => fetchThreads(true), 10000); // Poll every 5 seconds silently
     return () => clearInterval(interval);
   }, [currentUserId, toast]);
 
@@ -260,7 +260,7 @@ export default function Messages() {
 
   useEffect(() => {
     if (!selectedChat) return;
-    const interval = setInterval(() => fetchChatData(true), 3000); // Poll every 3 seconds silently
+    const interval = setInterval(() => fetchChatData(true), 10000); // Poll every 3 seconds silently
     return () => clearInterval(interval);
   }, [selectedChat]);
 

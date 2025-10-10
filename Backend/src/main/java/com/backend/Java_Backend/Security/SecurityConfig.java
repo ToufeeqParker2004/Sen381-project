@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/learning-materials/**").authenticated()
                         .requestMatchers("/modules/**").authenticated()
                         .requestMatchers("/events/**").authenticated()
+                        .requestMatchers("/messaging/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
