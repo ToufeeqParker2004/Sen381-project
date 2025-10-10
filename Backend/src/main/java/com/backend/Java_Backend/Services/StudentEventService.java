@@ -28,7 +28,7 @@ public class StudentEventService {
     private EventRepository eventRepository;
 
     @Transactional
-    public StudentEvent registerForEvent(Long studentId, UUID eventId) {
+    public StudentEvent registerForEvent(Integer studentId, UUID eventId) {
         // Check if already registered
         if (studentEventRepository.existsByStudentIdAndEventId(studentId, eventId)) {
             throw new RuntimeException("Student is already registered for this event");
@@ -48,14 +48,14 @@ public class StudentEventService {
     }
 
     @Transactional
-    public void unregisterFromEvent(Long studentId, UUID eventId) {
+    public void unregisterFromEvent(Integer studentId, UUID eventId) {
         if (!studentEventRepository.existsByStudentIdAndEventId(studentId, eventId)) {
             throw new RuntimeException("Student is not registered for this event");
         }
         studentEventRepository.deleteByStudentIdAndEventId(studentId, eventId);
     }
 
-    public List<Events> getEventsByStudentId(Long studentId) {
+    public List<Events> getEventsByStudentId(Integer studentId) {
         List<StudentEvent> studentEvents = studentEventRepository.findByStudentId(studentId);
         return studentEvents.stream()
                 .map(StudentEvent::getEvent)
@@ -69,7 +69,7 @@ public class StudentEventService {
                 .collect(Collectors.toList());
     }
 
-    public boolean isStudentRegisteredForEvent(Long studentId, UUID eventId) {
+    public boolean isStudentRegisteredForEvent(Integer studentId, UUID eventId) {
         return studentEventRepository.existsByStudentIdAndEventId(studentId, eventId);
     }
 

@@ -21,7 +21,7 @@ public class StudentEventController {
     @PostMapping("/register")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> registerForEvent(
-            @RequestParam Long studentId,
+            @RequestParam Integer studentId,
             @RequestParam UUID eventId) {
         try {
             return ResponseEntity.ok(studentEventService.registerForEvent(studentId, eventId));
@@ -33,7 +33,7 @@ public class StudentEventController {
     @DeleteMapping("/unregister")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> unregisterFromEvent(
-            @RequestParam Long studentId,
+            @RequestParam Integer studentId,
             @RequestParam UUID eventId) {
         try {
             studentEventService.unregisterFromEvent(studentId, eventId);
@@ -45,7 +45,7 @@ public class StudentEventController {
 
     @GetMapping("/student/{studentId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Events>> getEventsByStudentId(@PathVariable Long studentId) {
+    public ResponseEntity<List<Events>> getEventsByStudentId(@PathVariable Integer studentId) {
         List<Events> events = studentEventService.getEventsByStudentId(studentId);
         return ResponseEntity.ok(events);
     }
@@ -60,7 +60,7 @@ public class StudentEventController {
     @GetMapping("/check-registration")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Boolean> isStudentRegisteredForEvent(
-            @RequestParam Long studentId,
+            @RequestParam Integer studentId,
             @RequestParam UUID eventId) {
         boolean isRegistered = studentEventService.isStudentRegisteredForEvent(studentId, eventId);
         return ResponseEntity.ok(isRegistered);
