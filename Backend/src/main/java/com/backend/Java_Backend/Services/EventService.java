@@ -36,6 +36,9 @@ public class EventService {
             event.setEnd_time(eventDetails.getEnd_time());
             event.setLocation(eventDetails.getLocation());
             event.setPresenter(eventDetails.getPresenter());
+            event.setTitle(eventDetails.getTitle());
+            event.setDate(eventDetails.getDate());
+            event.setTutor_id(eventDetails.getTutor_id());
             return eventRepository.save(event);
         }
         return null;
