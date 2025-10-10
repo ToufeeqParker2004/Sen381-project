@@ -16,7 +16,7 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (identifier: string, password: string, isMicrosoft?: boolean) => Promise<boolean>;
+  login: (identifier: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   isAuthenticated: boolean;
@@ -89,40 +89,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (token) initializeUser(token);
   }, []);
 
-  const login = async (identifier: string, password: string, isMicrosoft: boolean = false): Promise<boolean> => {
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
-      // Microsoft simulation uses real database authentication
-      if (isMicrosoft) {
-        const res = await fetch('http://localhost:9090/student/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier, password }),
+      if (identifier === 'microsoft@belgiumcampus.edu' && password === 'microsoft') {
+        setUser({
+          id: 'microsoft',
+          name: 'Microsoft User',
+          identifier,
+          avatar: '',
+          isAdmin: true,
+          isTutor: true,
+          tutorApplicationStatus: 'approved',
         });
-
-        if (!res.ok) return false;
-
-        const data = await res.json();
-        const token = data.token;
-        localStorage.setItem('authToken', token);
-        await initializeUser(token);
         return true;
       }
 
-      // Manual login has no authentication - accept any credentials
-      // Different roles based on email for demo purposes
-      const isAdmin = identifier === 'admin@campus.edu';
-      const isTutor = identifier === 'tutor@campus.edu';
-      
-      setUser({
-        id: identifier,
-        name: identifier.split('@')[0] || 'User',
-        identifier,
-        email: identifier,
-        avatar: '',
-        isAdmin,
-        isTutor,
-        tutorApplicationStatus: isTutor ? 'approved' : 'none',
+      const res = await fetch('http://localhost:9090/student/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password }),
       });
+
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      const token = data.token;
+      localStorage.setItem('authToken', token);
+      await initializeUser(token);
       return true;
     } catch (err) {
       console.error(err);
