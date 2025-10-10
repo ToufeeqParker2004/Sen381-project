@@ -24,7 +24,7 @@ public class StudentEvent {
     public StudentEvent( Student student , Events event) {
         this.student = student;
         this.event = event;
-        this.id = new StudentEventId((long)student.getId(),event.getId());
+        this.id = new StudentEventId(student.getId(),event.getId());
     }
 
     // Getters and setters

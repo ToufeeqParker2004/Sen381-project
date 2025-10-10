@@ -9,22 +9,22 @@ import java.util.UUID;
 @Embeddable
 public class StudentEventId implements Serializable {
 
-    private Long studentId;
+    private Integer studentId;
     private UUID eventId;
 
     public StudentEventId() {}
 
-    public StudentEventId(Long studentId, UUID eventId) {
+    public StudentEventId(Integer studentId, UUID eventId) {
         this.studentId = studentId;
         this.eventId = eventId;
     }
 
     // Getters and setters
-    public Long getStudentId() {
+    public Integer getStudentId() {
         return studentId;
     }
 
-    public void setStudentId(Long studentId) {
+    public void setStudentId(Integer studentId) {
         this.studentId = studentId;
     }
 

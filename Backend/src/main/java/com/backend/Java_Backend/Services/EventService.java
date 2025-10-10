@@ -29,7 +29,7 @@ public class EventService {
     }
 
     public List<Events> getEventsByTutorId(Long tutorId) {
-        return eventRepository.findByTutor_id(tutorId);
+        return eventRepository.findByTutorId(tutorId);
     }
 
     public Events updateEvent(UUID id, Events eventDetails) {
