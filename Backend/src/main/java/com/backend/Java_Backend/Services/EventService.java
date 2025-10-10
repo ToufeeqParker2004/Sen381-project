@@ -28,6 +28,10 @@ public class EventService {
         return eventRepository.findById(id);
     }
 
+    public List<Events> getEventsByTutorId(Long tutorId) {
+        return eventRepository.findByTutor_id(tutorId);
+    }
+
     public Events updateEvent(UUID id, Events eventDetails) {
         Optional<Events> eventOptional = eventRepository.findById(id);
         if (eventOptional.isPresent()) {
