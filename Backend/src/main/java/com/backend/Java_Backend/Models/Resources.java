@@ -12,6 +12,7 @@ public class Resources {
     int id;
     @Column(name = "student_id")
     int studentId;
+    @Column(name = "Learning_materialsID")
     UUID Learning_MaterialsID;
     @Column(name = "tutor_id")
     int tutorID;
