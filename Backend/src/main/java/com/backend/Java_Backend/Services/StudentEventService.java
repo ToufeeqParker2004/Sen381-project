@@ -1,5 +1,6 @@
 package com.backend.Java_Backend.Services;
 
+import com.backend.Java_Backend.DTO.StudentDTO;
 import com.backend.Java_Backend.Models.Events;
 import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Models.StudentEvent;
@@ -62,10 +63,21 @@ public class StudentEventService {
                 .collect(Collectors.toList());
     }
 
-    public List<Student> getStudentsByEventId(UUID eventId) {
+    public List<StudentDTO> getStudentsByEventId(UUID eventId) {
         List<StudentEvent> studentEvents = studentEventRepository.findByEventId(eventId);
+
         return studentEvents.stream()
-                .map(StudentEvent::getStudent)
+                .map(studentEvent -> {
+                    Student student = studentEvent.getStudent();
+                    return new StudentDTO(
+                            student.getId(),
+                            student.getCreatedAt(),
+                            student.getName(),
+                            student.getEmail(),
+                            student.getPhoneNumber(),
+                            student.getBio()
+                    );
+                })
                 .collect(Collectors.toList());
     }
 

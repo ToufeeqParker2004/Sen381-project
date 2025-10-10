@@ -1,5 +1,6 @@
 package com.backend.Java_Backend.Controller;
 
+import com.backend.Java_Backend.DTO.StudentDTO;
 import com.backend.Java_Backend.Models.Events;
 import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Services.StudentEventService;
@@ -52,8 +53,8 @@ public class StudentEventController {
 
     @GetMapping("/event/{eventId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<Student>> getStudentsByEventId(@PathVariable UUID eventId) {
-        List<Student> students = studentEventService.getStudentsByEventId(eventId);
+    public ResponseEntity<List<StudentDTO>> getStudentsByEventId(@PathVariable UUID eventId) {
+        List<StudentDTO> students = studentEventService.getStudentsByEventId(eventId);
         return ResponseEntity.ok(students);
     }
 

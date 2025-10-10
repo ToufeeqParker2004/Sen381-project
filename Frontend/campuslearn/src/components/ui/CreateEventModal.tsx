@@ -8,8 +8,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -17,61 +17,80 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar, Clock, MapPin } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Loader2, Calendar, Clock, MapPin, User } from 'lucide-react';
 
 interface CreateEventModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEventCreated?: () => void;
+  onEventCreated: () => void;
+  tutorId: number | null; // Add this prop
 }
 
-export function CreateEventModal({ open, onOpenChange, onEventCreated }: CreateEventModalProps) {
-  const { toast } = useToast();
+export function CreateEventModal({ open, onOpenChange, onEventCreated, tutorId }: CreateEventModalProps) {
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    subject: '',
-    level: '',
     date: '',
-    time: '',
+    start_time: '',
+    end_time: '',
     location: '',
-    duration: '',
+    presenter: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form
-    if (!formData.title || !formData.description || !formData.date || !formData.time) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
-      });
+    if (!tutorId) {
+      alert('Tutor ID not found. Please ensure you are properly authenticated.');
       return;
     }
 
-    // Here you would typically send the data to your backend
-    toast({
-      title: 'Event Created!',
-      description: 'Your event has been successfully created.',
-    });
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('http://localhost:9090/events', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          tutor_id: tutorId, // Use the correct tutor ID
+        }),
+      });
 
-    // Reset form
-    setFormData({
-      title: '',
-      description: '',
-      subject: '',
-      level: '',
-      date: '',
-      time: '',
-      location: '',
-      duration: '',
-    });
+      if (!response.ok) {
+        throw new Error('Failed to create event');
+      }
 
-    onOpenChange(false);
-    onEventCreated?.();
+      // Reset form and close modal
+      setFormData({
+        title: '',
+        description: '',
+        date: '',
+        start_time: '',
+        end_time: '',
+        location: '',
+        presenter: '',
+      });
+      
+      onEventCreated();
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error creating event:', error);
+      alert('Failed to create event. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   return (
@@ -80,72 +99,54 @@ export function CreateEventModal({ open, onOpenChange, onEventCreated }: CreateE
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
           <DialogDescription>
-            Fill in the details to create a new tutoring event or workshop
+            Fill in the details below to create a new tutoring event.
           </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Event Title *</Label>
             <Input
               id="title"
-              placeholder="e.g., Advanced Calculus Workshop"
+              placeholder="Enter event title"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) => handleChange('title', e.target.value)}
+              required
             />
           </div>
 
+          {/* Description */}
           <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
-              placeholder="Describe what students will learn in this event..."
+              placeholder="Describe your event..."
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows={4}
+              onChange={(e) => handleChange('description', e.target.value)}
+              required
+              rows={3}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Select
-                value={formData.subject}
-                onValueChange={(value) => setFormData({ ...formData, subject: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mathematics">Mathematics</SelectItem>
-                  <SelectItem value="physics">Physics</SelectItem>
-                  <SelectItem value="chemistry">Chemistry</SelectItem>
-                  <SelectItem value="computer-science">Computer Science</SelectItem>
-                  <SelectItem value="biology">Biology</SelectItem>
-                  <SelectItem value="english">English</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="level">Level</Label>
-              <Select
-                value={formData.level}
-                onValueChange={(value) => setFormData({ ...formData, level: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select level" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="beginner">Beginner</SelectItem>
-                  <SelectItem value="intermediate">Intermediate</SelectItem>
-                  <SelectItem value="advanced">Advanced</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Presenter */}
+          <div className="space-y-2">
+            <Label htmlFor="presenter">Presenter Name *</Label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="presenter"
+                placeholder="Your name"
+                className="pl-9"
+                value={formData.presenter}
+                onChange={(e) => handleChange('presenter', e.target.value)}
+                required
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Date */}
             <div className="space-y-2">
               <Label htmlFor="date">Date *</Label>
               <div className="relative">
@@ -155,58 +156,95 @@ export function CreateEventModal({ open, onOpenChange, onEventCreated }: CreateE
                   type="date"
                   className="pl-9"
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(e) => handleChange('date', e.target.value)}
+                  required
+                  min={new Date().toISOString().split('T')[0]}
                 />
               </div>
             </div>
 
+            {/* Location */}
             <div className="space-y-2">
-              <Label htmlFor="time">Time *</Label>
+              <Label htmlFor="location">Location *</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="location"
+                  placeholder="Event location"
+                  className="pl-9"
+                  value={formData.location}
+                  onChange={(e) => handleChange('location', e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Start Time */}
+            <div className="space-y-2">
+              <Label htmlFor="start_time">Start Time *</Label>
               <div className="relative">
                 <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="time"
+                  id="start_time"
                   type="time"
                   className="pl-9"
-                  value={formData.time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                  value={formData.start_time}
+                  onChange={(e) => handleChange('start_time', e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* End Time */}
+            <div className="space-y-2">
+              <Label htmlFor="end_time">End Time *</Label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="end_time"
+                  type="time"
+                  className="pl-9"
+                  value={formData.end_time}
+                  onChange={(e) => handleChange('end_time', e.target.value)}
+                  required
                 />
               </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="location"
-                placeholder="e.g., Math Building, Room 201"
-                className="pl-9"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="duration">Duration</Label>
-            <Input
-              id="duration"
-              placeholder="e.g., 2hr, 3hr 30min"
-              value={formData.duration}
-              onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-            />
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          {/* Submit Buttons */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
               Cancel
             </Button>
-            <Button type="submit" className="bg-gradient-primary hover:opacity-90">
-              Create Event
+            <Button 
+              type="submit" 
+              disabled={loading || !tutorId}
+              className="bg-gradient-primary hover:opacity-90"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Event'
+              )}
             </Button>
           </div>
+
+          {!tutorId && (
+            <div className="text-sm text-destructive text-center">
+              Cannot create event: Tutor profile not found. Please ensure you are registered as a tutor.
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>
