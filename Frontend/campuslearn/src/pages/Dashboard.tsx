@@ -247,7 +247,7 @@ export default function Dashboard() {
                     <h4 className="font-medium text-sm md:text-base">{lesson.subject}</h4>
                     <p className="text-xs md:text-sm text-muted-foreground">
                       <p className="text-xs md:text-sm text-muted-foreground">
-                        <User className="inline-block h-3 w-3 mr-1" /> {lesson.tutorName} • {dateStr} • {timeStr}
+                        <User className="inline-block h-3 w-3 mr-1" /> {lesson.tutorName} • <b>{dateStr}</b> • {timeStr}
                       </p>
                     </p>
                   </div>
