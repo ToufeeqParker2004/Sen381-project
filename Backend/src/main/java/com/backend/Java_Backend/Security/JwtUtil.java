@@ -13,7 +13,7 @@ import java.util.UUID;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET = "Wwyt0QbrvrHhJfmdNruwkeWfe7gpnzdCoLZD1K5CopyVHQFwUsTfB2Qp45IftLrAWPG10D+APp5Wi0few2Qbjw==";
+    private static final String SECRET = "/wB6gM3dPvcF0n85QHW+WIze4u6FmjeW0vQoqD3Q8Oizl4lQ2ie3jfcIH5PYZJmTILDuFYFc2+vCkSotVHuu3A==";
     private static final long EXPIRATION_TIME = 3600_000; // 1 hour
 
     // Generate token for students/tutors (int ID)

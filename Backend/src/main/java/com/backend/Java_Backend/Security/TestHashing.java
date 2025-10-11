@@ -2,7 +2,7 @@ package com.backend.Java_Backend.Security;
 
 public class TestHashing {
     public static void main(String[] args) {
-        String password = "1111";
+        String password = "test@1";
 
         String hashed = PasswordHasher.hashPassword(password);
         System.out.println("Hashed: " + hashed);
