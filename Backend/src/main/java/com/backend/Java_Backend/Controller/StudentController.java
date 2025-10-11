@@ -7,6 +7,7 @@ import com.backend.Java_Backend.DTO.StudentWithModuleDTO;
 import com.backend.Java_Backend.DTO.UpdateStudentDTO;
 import com.backend.Java_Backend.DTO.LoginRequest; // Assume this exists with identifier/password
 import com.backend.Java_Backend.Models.NotificationSubscription;
+import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Services.AuthService; // Use unified AuthService
 import com.backend.Java_Backend.Services.NotificationService;
 import com.backend.Java_Backend.Services.StudentService;
@@ -131,5 +132,10 @@ public class StudentController {
         }
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/by-tutor/{tutorId}")
+    public ResponseEntity<Student> getStudentByTutorId(@PathVariable Integer tutorId) {
+        return ResponseEntity.ok(studentService.getStudentByTutorId(tutorId));
+    }
 
 }

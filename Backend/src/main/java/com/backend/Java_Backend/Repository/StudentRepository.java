@@ -17,5 +17,8 @@ public interface StudentRepository extends JpaRepository<Student, Integer> {
     Student findByIdWithModules(@Param("studentId") Integer studentId);
     Optional<Student> findByEmail(String email);
     List<Student> findAll();
+    @Query("SELECT s FROM Student s WHERE s.id = (" +
+            "SELECT t.student_id FROM Tutor t WHERE t.id = :tutorId)")
+    Student findStudentByTutorId(@Param("tutorId") Integer tutorId);
 
 }

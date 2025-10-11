@@ -2,6 +2,7 @@ package com.backend.Java_Backend.Services;
 
 import com.backend.Java_Backend.DTO.*;
 import com.backend.Java_Backend.Models.Student;
+import com.backend.Java_Backend.Models.Tutor;
 import com.backend.Java_Backend.Repository.StudentRepository;
 import com.backend.Java_Backend.Repository.TutorRepository;
 import com.backend.Java_Backend.Security.JwtUtil;
@@ -107,5 +108,13 @@ public class StudentService {
         return JwtUtil.generateToken(studentAct.getId(), studentAct.getEmail(), roles);
         }
         return null;
+    }
+
+    public Student getStudentByTutorId(Integer tutorId) {
+        Student student = studentRepository.findStudentByTutorId(tutorId);
+        if (student == null) {
+            throw new RuntimeException("Student not found for tutor ID: " + tutorId);
+        }
+        return student;
     }
 }

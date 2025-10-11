@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -53,6 +54,13 @@ public class BookingService {
         return bookings.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
+    // Get all bookings for a student
+    public List<BookingDTO> getBookingsByStudent(Integer studentID) {
+        studentRepository.findById(studentID).orElseThrow(() -> new RuntimeException("Student not found"));
+        List<Booking> bookings = bookingRepository.findByStudentId(studentID);
+        return bookings.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
     private BookingDTO convertToDTO(Booking booking) {
         BookingDTO dto = new BookingDTO();
         dto.setId(booking.getId());
@@ -63,6 +71,37 @@ public class BookingService {
         dto.setStatus(booking.getStatus());
         dto.setSubject(booking.getSubject());
         dto.setStudentName(booking.getStudentName());
+        return dto;
+    }
+
+    public BookingDTO updateStatus(UUID bookingId, String status) {
+        Optional<Booking> bookingOpt = bookingRepository.findById(bookingId);
+
+        if (bookingOpt.isEmpty()) {
+            throw new RuntimeException("Booking not found");
+        }
+
+        Booking booking = bookingOpt.get();
+
+        // Optional: prevent updating already declined bookings
+        if ("declined".equalsIgnoreCase(booking.getStatus())) {
+            throw new RuntimeException("Cannot update a declined booking");
+        }
+
+        booking.setStatus(status);
+        bookingRepository.save(booking);
+
+        // Map entity to DTO
+        BookingDTO dto = new BookingDTO();
+        dto.setId(booking.getId());
+        dto.setTutorId(booking.getTutor().getId());
+        dto.setStudentId(booking.getStudent().getId());
+        dto.setStartDatetime(booking.getStartDatetime());
+        dto.setEndDatetime(booking.getEndDatetime());
+        dto.setStatus(booking.getStatus());
+        dto.setStudentName(booking.getStudentName());
+        dto.setSubject(booking.getSubject());
+
         return dto;
     }
 }

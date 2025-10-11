@@ -12,6 +12,8 @@ import java.util.UUID;
 public interface BookingRepository extends JpaRepository<Booking, UUID> {
     List<Booking> findByTutorId(Integer tutorId);
 
+    List<Booking> findByStudentId(Integer studentId);
+
     @Query("SELECT b FROM Booking b WHERE b.tutor.id = :tutorId AND b.startDatetime >= :start AND b.endDatetime <= :end")
     List<Booking> findByTutorIdAndDateRange(@Param("tutorId") Integer tutorId, @Param("start") Timestamp start, @Param("end") Timestamp end);
 }
