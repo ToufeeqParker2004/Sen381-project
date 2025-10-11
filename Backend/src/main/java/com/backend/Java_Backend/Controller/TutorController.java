@@ -46,7 +46,7 @@ public class TutorController {
         return ResponseEntity.ok(tutor);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or authentication.principal == #studentId.toString()")
+    //@PreAuthorize("hasRole('ADMIN') or authentication.principal == #studentId.toString()")
     @GetMapping("/student/{studentId}")
     public ResponseEntity<?> getTutorByStudentId(@PathVariable Integer studentId) {
         TutorDTO tutor = tutorService.getTutorByStudentId(studentId);

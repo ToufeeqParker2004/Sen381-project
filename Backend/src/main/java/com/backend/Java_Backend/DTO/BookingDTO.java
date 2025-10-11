@@ -1,5 +1,7 @@
 package com.backend.Java_Backend.DTO;
 
+import jakarta.persistence.Column;
+
 import java.sql.Timestamp;
 import java.util.UUID;
 
@@ -10,6 +12,8 @@ public class BookingDTO {
     private Timestamp startDatetime;
     private Timestamp endDatetime;
     private String status;
+    private String studentName;
+    private String subject;
 
     // Getters and Setters
 
@@ -59,5 +63,21 @@ public class BookingDTO {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getStudentName() {
+        return studentName;
+    }
+
+    public void setStudentName(String studentName) {
+        this.studentName = studentName;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
     }
 }

@@ -30,6 +30,12 @@ public class Booking {
     @Column(name = "status")
     private String status; // e.g., pending, accepted, cancelled
 
+    @Column(name = "student_name")
+    private String studentName;
+
+    @Column(name = "subject")
+    private String subject;
+
     // Getters and Setters
     public UUID getId() {
         return id;
@@ -66,5 +72,21 @@ public class Booking {
     }
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getStudentName() {
+        return studentName;
+    }
+
+    public void setStudentName(String studentName) {
+        this.studentName = studentName;
+    }
+
+    public String getSubject() {
+        return subject;
+    }
+
+    public void setSubject(String subject) {
+        this.subject = subject;
     }
 }

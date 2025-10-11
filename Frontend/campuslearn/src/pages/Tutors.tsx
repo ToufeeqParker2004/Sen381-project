@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { useToast } from '@/hooks/use-toast';
 import apiClient from '@/services/api';
 import { TutorWithStudent, Module } from '@/types';
@@ -6,9 +8,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, BookOpen, Filter, Star, MapPin, Clock, MessageCircle } from 'lucide-react';
+import { Search, BookOpen, Filter, Star, MapPin, Clock } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface TutorWithModulesResponse {
   tutor: {
@@ -28,95 +31,78 @@ export default function TutorsPage() {
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
-  // Fetch tutors with their modules and student details
+  const [selectedDates, setSelectedDates] = useState<{ [tutorId: number]: Date | null }>({});
+
+  const { user } = useAuth();
+
+  // Fetch tutors and modules
   useEffect(() => {
     const fetchTutorsWithModules = async () => {
       try {
         setIsLoading(true);
-        
-        // Step 1: Get all tutors
+
         const tutorsResponse = await apiClient.get('/tutors');
         const tutorData = tutorsResponse.data;
-        
-        console.log('Raw tutors response:', tutorData);
 
-        // Step 2: For each tutor, fetch their modules and student details
         const tutorsWithDetails = await Promise.all(
           tutorData.map(async (tutor: any) => {
             try {
-              // Get tutor modules from the dedicated endpoint
               const modulesResponse = await apiClient.get(`/tutors/${tutor.id}/modules`);
               const modulesData: TutorWithModulesResponse = modulesResponse.data;
-              
-              console.log(`Tutor ${tutor.id} modules response:`, modulesData);
 
-              // Get student details
               const studentResponse = await apiClient.get(`/student/${tutor.studentId}`);
               const student = studentResponse.data;
 
-              // Extract modules from the response
               const modules = modulesData.modules || [];
 
               return {
                 tutorId: tutor.id,
                 studentId: tutor.studentId,
                 student: student,
-                modules: modules
+                modules: modules,
               };
             } catch (error) {
               console.error(`Failed to fetch data for tutor ${tutor.id}:`, error);
-              
-              // Fallback: try to get student details even if modules fail
+
               try {
                 const studentResponse = await apiClient.get(`/student/${tutor.studentId}`);
                 const student = studentResponse.data;
-                
+
                 return {
                   tutorId: tutor.id,
                   studentId: tutor.studentId,
-                  student: student,
-                  modules: []
+                  student,
+                  modules: [],
                 };
               } catch (studentError) {
                 console.error(`Failed to fetch student ${tutor.studentId}:`, studentError);
-                
+
                 return {
                   tutorId: tutor.id,
                   studentId: tutor.studentId,
-                  student: { 
+                  student: {
                     id: tutor.studentId,
                     name: tutor.studentEmail?.split('@')[0] || 'Unknown Tutor',
                     email: tutor.studentEmail || '',
                     bio: 'Bio not available',
-                    location: 'Unknown'
+                    location: 'Unknown',
                   },
-                  modules: []
+                  modules: [],
                 };
               }
             }
           })
         );
-        
-        console.log('Final tutors with all data:', tutorsWithDetails);
+
         setTutors(tutorsWithDetails);
 
-        // Extract unique subjects for filter dropdown
         const subjects = Array.from(
-          new Set(
-            tutorsWithDetails.flatMap(tutor => 
-              tutor.modules.map(module => module.module_name)
-            )
-          )
+          new Set(tutorsWithDetails.flatMap(t => t.modules.map(m => m.module_name)))
         );
         setAvailableSubjects(subjects);
-
       } catch (error) {
         console.error('Error fetching tutors:', error);
-        toast({ 
-          title: 'Error', 
-          description: 'Failed to load tutors', 
-          variant: 'destructive' 
-        });
+        toast({ title: 'Error', description: 'Failed to load tutors', variant: 'destructive' });
       } finally {
         setIsLoading(false);
       }
@@ -125,20 +111,88 @@ export default function TutorsPage() {
     fetchTutorsWithModules();
   }, [toast]);
 
-  // Filter tutors based on search and subject
-  const filteredTutors = tutors.filter((tutor) => {
+  // Apply button handler
+  const handleApply = async (tutorId: number) => {
+    if (!user?.id) {
+      toast({
+        title: 'Not logged in',
+        description: 'Please log in to apply for a tutor',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      toast({
+        title: 'Not logged in',
+        description: 'Missing authentication token',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const start = selectedDates[tutorId];
+    if (!start) {
+      toast({
+        title: 'Select a date',
+        description: 'Please select a date and time for your session',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const end = new Date(start);
+    end.setHours(start.getHours() + 1); // automatically +1 hour
+
+    try {
+      await fetch(`http://localhost:9090/api/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          tutorId: tutorId,
+          studentId: user.id,
+          startDatetime: start.toISOString(),
+          endDatetime: end.toISOString(),
+          status: 'pending',
+          subject: 'General', // Placeholder, can be extended to allow user input
+          studentName: user.name || 'Student',
+        }),
+      });
+
+      toast({ title: 'Applied!', description: 'Tutor request sent successfully.' });
+
+      // ✅ Clear the selected date for this tutor
+      setSelectedDates(prev => ({ ...prev, [tutorId]: null }));
+    } catch (error: any) {
+      console.error('Error applying for tutor:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to apply for tutor',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Filter tutors
+  const filteredTutors = tutors.filter(tutor => {
     if (!tutor.student) return false;
-    
-    const matchesSearch = searchQuery === '' || 
+
+    const matchesSearch =
+      searchQuery === '' ||
       tutor.student.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tutor.student.bio?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tutor.modules?.some(module => 
-        module.module_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        module.module_code?.toLowerCase().includes(searchQuery.toLowerCase())
+      tutor.modules?.some(
+        m =>
+          m.module_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          m.module_code?.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
-    const matchesSubject = selectedSubject === 'all' || 
-      tutor.modules?.some(module => module.module_name === selectedSubject);
+    const matchesSubject =
+      selectedSubject === 'all' || tutor.modules?.some(m => m.module_name === selectedSubject);
 
     return matchesSearch && matchesSubject;
   });
@@ -168,12 +222,13 @@ export default function TutorsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Find Tutors</h1>
         <p className="text-muted-foreground">Connect with expert tutors for personalized learning</p>
       </div>
 
-      {/* Search and Filters */}
+      {/* Filters */}
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4">
@@ -183,7 +238,7 @@ export default function TutorsPage() {
                 placeholder="Search tutors, subjects, modules, or specialties..."
                 className="pl-9"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
             <Select value={selectedSubject} onValueChange={setSelectedSubject}>
@@ -191,8 +246,10 @@ export default function TutorsPage() {
                 <SelectValue placeholder="All Subjects" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem key="all" value="all">All Subjects</SelectItem>
-                {availableSubjects.map((subject) => (
+                <SelectItem key="all" value="all">
+                  All Subjects
+                </SelectItem>
+                {availableSubjects.map(subject => (
                   <SelectItem key={subject} value={subject}>
                     {subject}
                   </SelectItem>
@@ -207,7 +264,6 @@ export default function TutorsPage() {
         </CardContent>
       </Card>
 
-      {/* Results Count */}
       <div className="text-sm text-muted-foreground">
         Showing {filteredTutors.length} of {tutors.length} tutors
         {searchQuery && ` for "${searchQuery}"`}
@@ -215,7 +271,6 @@ export default function TutorsPage() {
       </div>
 
       {/* Tutors List */}
-
       <div className="grid gap-6">
         {filteredTutors.length === 0 ? (
           <Card>
@@ -223,15 +278,14 @@ export default function TutorsPage() {
               <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No tutors found</h3>
               <p className="text-muted-foreground">
-                {searchQuery || selectedSubject !== 'all' 
-                  ? 'Try adjusting your search criteria or filters' 
-                  : 'No tutors available at the moment'
-                }
+                {searchQuery || selectedSubject !== 'all'
+                  ? 'Try adjusting your search criteria or filters'
+                  : 'No tutors available at the moment'}
               </p>
             </CardContent>
           </Card>
         ) : (
-          filteredTutors.map((tutor) => (
+          filteredTutors.map(tutor => (
             <Card key={tutor.tutorId} className="hover:shadow-custom-md transition-shadow">
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
@@ -240,28 +294,28 @@ export default function TutorsPage() {
                       {tutor.student?.name?.charAt(0) || 'T'}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h3 className="text-xl font-semibold">
-                          {tutor.student?.name || 'Tutor'}
-                        </h3>
+                        <h3 className="text-xl font-semibold">{tutor.student?.name || 'Tutor'}</h3>
                         <p className="text-muted-foreground mt-1">
                           {tutor.student?.bio || 'Bio not available'}
                         </p>
                       </div>
                     </div>
-                    
-                    {/* Display Modules */}
+
+                    {/* Modules */}
                     <div className="mt-4">
-                      <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        Teaches:
-                      </h4>
+                      <h4 className="text-sm font-medium text-muted-foreground mb-2">Teaches:</h4>
                       <div className="flex flex-wrap gap-2">
                         {tutor.modules && tutor.modules.length > 0 ? (
-                          tutor.modules.map((module) => (
-                            <Badge key={module.moduleId} variant="secondary" className="text-xs">
+                          tutor.modules.map((module, idx) => (
+                            <Badge
+                              key={`${module.moduleId}-${idx}`}
+                              variant="secondary"
+                              className="text-xs"
+                            >
                               {module.module_name} ({module.module_code})
                             </Badge>
                           ))
@@ -270,30 +324,34 @@ export default function TutorsPage() {
                         )}
                       </div>
                     </div>
-                    
-                    <div className="flex items-center space-x-6 mt-4 text-sm text-muted-foreground">
-                      <div className="flex items-center">
-                        <Star className="mr-1 h-3 w-3 fill-current text-warning" />
-                        {/* Rating will go here when available */}
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="mr-1 h-3 w-3" />
-                        {tutor.student?.location || 'Location not specified'}
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="mr-1 h-3 w-3" />
-                        {/* Availability will go here when available */}
-                      </div>
+
+                    {/* Booking */}
+                    <div className="mt-4">
+                      <DatePicker
+                        selected={selectedDates[tutor.tutorId]}
+                        onChange={(date: Date) =>
+                          setSelectedDates(prev => ({ ...prev, [tutor.tutorId]: date }))
+                        }
+                        showTimeSelect
+                        timeIntervals={60} // 1-hour blocks
+                        dateFormat="MMMM d, yyyy h:mm aa"
+                        placeholderText="Select session start time"
+                        className="border rounded-md p-2 w-full"
+                        minDate={new Date()} // prevent past dates
+                      />
                     </div>
-                    
+
+                    {/* Apply button */}
                     <div className="flex space-x-3 mt-6">
-                      <Button className="bg-gradient-primary hover:opacity-90">
+                      <Button
+                        className="bg-gradient-primary hover:opacity-90"
+                        onClick={() => handleApply(tutor.tutorId)}
+                      >
                         <BookOpen className="mr-2 h-4 w-4" />
                         Apply for Tutor
                       </Button>
                     </div>
                   </div>
-   
                 </div>
               </CardContent>
             </Card>

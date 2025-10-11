@@ -39,6 +39,8 @@ public class BookingService {
         booking.setStartDatetime(dto.getStartDatetime());
         booking.setEndDatetime(dto.getEndDatetime());
         booking.setStatus(dto.getStatus());
+        booking.setSubject(dto.getSubject());
+        booking.setStudentName(dto.getStudentName());
 
         Booking saved = bookingRepository.save(booking);
         return convertToDTO(saved);
@@ -59,6 +61,8 @@ public class BookingService {
         dto.setStartDatetime(booking.getStartDatetime());
         dto.setEndDatetime(booking.getEndDatetime());
         dto.setStatus(booking.getStatus());
+        dto.setSubject(booking.getSubject());
+        dto.setStudentName(booking.getStudentName());
         return dto;
     }
 }
