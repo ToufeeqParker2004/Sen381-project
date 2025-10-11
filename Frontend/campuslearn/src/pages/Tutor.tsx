@@ -81,10 +81,8 @@ export default function Tutor() {
     }
   };
 
-  // Filter out declined sessions
   const filteredSessions = tutorSessions.filter((s) => s.status !== 'declined');
 
-  // Sort sessions based on the selected order
   const sortedSessions = [...filteredSessions].sort((a, b) => {
     const aTime = new Date(a.startDatetime).getTime();
     const bTime = new Date(b.startDatetime).getTime();
@@ -231,16 +229,34 @@ export default function Tutor() {
                           </div>
                         )}
 
+                        {/* ✅ Added cancel button for accepted bookings */}
                         {session.status !== 'pending' && (
-                          <Badge
-                            className={`${
-                              session.status === 'accepted'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            } pointer-events-none`}
-                          >
-                            {session.status.toUpperCase()}
-                          </Badge>
+                          <>
+                            <Badge
+                              className={`${
+                                session.status === 'accepted'
+                                  ? 'bg-green-100 text-green-800'
+                                  : session.status === 'cancelled'
+                                  ? 'bg-gray-200 text-gray-800'
+                                  : 'bg-red-100 text-red-800'
+                              } pointer-events-none`}
+                            >
+                              {session.status.toUpperCase()}
+                            </Badge>
+
+                            {session.status === 'accepted' && (
+                              <div className="mt-2">
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="hover:bg-red-700"
+                                  onClick={() => handleUpdateStatus(session.id, 'cancelled')}
+                                >
+                                  Cancel Booking
+                                </Button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
