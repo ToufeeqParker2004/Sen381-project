@@ -19,7 +19,7 @@ export interface TutorWithStudent extends Tutor {
 }
 
 export interface Module {
-  moduleId: number;
+  id: number;
   module_code: string;
   module_name: string;
   description: string;
@@ -59,6 +59,16 @@ export interface LearningMaterial {
   fileUrl: string;
   createdAt: string;
   tags: string[];
+}
+
+export interface TutorWithModulesResponse {
+  tutor: {
+    id: number;
+    studentId: number;
+    created_at: string;
+    studentEmail: string;
+  };
+  modules: Module[];
 }
 
 

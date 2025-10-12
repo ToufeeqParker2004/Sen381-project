@@ -312,7 +312,7 @@ export default function TutorsPage() {
                         {tutor.modules && tutor.modules.length > 0 ? (
                           tutor.modules.map((module, idx) => (
                             <Badge
-                              key={`${module.moduleId}-${idx}`}
+                              key={`${module.id}-${idx}`}
                               variant="secondary"
                               className="text-xs"
                             >
