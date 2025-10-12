@@ -165,7 +165,7 @@ export default function TutorsPage() {
 
       toast({ title: 'Applied!', description: 'Tutor request sent successfully.' });
 
-      // ✅ Clear the selected date for this tutor
+      // Clear the selected date for this tutor
       setSelectedDates(prev => ({ ...prev, [tutorId]: null }));
     } catch (error: any) {
       console.error('Error applying for tutor:', error);

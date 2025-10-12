@@ -61,5 +61,15 @@ export interface LearningMaterial {
   tags: string[];
 }
 
+export interface TutorWithModulesResponse {
+  tutor: {
+    id: number;
+    studentId: number;
+    created_at: string;
+    studentEmail: string;
+  };
+  modules: Module[];
+}
+
 
  
