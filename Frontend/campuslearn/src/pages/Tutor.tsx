@@ -229,23 +229,24 @@ export default function Tutor() {
                           </div>
                         )}
 
-                        {/* ✅ Added cancel button for accepted bookings */}
+                        {/* Added cancel button for accepted bookings */}
                         {session.status !== 'pending' && (
                           <>
                             <Badge
-                              className={`${
-                                session.status === 'accepted'
+                              className={`${session.status === 'accepted'
                                   ? 'bg-green-100 text-green-800'
-                                  : session.status === 'cancelled'
-                                  ? 'bg-gray-200 text-gray-800'
-                                  : 'bg-red-100 text-red-800'
-                              } pointer-events-none`}
+                                  : session.status === 'completed'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : session.status === 'cancelled'
+                                      ? 'bg-gray-200 text-gray-800'
+                                      : 'bg-red-100 text-red-800'
+                                } pointer-events-none`}
                             >
                               {session.status.toUpperCase()}
                             </Badge>
 
                             {session.status === 'accepted' && (
-                              <div className="mt-2">
+                              <div className="flex gap-2 mt-2">
                                 <Button
                                   variant="destructive"
                                   size="sm"
@@ -254,10 +255,20 @@ export default function Tutor() {
                                 >
                                   Cancel Booking
                                 </Button>
+
+                                {/* New button for Completed */}
+                                <Button
+                                  size="sm"
+                                  className="bg-blue-600 text-white hover:bg-blue-700"
+                                  onClick={() => handleUpdateStatus(session.id, 'completed')}
+                                >
+                                  Mark as Completed
+                                </Button>
                               </div>
                             )}
                           </>
                         )}
+
                       </div>
                     </div>
                   );
