@@ -19,7 +19,7 @@ export interface TutorWithStudent extends Tutor {
 }
 
 export interface Module {
-  moduleId: number;
+  id: number;
   module_code: string;
   module_name: string;
   description: string;

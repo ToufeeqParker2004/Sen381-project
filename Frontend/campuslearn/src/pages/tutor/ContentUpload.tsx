@@ -175,99 +175,136 @@ export default function ContentUpload() {
   };
 
   const handleUpload = async () => {
-    if (!title || !module || !selectedFile) {
-      toast({
-        title: "Missing information",
-        description: "Please fill in all fields and select a file",
-        variant: "destructive",
-      });
-      return;
-    }
+  if (!title || !selectedModule || !selectedFile) {
+    toast({
+      title: "Missing information",
+      description: "Please fill in all fields and select a file",
+      variant: "destructive",
+    });
+    return;
+  }
 
-    setIsUploading(true);
-    setUploadProgress(0);
+  setIsUploading(true);
+  setUploadProgress(0);
 
-    try {
-         const formData = new FormData();
+  try {
+    // Debug: Log current state
+    console.log('Upload state:', {
+      title,
+      selectedModule,
+      selectedFile: selectedFile?.name,
+      tutors: tutors[0],
+      modules: tutors[0]?.modules,
+      modulesCount: tutors[0]?.modules?.length
+    });
+
+    const formData = new FormData();
     formData.append('title', title);
     formData.append('document_type', getDocumentType(selectedFile));
 
-    // Fix: Use moduleId instead of module_id
-    const selectedModuleObj = tutors[0]?.modules?.find(m => m.module_code === selectedModule);
-    if (selectedModuleObj) {
-      formData.append('module_id', selectedModuleObj.moduleId.toString()); // Use moduleId
-    } else {
-      throw new Error('Selected module not found');
+    // Check if modules are loaded
+    if (!tutors[0]?.modules?.length) {
+      throw new Error('No modules available. Please wait for modules to load.');
     }
 
-    // Fix: Access tutor ID via the tutor object
-    if (tutors[0]) {
+    // Find the selected module with better error handling
+    const selectedModuleObj = tutors[0].modules.find(m => 
+      m.module_code === selectedModule || m.module_name === selectedModule
+    );
+    
+    console.log('Found module:', selectedModuleObj);
+    console.log('Available modules:', tutors[0].modules.map(m => ({
+      code: m.module_code,
+      name: m.module_name,
+      id: m.id
+    })));
+
+    if (!selectedModuleObj) {
+      throw new Error(`Module "${selectedModule}" not found in your assigned modules. Available modules: ${tutors[0].modules.map(m => m.module_name).join(', ')}`);
+    }
+
+    if (!selectedModuleObj.id) {
+      throw new Error('Module ID is missing for the selected module');
+    }
+
+    formData.append('module_id', selectedModuleObj.id.toString());
+
+    // Check if tutor data is available
+    if (tutors[0]?.tutor?.id) {
       formData.append('uploader_id', tutors[0].tutor.id.toString());
+    } else {
+      throw new Error('Tutor information not available');
     }
-      formData.append('topic_id', '1'); // You can make this dynamic based on your needs
-      formData.append('file', selectedFile);
 
-      // Add description as tags if needed
-      if (description) {
-        formData.append('tags', description);
-      }
+    formData.append('topic_id', '1');
+    formData.append('file', selectedFile);
 
-      const response = await fetch('http://localhost:8080/learning-materials/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Adjust based on your auth
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
-      }
-
-      const savedMaterial = await response.json();
-
-      // Determine frontend type for display
-      const fileType = selectedFile.type.includes('video') ? 'video' :
-        selectedFile.type.includes('image') ? 'image' : 'document';
-
-      const newUpload: UploadedContent = {
-        id: savedMaterial.id,
-        title: savedMaterial.title,
-        type: fileType,
-        module: module,
-        uploadDate: new Date().toISOString().split('T')[0],
-        file_url: savedMaterial.file_url,
-      };
-
-      setUploads([newUpload, ...uploads]);
-
-      // Reset form
-      setTitle('');
-      setModule('');
-      setDescription('');
-      setSelectedFile(null);
-      setUploadProgress(0);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-
-      toast({
-        title: "Content uploaded successfully!",
-        description: "Your content has been uploaded to Supabase Storage",
-      });
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast({
-        title: "Upload failed",
-        description: error instanceof Error ? error.message : "Failed to upload content",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
+    if (description) {
+      formData.append('tags', description);
     }
-  };
+
+       const response = await apiClient.post('/learning-materials/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const progress = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          setUploadProgress(progress);
+        }
+      },
+    });
+
+    const savedMaterial = response.data;
+
+    const fileType = selectedFile.type.includes('video') ? 'video' :
+      selectedFile.type.includes('image') ? 'image' : 'document';
+
+    const newUpload: UploadedContent = {
+      id: savedMaterial.id,
+      title: savedMaterial.title,
+      type: fileType,
+      module: selectedModule,
+      uploadDate: new Date().toISOString().split('T')[0],
+      file_url: savedMaterial.file_url,
+    };
+
+    setUploads([newUpload, ...uploads]);
+
+    // Reset form
+    setTitle('');
+    setSelectedModule('');
+    setDescription('');
+    setSelectedFile(null);
+    setUploadProgress(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    toast({
+      title: "Content uploaded successfully!",
+      description: "Your content has been uploaded to Supabase Storage",
+    });
+
+  } catch (error) {
+    console.error('Upload error details:', {
+      error,
+      tutors: tutors[0],
+      selectedModule,
+      availableModules: tutors[0]?.modules?.map(m => m.module_name)
+    });
+    
+    toast({
+      title: "Upload failed",
+      description: error instanceof Error ? error.message : "Failed to upload content",
+      variant: "destructive",
+    });
+  } finally {
+    setIsUploading(false);
+  }
+};
 
   const handleRemove = async (id: string) => {
     try {
@@ -411,7 +448,7 @@ export default function ContentUpload() {
                 </SelectTrigger>
                 <SelectContent>
                   {tutors[0]?.modules?.map((module) => (
-                    <SelectItem key={module.moduleId} value={module.module_code || module.module_name}>
+                    <SelectItem key={module.id} value={module.module_code || module.module_name}>
                       {module.module_code ? `${module.module_code} - ${module.module_name}` : module.module_name}
                     </SelectItem>
                   ))}
@@ -513,7 +550,7 @@ export default function ContentUpload() {
             <Button
               className="w-full"
               onClick={handleUpload}
-              disabled={isUploading || !title || !module || !selectedFile}
+              disabled={isUploading || !title || !selectedFile || !selectedFile}
             >
               {isUploading ? (
                 <>
