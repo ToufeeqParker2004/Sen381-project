@@ -2,12 +2,14 @@ package com.backend.Java_Backend.Controller;
 
 import com.backend.Java_Backend.Models.LearningMaterial;
 import com.backend.Java_Backend.Services.LearningMaterialService;
+import com.backend.Java_Backend.Services.SupabaseStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -21,6 +23,9 @@ import java.util.UUID;
 public class LearningMaterialController {
 
     private final LearningMaterialService learningMaterialService;
+
+    @Autowired
+    private SupabaseStorageService storageService; // Add this
 
     @Autowired
     public LearningMaterialController(LearningMaterialService learningMaterialService) {
@@ -53,22 +58,51 @@ public class LearningMaterialController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Create a new learning material
-    @PreAuthorize("hasAnyRole('TUTOR', 'ADMIN')")
-    @PostMapping
-    public ResponseEntity<?> createLearningMaterial(@RequestBody LearningMaterial material, Authentication authentication) {
+    //@PreAuthorize("isAuthenticated()")
+    @PostMapping("/upload")
+    public ResponseEntity<?> createLearningMaterialWithFile(
+            @RequestParam("title") String title,
+            @RequestParam("document_type") String documentType,
+            @RequestParam(value = "topic_id", required = false) Integer topicId,
+            @RequestParam(value = "module_id", required = false) Integer moduleId,
+            @RequestParam(value = "tags", required = false) String[] tags,
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
+
         try {
+
+            // Validate file
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Collections.singletonMap("error", "File cannot be empty"));
+            }
+
             String principal = (String) authentication.getPrincipal();
-            int uploaderId = Integer.parseInt(principal); // Tutor ID
+            int uploaderId = Integer.parseInt(principal);
+
+            // Upload file to Supabase bucket and get URL
+            String fileUrl = storageService.uploadFile(file);
+
+            // Create learning material
+            LearningMaterial material = new LearningMaterial();
+            material.setTitle(title);
+            material.setDocument_type(documentType);
+            material.setTopic_id(topicId);
+            material.setModule_id(moduleId);
+            material.setTags(tags);
             material.setUploader_id(uploaderId);
+            material.setFile_url(fileUrl); // This stores the Supabase URL
             material.setCreated_at(Timestamp.from(Instant.now()));
+
             LearningMaterial savedMaterial = learningMaterialService.saveLearningMaterial(material);
             return ResponseEntity.ok(savedMaterial);
-        } catch (NumberFormatException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Collections.singletonMap("error", "Only tutors and admins can create learning materials"));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.singletonMap("error", "Failed to create learning material: " + e.getMessage()));
         }
     }
+
 
     // Update an existing learning material
     @PreAuthorize("hasRole('ADMIN') or hasPermission(#id, 'LearningMaterial', 'own')")
