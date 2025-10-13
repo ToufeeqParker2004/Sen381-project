@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, BookOpen, Filter, Star, MapPin, Clock } from 'lucide-react';
+import { Search, BookOpen, Filter } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface TutorWithModulesResponse {
@@ -30,9 +30,8 @@ export default function TutorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
-
   const [selectedDates, setSelectedDates] = useState<{ [tutorId: number]: Date | null }>({});
-
+  const [selectedModules, setSelectedModules] = useState<{ [tutorId: number]: string }>({}); // 🆕 Track selected module per tutor
   const { user } = useAuth();
 
   // Fetch tutors and modules
@@ -49,34 +48,26 @@ export default function TutorsPage() {
             try {
               const modulesResponse = await apiClient.get(`/tutors/${tutor.id}/modules`);
               const modulesData: TutorWithModulesResponse = modulesResponse.data;
-
               const studentResponse = await apiClient.get(`/student/${tutor.studentId}`);
               const student = studentResponse.data;
-
               const modules = modulesData.modules || [];
 
               return {
                 tutorId: tutor.id,
                 studentId: tutor.studentId,
-                student: student,
-                modules: modules,
+                student,
+                modules,
               };
             } catch (error) {
               console.error(`Failed to fetch data for tutor ${tutor.id}:`, error);
 
+              // Fallback: just fetch student info
               try {
                 const studentResponse = await apiClient.get(`/student/${tutor.studentId}`);
                 const student = studentResponse.data;
-
-                return {
-                  tutorId: tutor.id,
-                  studentId: tutor.studentId,
-                  student,
-                  modules: [],
-                };
+                return { tutorId: tutor.id, studentId: tutor.studentId, student, modules: [] };
               } catch (studentError) {
                 console.error(`Failed to fetch student ${tutor.studentId}:`, studentError);
-
                 return {
                   tutorId: tutor.id,
                   studentId: tutor.studentId,
@@ -95,10 +86,7 @@ export default function TutorsPage() {
         );
 
         setTutors(tutorsWithDetails);
-
-        const subjects = Array.from(
-          new Set(tutorsWithDetails.flatMap(t => t.modules.map(m => m.module_name)))
-        );
+        const subjects = Array.from(new Set(tutorsWithDetails.flatMap(t => t.modules.map(m => m.module_name))));
         setAvailableSubjects(subjects);
       } catch (error) {
         console.error('Error fetching tutors:', error);
@@ -111,76 +99,100 @@ export default function TutorsPage() {
     fetchTutorsWithModules();
   }, [toast]);
 
-  // Apply button handler
+  // 🧠 Apply button handler
   const handleApply = async (tutorId: number) => {
     if (!user?.id) {
-      toast({
-        title: 'Not logged in',
-        description: 'Please log in to apply for a tutor',
-        variant: 'destructive',
-      });
+      toast({ title: 'Not logged in', description: 'Please log in to apply for a tutor.', variant: 'destructive' });
       return;
     }
 
     const token = localStorage.getItem('authToken');
     if (!token) {
-      toast({
-        title: 'Not logged in',
-        description: 'Missing authentication token',
-        variant: 'destructive',
-      });
+      toast({ title: 'Not logged in', description: 'Missing authentication token.', variant: 'destructive' });
       return;
     }
 
     const start = selectedDates[tutorId];
+    const selectedModule = selectedModules[tutorId];
+
+    if (!selectedModule) {
+      toast({ title: 'Select a module', description: 'Please choose a module before booking.', variant: 'destructive' });
+      return;
+    }
+
     if (!start) {
-      toast({
-        title: 'Select a date',
-        description: 'Please select a date and time for your session',
-        variant: 'destructive',
-      });
+      toast({ title: 'Select a date', description: 'Please select a date and time for your session.', variant: 'destructive' });
+      return;
+    }
+
+    const currentTutor = tutors.find(t => t.tutorId === tutorId);
+    if (currentTutor && currentTutor.studentId === Number(user.id)) {
+      toast({ title: 'Invalid booking', description: 'You cannot book a session with yourself.', variant: 'destructive' });
+      return;
+    }
+
+    // --- Date & time restrictions ---
+    const now = new Date();
+    const oneWeekLater = new Date();
+    const threeWeeksLater = new Date();
+    oneWeekLater.setDate(now.getDate() + 7);
+    threeWeeksLater.setDate(now.getDate() + 21);
+
+    if (start < oneWeekLater) {
+      toast({ title: 'Date too soon', description: 'Bookings must be scheduled at least 1 week in advance.', variant: 'destructive' });
+      return;
+    }
+
+    if (start > threeWeeksLater) {
+      toast({ title: 'Date too far ahead', description: 'You cannot book lessons more than 3 weeks in advance.', variant: 'destructive' });
+      return;
+    }
+
+    const hour = start.getHours();
+    if (hour < 8 || hour >= 20) {
+      toast({ title: 'Invalid time', description: 'Bookings are only allowed between 08:00 and 20:00.', variant: 'destructive' });
       return;
     }
 
     const end = new Date(start);
-    end.setHours(start.getHours() + 1); // automatically +1 hour
+    end.setHours(start.getHours() + 1);
 
+    // --- Send booking ---
     try {
-      await fetch(`http://localhost:9090/api/bookings`, {
+      const response = await fetch(`http://localhost:9090/api/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          tutorId: tutorId,
-          studentId: user.id,
+          tutorId,
+          studentId: Number(user.id),
           startDatetime: start.toISOString(),
           endDatetime: end.toISOString(),
           status: 'pending',
-          subject: 'General', // Placeholder, can be extended to allow user input
           studentName: user.name || 'Student',
+          subject: selectedModule, // 🟩 module used as subject
         }),
       });
 
-      toast({ title: 'Applied!', description: 'Tutor request sent successfully.' });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Booking failed.');
+      }
 
-      // Clear the selected date for this tutor
+      toast({ title: 'Booking Sent!', description: `You booked ${selectedModule} with your tutor successfully.` });
       setSelectedDates(prev => ({ ...prev, [tutorId]: null }));
+      setSelectedModules(prev => ({ ...prev, [tutorId]: '' }));
     } catch (error: any) {
       console.error('Error applying for tutor:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to apply for tutor',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: error.message || 'Failed to apply for tutor.', variant: 'destructive' });
     }
   };
 
   // Filter tutors
   const filteredTutors = tutors.filter(tutor => {
     if (!tutor.student) return false;
-
     const matchesSearch =
       searchQuery === '' ||
       tutor.student.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -197,6 +209,7 @@ export default function TutorsPage() {
     return matchesSearch && matchesSubject;
   });
 
+  // --- Loading state ---
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -220,6 +233,7 @@ export default function TutorsPage() {
     );
   }
 
+  // --- Render tutors ---
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -264,12 +278,6 @@ export default function TutorsPage() {
         </CardContent>
       </Card>
 
-      <div className="text-sm text-muted-foreground">
-        Showing {filteredTutors.length} of {tutors.length} tutors
-        {searchQuery && ` for "${searchQuery}"`}
-        {selectedSubject !== 'all' && ` in ${selectedSubject}`}
-      </div>
-
       {/* Tutors List */}
       <div className="grid gap-6">
         {filteredTutors.length === 0 ? (
@@ -277,11 +285,7 @@ export default function TutorsPage() {
             <CardContent className="p-12 text-center">
               <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No tutors found</h3>
-              <p className="text-muted-foreground">
-                {searchQuery || selectedSubject !== 'all'
-                  ? 'Try adjusting your search criteria or filters'
-                  : 'No tutors available at the moment'}
-              </p>
+              <p className="text-muted-foreground">Try adjusting your search or filters</p>
             </CardContent>
           </Card>
         ) : (
@@ -290,18 +294,14 @@ export default function TutorsPage() {
               <CardContent className="p-6">
                 <div className="flex items-start space-x-4">
                   <Avatar className="h-20 w-20">
-                    <AvatarFallback className="text-xl">
-                      {tutor.student?.name?.charAt(0) || 'T'}
-                    </AvatarFallback>
+                    <AvatarFallback className="text-xl">{tutor.student?.name?.charAt(0) || 'T'}</AvatarFallback>
                   </Avatar>
 
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="text-xl font-semibold">{tutor.student?.name || 'Tutor'}</h3>
-                        <p className="text-muted-foreground mt-1">
-                          {tutor.student?.bio || 'Bio not available'}
-                        </p>
+                        <p className="text-muted-foreground mt-1">{tutor.student?.bio || 'Bio not available'}</p>
                       </div>
                     </div>
 
@@ -313,8 +313,13 @@ export default function TutorsPage() {
                           tutor.modules.map((module, idx) => (
                             <Badge
                               key={`${module.id}-${idx}`}
-                              variant="secondary"
-                              className="text-xs"
+                              variant={selectedModules[tutor.tutorId] === module.module_name ? 'default' : 'secondary'}
+                              className={`text-xs cursor-pointer ${
+                                selectedModules[tutor.tutorId] === module.module_name ? 'bg-blue-600 text-white' : ''
+                              }`}
+                              onClick={() =>
+                                setSelectedModules(prev => ({ ...prev, [tutor.tutorId]: module.module_name }))
+                              }
                             >
                               {module.module_name} ({module.module_code})
                             </Badge>
@@ -329,24 +334,18 @@ export default function TutorsPage() {
                     <div className="mt-4">
                       <DatePicker
                         selected={selectedDates[tutor.tutorId]}
-                        onChange={(date: Date) =>
-                          setSelectedDates(prev => ({ ...prev, [tutor.tutorId]: date }))
-                        }
+                        onChange={(date: Date) => setSelectedDates(prev => ({ ...prev, [tutor.tutorId]: date }))}
                         showTimeSelect
-                        timeIntervals={60} // 1-hour blocks
+                        timeIntervals={60}
                         dateFormat="MMMM d, yyyy h:mm aa"
                         placeholderText="Select session start time"
                         className="border rounded-md p-2 w-full"
-                        minDate={new Date()} // prevent past dates
+                        minDate={new Date()}
                       />
                     </div>
 
-                    {/* Apply button */}
                     <div className="flex space-x-3 mt-6">
-                      <Button
-                        className="bg-gradient-primary hover:opacity-90"
-                        onClick={() => handleApply(tutor.tutorId)}
-                      >
+                      <Button className="bg-gradient-primary hover:opacity-90" onClick={() => handleApply(tutor.tutorId)}>
                         <BookOpen className="mr-2 h-4 w-4" />
                         Apply for Tutor
                       </Button>
