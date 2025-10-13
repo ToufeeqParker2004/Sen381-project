@@ -16,7 +16,8 @@ import {
   Calendar,
   Clock,
   ChevronRight,
-  User, MapPin,
+  User,
+  MapPin,
   Mic2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -69,6 +70,7 @@ export default function Dashboard() {
   const [showAllMessages, setShowAllMessages] = useState(false);
   const [hoveredStat, setHoveredStat] = useState<string | null>(null);
 
+  const [lessonFilter, setLessonFilter] = useState<'all' | 'accepted' | 'pending' | 'declined' | 'cancelled' | 'completed'>('all');
 
   const [stats, setStats] = useState([
     { label: 'Lessons Summary', value: '-', icon: BookOpen, color: 'text-primary' },
@@ -83,8 +85,6 @@ export default function Dashboard() {
     cancelled: 0,
     completed: 0,
   });
-
-
 
   useEffect(() => {
     const upcomingLessons = lessons.length;
@@ -110,8 +110,6 @@ export default function Dashboard() {
     ]);
 
   }, [lessons, recentMessages, registeredEvents]);
-
-
 
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
@@ -189,8 +187,6 @@ export default function Dashboard() {
       setRecentMessages([]);
     }
   };
-
-
 
   // Fetch registered events for current student
   const fetchRegisteredEvents = async (): Promise<void> => {
@@ -297,6 +293,10 @@ export default function Dashboard() {
     return { dateStr, timeStr };
   };
 
+  const filteredLessons = lessons.filter((lesson) =>
+    lessonFilter === 'all' ? true : lesson.status === lessonFilter
+  );
+
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
@@ -346,7 +346,6 @@ export default function Dashboard() {
           );
         })}
       </div>
-
 
       <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
         {/* Recent Messages */}
@@ -480,9 +479,26 @@ export default function Dashboard() {
           <CardDescription>Your scheduled lessons</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {lessons.length > 0 ? (
+
+          {/* Filter Buttons */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {['all', 'accepted', 'pending', 'declined', 'cancelled', 'completed'].map((status) => (
+              <Button
+                key={status}
+                size="sm"
+                variant={lessonFilter === status ? 'default' : 'outline'}
+                onClick={() => setLessonFilter(status as typeof lessonFilter)}
+                className="capitalize"
+              >
+                {status === 'all' ? 'All' : status}
+              </Button>
+            ))}
+          </div>
+
+          {/* Lessons List */}
+          {filteredLessons.length > 0 ? (
             <>
-              {(showAllLessons ? lessons : lessons.slice(0, 4)).map((lesson, index) => {
+              {(showAllLessons ? filteredLessons : filteredLessons.slice(0, 4)).map((lesson, index) => {
                 const { dateStr, timeStr } = formatDateTime(lesson.startDatetime, lesson.endDatetime);
                 return (
                   <div
@@ -513,7 +529,7 @@ export default function Dashboard() {
                 );
               })}
 
-              {lessons.length > 4 && (
+              {filteredLessons.length > 4 && (
                 <div className="flex justify-center mt-2">
                   <Button
                     variant="outline"
@@ -533,7 +549,6 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
-
 
       {/* Quick Actions */}
       <Card>

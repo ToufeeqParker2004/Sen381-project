@@ -181,7 +181,7 @@ export default function TutorsPage() {
         throw new Error(errorData.message || 'Booking failed.');
       }
 
-      toast({ title: 'Booking Sent!', description: `You booked ${selectedModule} with your tutor successfully.` });
+      toast({ title: 'Booking Sent!', description: `Your booking for ${selectedModule} with your tutor has been sent successfully.Please wait while it gets approved. View status in Dashboard.` });
       setSelectedDates(prev => ({ ...prev, [tutorId]: null }));
       setSelectedModules(prev => ({ ...prev, [tutorId]: '' }));
     } catch (error: any) {
