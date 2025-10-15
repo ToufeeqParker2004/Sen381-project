@@ -31,8 +31,9 @@ export default function TutorsPage() {
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [selectedDates, setSelectedDates] = useState<{ [tutorId: number]: Date | null }>({});
-  const [selectedModules, setSelectedModules] = useState<{ [tutorId: number]: string }>({}); // 🆕 Track selected module per tutor
+  const [selectedModules, setSelectedModules] = useState<{ [tutorId: number]: string }>({}); //Track selected module per tutor
   const { user } = useAuth();
+  
 
   // Fetch tutors and modules
   useEffect(() => {
@@ -172,7 +173,7 @@ export default function TutorsPage() {
           endDatetime: end.toISOString(),
           status: 'pending',
           studentName: user.name || 'Student',
-          subject: selectedModule, // 🟩 module used as subject
+          subject: selectedModule, //module used as subject
         }),
       });
 
