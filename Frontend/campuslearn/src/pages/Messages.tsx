@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -481,7 +482,7 @@ export default function Messages() {
         {isMobile ? (
           <>
             {mobileView === 'conversations' ? (
-              <Card className="h-[calc(100vh-120px)] rounded-xl shadow-md">
+              <Card className="h-[600px] rounded-xl shadow-md flex flex-col">
                 <CardHeader className="p-4">
                   <CardTitle className="text-lg">Chats</CardTitle>
                   <div className="relative">
@@ -489,8 +490,9 @@ export default function Messages() {
                     <Input placeholder="Search messages..." className="pl-9 rounded-full" />
                   </div>
                 </CardHeader>
-                <CardContent className="p-0">
-                  <div className="space-y-1 overflow-y-auto h-[calc(100vh-200px)]">
+                <CardContent className="p-0 flex-1 overflow-hidden">
+                  <ScrollArea className="h-[calc(100vh-220px)]">
+                    <div className="space-y-1 px-2">
                     {isLoading ? (
                       <div className="p-4 text-center text-muted-foreground animate-pulse">Loading conversations...</div>
                     ) : conversations.length === 0 ? (
@@ -526,14 +528,15 @@ export default function Messages() {
                             <p className="text-sm text-muted-foreground truncate mt-1">{conversation.lastMessage}</p>
                           </div>
                         </div>
-                      ))
-                    )}
-                  </div>
+                        ))
+                      )}
+                    </div>
+                  </ScrollArea>
                 </CardContent>
               </Card>
             ) : (
               currentChat && (
-                <Card className="h-[calc(100vh-80px)] flex flex-col rounded-xl shadow-md">
+                <Card className="h-[600px] flex flex-col rounded-xl shadow-md">
                   <CardHeader className="border-b p-3">
                     <div className="flex items-center space-x-3">
                       <Button 
@@ -578,46 +581,48 @@ export default function Messages() {
                     </div>
                   </CardHeader>
 
-                  <CardContent className="flex-1 p-3 overflow-y-auto">
-                    {isChatLoading ? (
-                      <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center">
-                          <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
-                          <h3 className="text-lg font-semibold mb-2">Loading messages...</h3>
+                  <ScrollArea className="flex-1">
+                    <CardContent className="p-3">
+                      {isChatLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="text-center">
+                            <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
+                            <h3 className="text-lg font-semibold mb-2">Loading messages...</h3>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {groupMessagesByDate(messages).map((group, index) => (
-                          <React.Fragment key={index}>
-                            <div className="flex justify-center my-3">
-                              <Badge variant="secondary" className="px-2 py-0.5 text-xs rounded-full">
-                                {formatDateHeader(group.date)}
-                              </Badge>
-                            </div>
-                            {group.messages.map((message) => (
-                              <div
-                                key={message.id}
-                                className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}
-                              >
-                                <div
-                                  className={`max-w-[80%] px-3 py-1.5 rounded-2xl text-sm ${message.isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
-                                >
-                                  {currentChat.role === 'Group Chat' && (
-                                    <p className="text-xs font-semibold mb-0.5">{message.isOwn ? 'You' : message.senderName}</p>
-                                  )}
-                                  <p>{message.content}</p>
-                                  <p className={`text-xs mt-0.5 ${message.isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
-                                    {formatMessageTime(message.timestamp)}
-                                  </p>
-                                </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {groupMessagesByDate(messages).map((group, index) => (
+                            <React.Fragment key={index}>
+                              <div className="flex justify-center my-3">
+                                <Badge variant="secondary" className="px-2 py-0.5 text-xs rounded-full">
+                                  {formatDateHeader(group.date)}
+                                </Badge>
                               </div>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
+                              {group.messages.map((message) => (
+                                <div
+                                  key={message.id}
+                                  className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}
+                                >
+                                  <div
+                                    className={`max-w-[80%] px-3 py-1.5 rounded-2xl text-sm ${message.isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
+                                  >
+                                    {currentChat.role === 'Group Chat' && (
+                                      <p className="text-xs font-semibold mb-0.5">{message.isOwn ? 'You' : message.senderName}</p>
+                                    )}
+                                    <p>{message.content}</p>
+                                    <p className={`text-xs mt-0.5 ${message.isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                                      {formatMessageTime(message.timestamp)}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </ScrollArea>
 
                   {/* Message Input - mobile */}
                   <div className="border-t p-2 bg-background">
@@ -663,9 +668,9 @@ export default function Messages() {
           </>
         ) : (
           /* Desktop layout */
-          <div className="grid gap-6 lg:grid-cols-3 h-[calc(100vh-200px)]">
+          <div className="grid gap-6 lg:grid-cols-3 h-[600px]">
             {/* Conversations List */}
-            <Card className="lg:col-span-1">
+            <Card className="lg:col-span-1 flex flex-col">
               <CardHeader>
                 <CardTitle className="text-lg">Conversations</CardTitle>
                 <div className="relative">
@@ -673,8 +678,9 @@ export default function Messages() {
                   <Input placeholder="Search messages..." className="pl-9" />
                 </div>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="space-y-1 max-h-96 overflow-y-auto">
+              <CardContent className="p-0 flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="space-y-1 px-2">
                   {isLoading ? (
                     <div className="p-4 text-center text-muted-foreground animate-pulse">Loading conversations...</div>
                   ) : conversations.length === 0 ? (
@@ -701,9 +707,10 @@ export default function Messages() {
                           <p className="text-xs text-muted-foreground">{conversation.role}</p>
                         </div>
                       </div>
-                    ))
-                  )}
-                </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
               </CardContent>
             </Card>
 
@@ -747,32 +754,34 @@ export default function Messages() {
                     </div>
                   </CardHeader>
 
-                  <CardContent className="flex-1 p-4 overflow-y-auto">
-                    {isChatLoading ? (
-                      <div className="flex-1 flex items-center justify-center text-muted-foreground animate-pulse">
-                        Loading messages...
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {groupMessagesByDate(messages).map((group, index) => (
-                          <React.Fragment key={index}>
-                            <div className="flex justify-center my-4">
-                              <Badge variant="secondary" className="px-3 py-1 text-sm">{formatDateHeader(group.date)}</Badge>
-                            </div>
-                            {group.messages.map((message) => (
-                              <div key={message.id} className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                                  {currentChat?.role === 'Group Chat' && <p className="text-xs font-semibold mb-1">{message.isOwn ? 'You' : message.senderName}</p>}
-                                  <p className="text-sm">{message.content}</p>
-                                  <p className={`text-xs mt-1 ${message.isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{formatMessageTime(message.timestamp)}</p>
-                                </div>
+                  <ScrollArea className="flex-1">
+                    <CardContent className="p-4">
+                      {isChatLoading ? (
+                        <div className="flex items-center justify-center py-12 text-muted-foreground animate-pulse">
+                          Loading messages...
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {groupMessagesByDate(messages).map((group, index) => (
+                            <React.Fragment key={index}>
+                              <div className="flex justify-center my-4">
+                                <Badge variant="secondary" className="px-3 py-1 text-sm">{formatDateHeader(group.date)}</Badge>
                               </div>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
+                              {group.messages.map((message) => (
+                                <div key={message.id} className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
+                                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                                    {currentChat?.role === 'Group Chat' && <p className="text-xs font-semibold mb-1">{message.isOwn ? 'You' : message.senderName}</p>}
+                                    <p className="text-sm">{message.content}</p>
+                                    <p className={`text-xs mt-1 ${message.isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{formatMessageTime(message.timestamp)}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </ScrollArea>
 
                   {/* Message input - desktop */}
                   <div className="border-t p-4 relative">
