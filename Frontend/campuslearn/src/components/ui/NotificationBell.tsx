@@ -41,7 +41,7 @@ export function NotificationBell() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'message':
+      case 'new_message':
         return '💬';
       case 'system':
         return '⚙️';
@@ -49,6 +49,8 @@ export function NotificationBell() {
         return '⚠️';
       case 'success':
         return '✅';
+      case 'assignment':
+        return '🖊️';
       default:
         return '🔔';
     }
