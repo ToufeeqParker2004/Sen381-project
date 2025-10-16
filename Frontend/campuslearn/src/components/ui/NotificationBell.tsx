@@ -14,10 +14,12 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const navigate = useNavigate();
 
   const handleNotificationClick = (notificationId: string) => {
     markAsRead(notificationId);
@@ -145,8 +147,7 @@ export function NotificationBell() {
             <DropdownMenuItem 
               className="text-xs text-center text-muted-foreground justify-center cursor-pointer hover:text-foreground"
               onClick={() => {
-                // Navigate to notifications page
-                console.log('Navigate to notifications page');
+                navigate('notifications')
                 setIsOpen(false);
               }}
             >
