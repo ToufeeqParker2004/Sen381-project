@@ -35,7 +35,7 @@ public class TutorController {
         return ResponseEntity.ok(tutors);
     }
 
-    @PreAuthorize("hasRole('ADMIN') or hasPermission(#id, 'Tutor', 'own')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public ResponseEntity<?> getTutorById(@PathVariable Integer id) {
         TutorDTO tutor = tutorService.getTutorById(id);
