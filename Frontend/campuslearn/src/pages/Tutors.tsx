@@ -23,6 +23,14 @@ interface TutorWithModulesResponse {
   modules: Module[];
 }
 
+interface Booking {
+  id: number;
+  tutorId: number;
+  startDatetime: string;
+  endDatetime: string;
+  status: 'pending' | 'accepted' | 'completed' | 'cancelled';
+}
+
 export default function TutorsPage() {
   const { toast } = useToast();
   const [tutors, setTutors] = useState<TutorWithStudent[]>([]);
@@ -31,7 +39,9 @@ export default function TutorsPage() {
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [selectedDates, setSelectedDates] = useState<{ [tutorId: number]: Date | null }>({});
-  const [selectedModules, setSelectedModules] = useState<{ [tutorId: number]: string }>({}); // 🆕 Track selected module per tutor
+  const [selectedModules, setSelectedModules] = useState<{ [tutorId: number]: string }>({});
+  const [tutorBookings, setTutorBookings] = useState<{ [tutorId: number]: Booking[] }>({});
+  const [loadingBookings, setLoadingBookings] = useState<{ [tutorId: number]: boolean }>({});
   const { user } = useAuth();
 
   // Fetch tutors and modules
@@ -40,14 +50,18 @@ export default function TutorsPage() {
       try {
         setIsLoading(true);
 
+        // Get tutors from /tutors endpoint
         const tutorsResponse = await apiClient.get('/tutors');
         const tutorData = tutorsResponse.data;
 
         const tutorsWithDetails = await Promise.all(
           tutorData.map(async (tutor: any) => {
             try {
+              // Get modules for this tutor
               const modulesResponse = await apiClient.get(`/tutors/${tutor.id}/modules`);
               const modulesData: TutorWithModulesResponse = modulesResponse.data;
+              
+              // Get student details
               const studentResponse = await apiClient.get(`/student/${tutor.studentId}`);
               const student = studentResponse.data;
               const modules = modulesData.modules || [];
@@ -61,26 +75,19 @@ export default function TutorsPage() {
             } catch (error) {
               console.error(`Failed to fetch data for tutor ${tutor.id}:`, error);
 
-              // Fallback: just fetch student info
-              try {
-                const studentResponse = await apiClient.get(`/student/${tutor.studentId}`);
-                const student = studentResponse.data;
-                return { tutorId: tutor.id, studentId: tutor.studentId, student, modules: [] };
-              } catch (studentError) {
-                console.error(`Failed to fetch student ${tutor.studentId}:`, studentError);
-                return {
-                  tutorId: tutor.id,
-                  studentId: tutor.studentId,
-                  student: {
-                    id: tutor.studentId,
-                    name: tutor.studentEmail?.split('@')[0] || 'Unknown Tutor',
-                    email: tutor.studentEmail || '',
-                    bio: 'Bio not available',
-                    location: 'Unknown',
-                  },
-                  modules: [],
-                };
-              }
+              // Fallback: just use basic tutor info
+              return {
+                tutorId: tutor.id,
+                studentId: tutor.studentId,
+                student: {
+                  id: tutor.studentId,
+                  name: tutor.studentEmail?.split('@')[0] || 'Unknown Tutor',
+                  email: tutor.studentEmail || '',
+                  bio: 'Bio not available',
+                  location: 'Unknown',
+                },
+                modules: [],
+              };
             }
           })
         );
@@ -88,9 +95,13 @@ export default function TutorsPage() {
         setTutors(tutorsWithDetails);
         const subjects = Array.from(new Set(tutorsWithDetails.flatMap(t => t.modules.map(m => m.module_name))));
         setAvailableSubjects(subjects);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching tutors:', error);
-        toast({ title: 'Error', description: 'Failed to load tutors', variant: 'destructive' });
+        toast({ 
+          title: 'Error', 
+          description: error.response?.data?.error || 'Failed to load tutors', 
+          variant: 'destructive' 
+        });
       } finally {
         setIsLoading(false);
       }
@@ -99,16 +110,77 @@ export default function TutorsPage() {
     fetchTutorsWithModules();
   }, [toast]);
 
-  // 🧠 Apply button handler
+  // Fetch bookings for a specific tutor
+  const fetchTutorBookings = async (tutorId: number) => {
+    try {
+      setLoadingBookings(prev => ({ ...prev, [tutorId]: true }));
+      
+      const bookingsResponse = await apiClient.get(`/api/bookings/tutor/${tutorId}`);
+      const bookings = bookingsResponse.data.filter(
+        (booking: Booking) => 
+          booking.status === 'pending' || 
+          booking.status === 'accepted' || 
+          booking.status === 'completed'
+      );
+      
+      setTutorBookings(prev => ({
+        ...prev,
+        [tutorId]: bookings
+      }));
+    } catch (error: any) {
+      console.error(`Failed to fetch bookings for tutor ${tutorId}:`, error);
+      // If fetching fails, ensure we at least have an empty array
+      setTutorBookings(prev => ({
+        ...prev,
+        [tutorId]: []
+      }));
+    } finally {
+      setLoadingBookings(prev => ({ ...prev, [tutorId]: false }));
+    }
+  };
+
+  // Function to check if a time slot is available
+  const isTimeSlotAvailable = (tutorId: number, date: Date) => {
+    const hour = date.getHours();
+    
+    // Check if time is outside business hours (before 8am or after 8pm)
+    if (hour < 8 || hour >= 20) {
+      return false;
+    }
+
+    // Check for existing bookings
+    const bookings = tutorBookings[tutorId] || [];
+    const selectedTime = date.getTime();
+    
+    const hasConflict = bookings.some(booking => {
+      try {
+        const bookingStart = new Date(booking.startDatetime).getTime();
+        const bookingEnd = new Date(booking.endDatetime).getTime();
+        
+        // Check if selected time conflicts with existing booking
+        return selectedTime >= bookingStart && selectedTime < bookingEnd;
+      } catch (e) {
+        console.error('Error parsing booking time:', e);
+        return false;
+      }
+    });
+
+    return !hasConflict;
+  };
+
+  // Custom time filter for DatePicker
+  const filterTime = (tutorId: number) => (time: Date) => {
+    return isTimeSlotAvailable(tutorId, time);
+  };
+
+  // Handle calendar open - fetch latest bookings
+  const handleCalendarOpen = async (tutorId: number) => {
+    await fetchTutorBookings(tutorId);
+  };
+
   const handleApply = async (tutorId: number) => {
     if (!user?.id) {
       toast({ title: 'Not logged in', description: 'Please log in to apply for a tutor.', variant: 'destructive' });
-      return;
-    }
-
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      toast({ title: 'Not logged in', description: 'Missing authentication token.', variant: 'destructive' });
       return;
     }
 
@@ -122,6 +194,12 @@ export default function TutorsPage() {
 
     if (!start) {
       toast({ title: 'Select a date', description: 'Please select a date and time for your session.', variant: 'destructive' });
+      return;
+    }
+
+    // Check if selected time slot is available
+    if (!isTimeSlotAvailable(tutorId, start)) {
+      toast({ title: 'Time slot unavailable', description: 'This time slot is already booked. Please choose another time.', variant: 'destructive' });
       return;
     }
 
@@ -159,34 +237,26 @@ export default function TutorsPage() {
 
     // --- Send booking ---
     try {
-      const response = await fetch(`http://localhost:9090/api/bookings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          tutorId,
-          studentId: Number(user.id),
-          startDatetime: start.toISOString(),
-          endDatetime: end.toISOString(),
-          status: 'pending',
-          studentName: user.name || 'Student',
-          subject: selectedModule, // 🟩 module used as subject
-        }),
+      const response = await apiClient.post('/api/bookings', {
+        tutorId,
+        studentId: Number(user.id),
+        startDatetime: start.toISOString(),
+        endDatetime: end.toISOString(),
+        status: 'pending',
+        studentName: user.name || 'Student',
+        subject: selectedModule,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Booking failed.');
-      }
 
       toast({ title: 'Booking Sent!', description: `Your booking for ${selectedModule} with your tutor has been sent successfully.Please wait while it gets approved. View status in Dashboard.` });
       setSelectedDates(prev => ({ ...prev, [tutorId]: null }));
       setSelectedModules(prev => ({ ...prev, [tutorId]: '' }));
+
+      // Refresh bookings to include the new one
+      await fetchTutorBookings(tutorId);
+
     } catch (error: any) {
       console.error('Error applying for tutor:', error);
-      toast({ title: 'Error', description: error.message || 'Failed to apply for tutor.', variant: 'destructive' });
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed to apply for tutor.', variant: 'destructive' });
     }
   };
 
@@ -270,10 +340,6 @@ export default function TutorsPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline">
-              <Filter className="mr-2 h-4 w-4" />
-              More Filters
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -335,13 +401,22 @@ export default function TutorsPage() {
                       <DatePicker
                         selected={selectedDates[tutor.tutorId]}
                         onChange={(date: Date) => setSelectedDates(prev => ({ ...prev, [tutor.tutorId]: date }))}
+                        onCalendarOpen={() => handleCalendarOpen(tutor.tutorId)}
                         showTimeSelect
                         timeIntervals={60}
                         dateFormat="MMMM d, yyyy h:mm aa"
                         placeholderText="Select session start time"
                         className="border rounded-md p-2 w-full"
                         minDate={new Date()}
+                        filterTime={filterTime(tutor.tutorId)}
+                        injectTimes={[]}
                       />
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Available times: 08:00 - 20:00. Booked slots are disabled.
+                      </p>
+                      {loadingBookings[tutor.tutorId] && (
+                        <p className="text-xs text-blue-500 mt-1">Loading availability...</p>
+                      )}
                     </div>
 
                     <div className="flex space-x-3 mt-6">

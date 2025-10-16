@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Users, Calendar, MessageSquare, Clock, TrendingUp, ChevronRight } from 'lucide-react';
+import { BookOpen, Users, Calendar, MessageSquare, Clock, TrendingUp, ChevronRight, Filter, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -44,6 +44,7 @@ export default function Tutor() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'accepted' | 'pending' | 'completed'>('all');
   const [filterSubject, setFilterSubject] = useState<string>('all');
   const [filterDate, setFilterDate] = useState<'all' | 'today' | 'thisWeek' | 'future'>('all');
+  const [showFilters, setShowFilters] = useState(false);
 
   const navigate = useNavigate();
   const currentStudentId = user?.id ? parseInt(user.id) : null;
@@ -226,6 +227,16 @@ export default function Tutor() {
       return sortOrder === 'upcoming' ? aTime - bTime : bTime - aTime;
     });
 
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case 'accepted': return 'default';
+      case 'pending': return 'secondary';
+      case 'completed': return 'outline';
+      case 'cancelled': return 'destructive';
+      default: return 'secondary';
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
@@ -272,182 +283,261 @@ export default function Tutor() {
       {/* Upcoming Sessions */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
-          <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              <CardTitle>Upcoming Sessions</CardTitle>
+          <CardHeader className="pb-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white-50 rounded-lg">
+                  <Calendar className="h-5 w-5 text-black-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Upcoming Sessions</CardTitle>
+                  <CardDescription className="mt-1">Your scheduled tutoring sessions</CardDescription>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  Filters
+                </Button>
+                
+                <div className="flex items-center border rounded-lg">
+                  <Button
+                    variant={sortOrder === 'upcoming' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setSortOrder('upcoming')}
+                    className="flex items-center gap-1 rounded-r-none border-0"
+                  >
+                    <ArrowUpDown className="h-3 w-3" />
+                    Upcoming
+                  </Button>
+                  <Button
+                    variant={sortOrder === 'recent' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setSortOrder('recent')}
+                    className="flex items-center gap-1 rounded-l-none border-0"
+                  >
+                    <ArrowUpDown className="h-3 w-3" />
+                    Recent
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-muted-foreground">Sort by:</span>
-              <Button
-                variant={sortOrder === 'upcoming' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSortOrder('upcoming')}
-              >
-                Upcoming
-              </Button>
-              <Button
-                variant={sortOrder === 'recent' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSortOrder('recent')}
-              >
-                Recent
-              </Button>
 
-              {/* Status Filter */}
-              <select
-                className="border rounded px-2 py-1 text-sm"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
-              >
-                <option value="all">All Status</option>
-                <option value="accepted">Accepted</option>
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-              </select>
-
-              {/* Subject Filter */}
-              <select
-                className="border rounded px-2 py-1 text-sm"
-                value={filterSubject}
-                onChange={(e) => setFilterSubject(e.target.value)}
-              >
-                <option value="all">All Subjects</option>
-                {subjects.map(subj => (
-                  <option key={subj} value={subj}>{subj}</option>
-                ))}
-              </select>
-
-              {/* Date Filter */}
-              <select
-                className="border rounded px-2 py-1 text-sm"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value as any)}
-              >
-                <option value="all">All Dates</option>
-                <option value="today">Today</option>
-                <option value="thisWeek">This Week</option>
-                <option value="future">Future</option>
-              </select>
-            </div>
+            {/* Filter Section */}
+            {showFilters && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Status</label>
+                    <select
+                      className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={filterStatus}
+                      onChange={(e) => setFilterStatus(e.target.value as any)}
+                    >
+                      <option value="all">All Status</option>
+                      <option value="accepted">Accepted</option>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Subject</label>
+                    <select
+                      className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={filterSubject}
+                      onChange={(e) => setFilterSubject(e.target.value)}
+                    >
+                      <option value="all">All Subjects</option>
+                      {subjects.map(subj => (
+                        <option key={subj} value={subj}>{subj}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Date Range</label>
+                    <select
+                      className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={filterDate}
+                      onChange={(e) => setFilterDate(e.target.value as any)}
+                    >
+                      <option value="all">All Dates</option>
+                      <option value="today">Today</option>
+                      <option value="thisWeek">This Week</option>
+                      <option value="future">Future</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end mt-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFilterStatus('all');
+                      setFilterSubject('all');
+                      setFilterDate('all');
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardHeader>
-          <CardDescription className="ml-7 pb-4">Your scheduled tutoring sessions</CardDescription>
+          
           <CardContent className="space-y-4">
             {filteredAndSortedSessions.length > 0 ? (
               <>
-                {filteredAndSortedSessions.slice(0, showAll ? undefined : 4).map((session) => {
-                  const start = new Date(session.startDatetime);
-                  const end = new Date(session.endDatetime);
+                <div className="space-y-3">
+                  {filteredAndSortedSessions.slice(0, showAll ? undefined : 4).map((session) => {
+                    const start = new Date(session.startDatetime);
+                    const end = new Date(session.endDatetime);
 
-                  const formattedDate = start.toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    day: '2-digit',
-                    month: 'short',
-                  });
-                  const formattedTime = start.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    hour12: true,
-                  });
+                    const formattedDate = start.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      day: '2-digit',
+                      month: 'short',
+                    });
+                    const formattedTime = start.toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    });
 
-                  const durationMs = end.getTime() - start.getTime();
-                  const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
-                  const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-                  let durationString = '';
-                  if (durationHours > 0) durationString += `${durationHours}h`;
-                  if (durationMinutes > 0) durationString += `${durationHours > 0 ? ' ' : ''}${durationMinutes}m`;
-                  if (!durationString) durationString = '1h';
+                    const durationMs = end.getTime() - start.getTime();
+                    const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+                    const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+                    let durationString = '';
+                    if (durationHours > 0) durationString += `${durationHours}h`;
+                    if (durationMinutes > 0) durationString += `${durationHours > 0 ? ' ' : ''}${durationMinutes}m`;
+                    if (!durationString) durationString = '1h';
 
-                  return (
-                    <div
-                      key={session.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="space-y-1">
-                        <p className="font-medium">{session.studentName}</p>
-                        <p className="text-sm text-muted-foreground">{session.subject}</p>
-                      </div>
+                    const isUpcoming = new Date(session.startDatetime) > new Date();
 
-                      <div className="text-right space-y-1">
-                        <p className="text-sm font-medium text-muted-foreground">
-                          <Clock className="inline-block mr-1 h-4 w-4" />
-                          {formattedTime}, {formattedDate}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Duration: {durationString}</p>
-
-                        {session.status === 'pending' && (
-                          <div className="flex gap-2 justify-end mt-2">
-                            <Button
-                              size="sm"
-                              className="bg-green-600 text-white hover:bg-green-700"
-                              onClick={() => handleUpdateStatus(session.id, 'accepted')}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleUpdateStatus(session.id, 'declined')}
-                            >
-                              Decline
-                            </Button>
-                          </div>
-                        )}
-
-                        {session.status !== 'pending' && (
-                          <>
-                            <Badge
-                              className={`${session.status === 'accepted'
-                                ? 'bg-green-100 text-green-800'
-                                : session.status === 'completed'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : session.status === 'cancelled'
-                                    ? 'bg-gray-200 text-gray-800'
-                                    : 'bg-red-100 text-red-800'
-                                } pointer-events-none`}
-                            >
-                              {session.status.toUpperCase()}
-                            </Badge>
-
-                            {session.status === 'accepted' && (
-                              <div className="flex gap-2 mt-2">
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="hover:bg-red-700"
-                                  onClick={() => handleUpdateStatus(session.id, 'cancelled')}
-                                >
-                                  Cancel Booking
-                                </Button>
-
-                                <Button
-                                  size="sm"
-                                  className="bg-blue-600 text-white hover:bg-blue-700"
-                                  onClick={() => handleUpdateStatus(session.id, 'completed')}
-                                >
-                                  Mark as Completed
-                                </Button>
+                    return (
+                      <div
+                        key={session.id}
+                        className="p-4 border rounded-lg hover:shadow-md transition-all bg-white"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h3 className="font-semibold text-lg text-gray-900">{session.studentName}</h3>
+                                <p className="text-sm text-gray-600 mt-1">{session.subject}</p>
                               </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                              <Badge 
+                                variant={getStatusVariant(session.status)}
+                                className="ml-2"
+                              >
+                                {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
+                              </Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                <span>{formattedDate}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                <span>{formattedTime}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Duration: {durationString}</span>
+                              </div>
+                            </div>
 
-                {filteredAndSortedSessions.length > 5 && (
-                  <Button
-                    variant="outline"
-                    className="w-full mt-2"
-                    onClick={() => setShowAll((prev) => !prev)}
-                  >
-                    {showAll ? 'View Less' : 'View More'}
-                  </Button>
+                            {/* Action Buttons */}
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              {session.status === 'pending' && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={() => handleUpdateStatus(session.id, 'accepted')}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-red-200 text-red-700 hover:bg-red-50"
+                                    onClick={() => handleUpdateStatus(session.id, 'declined')}
+                                  >
+                                    Decline
+                                  </Button>
+                                </>
+                              )}
+
+                              {session.status === 'accepted' && isUpcoming && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    onClick={() => handleUpdateStatus(session.id, 'completed')}
+                                  >
+                                    Mark Complete
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-red-200 text-red-700 hover:bg-red-50"
+                                    onClick={() => handleUpdateStatus(session.id, 'cancelled')}
+                                  >
+                                    Cancel Session
+                                  </Button>
+                                </>
+                              )}
+
+                              {session.status === 'completed' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-green-200 text-green-700"
+                                  disabled
+                                >
+                                  Completed
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {filteredAndSortedSessions.length > 4 && (
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAll((prev) => !prev)}
+                      className="w-full max-w-xs"
+                    >
+                      {showAll ? 'Show Less' : `View All (${filteredAndSortedSessions.length})`}
+                    </Button>
+                  </div>
                 )}
               </>
             ) : (
-              <p className="text-sm text-muted-foreground text-center">No upcoming sessions</p>
+              <div className="text-center py-8">
+                <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">No sessions found</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  {filterStatus !== 'all' || filterSubject !== 'all' || filterDate !== 'all' 
+                    ? 'Try adjusting your filters' 
+                    : 'No upcoming sessions scheduled'}
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
