@@ -570,7 +570,7 @@ export default function Dashboard() {
               <Calendar className="h-5 w-5 md:h-6 md:w-6" />
               <span className="text-xs md:text-sm">Schedule</span>
             </Button>
-            <Button variant="outline" className="h-16 md:h-20 flex-col space-y-1 md:space-y-2" onClick={() => navigate('/progress')}>
+            <Button variant="outline" className="h-16 md:h-20 flex-col space-y-1 md:space-y-2" onClick={() => navigate('/student-progress')}>
               <TrendingUp className="h-5 w-5 md:h-6 md:w-6" />
               <span className="text-xs md:text-sm">Progress</span>
             </Button>

@@ -24,6 +24,7 @@ import MyEvents from "./pages/tutor/MyEvents";
 import FAQ from "./pages/FAQ";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import ProgressPage from "./pages/Progress";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +68,7 @@ const AppRoutes = () => {
         <Route path="/tutor/students" element={<MyStudents />} />
         <Route path="/tutor/events" element={<MyEvents />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/student-progress" element={<ProgressPage/>}/>
       </Routes>
     </MainLayout>
   );
