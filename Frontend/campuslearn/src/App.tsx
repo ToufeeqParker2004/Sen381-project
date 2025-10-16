@@ -25,6 +25,7 @@ import FAQ from "./pages/FAQ";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ProgressPage from "./pages/Progress";
+import { NotificationsPage } from "./pages/notifications";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const AppRoutes = () => {
         <Route path="/tutor/events" element={<MyEvents />} />
         <Route path="*" element={<NotFound />} />
         <Route path="/student-progress" element={<ProgressPage/>}/>
+        <Route path="/notifications" element={<NotificationsPage />} />
       </Routes>
     </MainLayout>
   );

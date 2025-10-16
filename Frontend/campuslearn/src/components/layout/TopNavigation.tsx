@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from "@/components/ui/NotificationBell";
 interface TopNavigationProps {
   sidebarExpanded: boolean;
   className?: string;
@@ -80,6 +81,9 @@ export function TopNavigation({
 
         {/* Right Section - Actions */}
         <div className="flex items-center space-x-1 md:space-x-2">
+          {/* Notification Bell */}
+          <NotificationBell />
+          
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
