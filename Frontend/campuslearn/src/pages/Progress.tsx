@@ -22,6 +22,12 @@ import {
   Clock4,
   BookCheck,
   Users,
+  Zap,
+  Trophy,
+  Brain,
+  GraduationCap,
+  Lightbulb,
+  Bookmark,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -44,6 +50,9 @@ interface ProgressStats {
   streak: number;
   goalsAchieved: number;
   upcomingLessons: number;
+  uniqueTutors: number;
+  weeklyProgress: number;
+  monthlyProgress: number;
 }
 
 interface SubjectProgress {
@@ -51,7 +60,30 @@ interface SubjectProgress {
   lessonsCompleted: number;
   totalLessons: number;
   progress: number;
-  averageRating?: number;
+}
+
+interface Goal {
+  id: string;
+  title: string;
+  description: string;
+  target: number;
+  current: number;
+  progress: number;
+  icon: React.ComponentType<any>;
+  color: string;
+  completed: boolean;
+  type: 'lessons' | 'hours' | 'streak' | 'tutors' | 'subjects' | 'consistency';
+}
+
+interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ComponentType<any>;
+  color: string;
+  unlocked: boolean;
+  progress?: number;
+  target?: number;
 }
 
 export default function ProgressPage() {
@@ -67,8 +99,13 @@ export default function ProgressPage() {
     streak: 0,
     goalsAchieved: 0,
     upcomingLessons: 0,
+    uniqueTutors: 0,
+    weeklyProgress: 0,
+    monthlyProgress: 0,
   });
   const [subjectProgress, setSubjectProgress] = useState<SubjectProgress[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [timeframe, setTimeframe] = useState<'week' | 'month' | 'all'>('month');
 
   useEffect(() => {
@@ -108,7 +145,7 @@ export default function ProgressPage() {
       .reduce((total, lesson) => {
         const start = new Date(lesson.startDatetime);
         const end = new Date(lesson.endDatetime);
-        const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60); // hours
+        const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
         return total + duration;
       }, 0);
 
@@ -123,7 +160,10 @@ export default function ProgressPage() {
     const favoriteSubject = Object.entries(subjectCounts)
       .sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A';
 
-    // Calculate streak (simplified - consecutive weeks with at least one completed lesson)
+    // Calculate unique tutors
+    const uniqueTutors = new Set(lessonsData.map(lesson => lesson.tutorName)).size;
+
+    // Calculate streak
     const completedLessonDates = lessonsData
       .filter(lesson => lesson.status === 'completed')
       .map(lesson => new Date(lesson.startDatetime).toDateString());
@@ -134,7 +174,10 @@ export default function ProgressPage() {
       lesson => lesson.status === 'accepted' && new Date(lesson.startDatetime) > new Date()
     ).length;
 
-    setProgressStats({
+    const weeklyProgress = getWeeklyProgress(lessonsData);
+    const monthlyProgress = getMonthlyProgress(lessonsData);
+
+    const stats = {
       totalLessons,
       completedLessons,
       completionRate,
@@ -142,9 +185,16 @@ export default function ProgressPage() {
       averageSessionLength: Math.round(averageSessionLength * 10) / 10,
       favoriteSubject,
       streak,
-      goalsAchieved: Math.floor(completedLessons / 5), // 1 goal per 5 lessons
+      goalsAchieved: 0, // Will be calculated based on goals
       upcomingLessons,
-    });
+      uniqueTutors,
+      weeklyProgress,
+      monthlyProgress,
+    };
+
+    setProgressStats(stats);
+    calculateGoals(stats);
+    calculateAchievements(stats);
   };
 
   const calculateStreak = (dates: string[]): number => {
@@ -160,7 +210,7 @@ export default function ProgressPage() {
       const diffTime = Math.abs(currDate.getTime() - prevDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (diffDays <= 7) { // Within a week
+      if (diffDays <= 7) {
         currentStreak++;
         streak = Math.max(streak, currentStreak);
       } else {
@@ -196,27 +246,186 @@ export default function ProgressPage() {
     setSubjectProgress(progress);
   };
 
-  const getWeeklyProgress = () => {
+  const getWeeklyProgress = (lessonsData: Lesson[] = lessons) => {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    return lessons.filter(
+    return lessonsData.filter(
       lesson => 
         new Date(lesson.startDatetime) >= oneWeekAgo && 
         lesson.status === 'completed'
     ).length;
   };
 
-  const getMonthlyProgress = () => {
+  const getMonthlyProgress = (lessonsData: Lesson[] = lessons) => {
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-    return lessons.filter(
+    return lessonsData.filter(
       lesson => 
         new Date(lesson.startDatetime) >= oneMonthAgo && 
         lesson.status === 'completed'
     ).length;
   };
+
+  const calculateGoals = (stats: ProgressStats) => {
+    const newGoals: Goal[] = [
+      {
+        id: 'goal-1',
+        title: 'Complete 5 Lessons',
+        description: 'Build your learning foundation',
+        target: 5,
+        current: stats.completedLessons,
+        progress: Math.min((stats.completedLessons / 5) * 100, 100),
+        icon: BookOpen,
+        color: 'primary',
+        completed: stats.completedLessons >= 5,
+        type: 'lessons'
+      },
+      {
+        id: 'goal-2',
+        title: '10 Learning Hours',
+        description: 'Dedicate time to master skills',
+        target: 10,
+        current: stats.totalLearningHours,
+        progress: Math.min((stats.totalLearningHours / 10) * 100, 100),
+        icon: Clock,
+        color: 'success',
+        completed: stats.totalLearningHours >= 10,
+        type: 'hours'
+      },
+      {
+        id: 'goal-3',
+        title: '4-Week Streak',
+        description: 'Maintain consistent learning',
+        target: 4,
+        current: stats.streak,
+        progress: Math.min((stats.streak / 4) * 100, 100),
+        icon: TrendingUp,
+        color: 'secondary',
+        completed: stats.streak >= 4,
+        type: 'streak'
+      },
+      {
+        id: 'goal-4',
+        title: 'Learn from 3 Tutors',
+        description: 'Expand your perspectives',
+        target: 3,
+        current: stats.uniqueTutors,
+        progress: Math.min((stats.uniqueTutors / 3) * 100, 100),
+        icon: Users,
+        color: 'warning',
+        completed: stats.uniqueTutors >= 3,
+        type: 'tutors'
+      },
+      {
+        id: 'goal-5',
+        title: 'Master 2 Subjects',
+        description: 'Complete all lessons in subjects',
+        target: 2,
+        current: subjectProgress.filter(subj => subj.progress === 100).length,
+        progress: Math.min((subjectProgress.filter(subj => subj.progress === 100).length / 2) * 100, 100),
+        icon: GraduationCap,
+        color: 'primary',
+        completed: subjectProgress.filter(subj => subj.progress === 100).length >= 2,
+        type: 'subjects'
+      },
+      {
+        id: 'goal-6',
+        title: 'Weekly Consistency',
+        description: 'Complete lessons every week this month',
+        target: 4,
+        current: Math.min(stats.weeklyProgress, 4),
+        progress: Math.min((Math.min(stats.weeklyProgress, 4) / 4) * 100, 100),
+        icon: Zap,
+        color: 'success',
+        completed: stats.weeklyProgress >= 4,
+        type: 'consistency'
+      }
+    ];
+
+    setGoals(newGoals);
+    
+    // Update goals achieved count
+    const goalsAchieved = newGoals.filter(goal => goal.completed).length;
+    setProgressStats(prev => ({ ...prev, goalsAchieved }));
+  };
+
+  const calculateAchievements = (stats: ProgressStats) => {
+    const newAchievements: Achievement[] = [
+      {
+        id: 'ach-1',
+        title: 'First Steps',
+        description: 'Complete your first lesson',
+        icon: Star,
+        color: 'primary',
+        unlocked: stats.completedLessons >= 1
+      },
+      {
+        id: 'ach-2',
+        title: 'Learning Momentum',
+        description: 'Complete 5+ lessons',
+        icon: Target,
+        color: 'success',
+        unlocked: stats.completedLessons >= 5
+      },
+      {
+        id: 'ach-3',
+        title: 'Consistent Learner',
+        description: 'Maintain a 2-week streak',
+        icon: TrendingUp,
+        color: 'secondary',
+        unlocked: stats.streak >= 2
+      },
+      {
+        id: 'ach-4',
+        title: 'Dedicated Scholar',
+        description: 'Reach 10+ learning hours',
+        icon: Clock4,
+        color: 'warning',
+        unlocked: stats.totalLearningHours >= 10
+      },
+      {
+        id: 'ach-5',
+        title: 'Subject Explorer',
+        description: 'Learn from multiple tutors',
+        icon: Users,
+        color: 'primary',
+        unlocked: stats.uniqueTutors >= 2
+      },
+      {
+        id: 'ach-6',
+        title: 'Rising Star',
+        description: 'Complete 10 lessons',
+        icon: Trophy,
+        color: 'success',
+        unlocked: stats.completedLessons >= 10
+      },
+      {
+        id: 'ach-7',
+        title: 'Knowledge Seeker',
+        description: 'Master your first subject',
+        icon: Brain,
+        color: 'secondary',
+        unlocked: subjectProgress.some(subj => subj.progress === 100)
+      },
+      {
+        id: 'ach-8',
+        title: 'Learning Champion',
+        description: 'Complete 25 lessons',
+        icon: Award,
+        color: 'warning',
+        unlocked: stats.completedLessons >= 25,
+        progress: Math.min(stats.completedLessons, 25),
+        target: 25
+      }
+    ];
+
+    setAchievements(newAchievements);
+  };
+
+  const getUnlockedAchievements = () => achievements.filter(ach => ach.unlocked);
+  const getLockedAchievements = () => achievements.filter(ach => !ach.unlocked);
 
   return (
     <div className="space-y-6">
@@ -308,14 +517,14 @@ export default function ProgressPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Goals Achieved</p>
-                <p className="text-2xl font-bold">{progressStats.goalsAchieved}</p>
+                <p className="text-2xl font-bold">{progressStats.goalsAchieved}/{goals.length}</p>
               </div>
               <div className="p-2 bg-warning/10 rounded-lg">
                 <Target className="h-6 w-6 text-warning" />
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Every 5 lessons completed
+              {goals.filter(g => g.completed).length} of {goals.length} completed
             </p>
           </CardContent>
         </Card>
@@ -365,62 +574,56 @@ export default function ProgressPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Award className="mr-2 h-5 w-5" />
-                Recent Achievements
+                Achievements ({getUnlockedAchievements().length}/{achievements.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {progressStats.completedLessons >= 1 && (
-                <div className="flex items-center p-3 border rounded-lg">
-                  <div className="p-2 bg-primary/10 rounded-lg mr-3">
-                    <Star className="h-4 w-4 text-primary" />
+              {getUnlockedAchievements().slice(0, 4).map((achievement) => {
+                const Icon = achievement.icon;
+                return (
+                  <div key={achievement.id} className="flex items-center p-3 border rounded-lg bg-muted/20">
+                    <div className={`p-2 bg-${achievement.color}/10 rounded-lg mr-3`}>
+                      <Icon className={`h-4 w-4 text-${achievement.color}`} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{achievement.title}</p>
+                      <p className="text-xs text-muted-foreground">{achievement.description}</p>
+                      {achievement.progress !== undefined && achievement.target !== undefined && (
+                        <div className="mt-1">
+                          <Progress 
+                            value={(achievement.progress / achievement.target) * 100} 
+                            className="h-1"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {achievement.progress}/{achievement.target}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                      Unlocked ✓
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm">First Lesson Completed!</p>
-                    <p className="text-xs text-muted-foreground">You completed your first lesson</p>
-                  </div>
-                </div>
-              )}
+                );
+              })}
 
-              {progressStats.completedLessons >= 5 && (
-                <div className="flex items-center p-3 border rounded-lg">
-                  <div className="p-2 bg-success/10 rounded-lg mr-3">
-                    <Target className="h-4 w-4 text-success" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Learning Momentum</p>
-                    <p className="text-xs text-muted-foreground">Completed 5+ lessons</p>
-                  </div>
-                </div>
-              )}
-
-              {progressStats.streak >= 2 && (
-                <div className="flex items-center p-3 border rounded-lg">
-                  <div className="p-2 bg-secondary/10 rounded-lg mr-3">
-                    <TrendingUp className="h-4 w-4 text-secondary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Consistent Learner</p>
-                    <p className="text-xs text-muted-foreground">{progressStats.streak}-week streak</p>
-                  </div>
-                </div>
-              )}
-
-              {progressStats.totalLearningHours >= 10 && (
-                <div className="flex items-center p-3 border rounded-lg">
-                  <div className="p-2 bg-warning/10 rounded-lg mr-3">
-                    <Clock4 className="h-4 w-4 text-warning" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">Dedicated Scholar</p>
-                    <p className="text-xs text-muted-foreground">10+ hours of learning</p>
-                  </div>
-                </div>
-              )}
-
-              {progressStats.completedLessons === 0 && (
+              {getUnlockedAchievements().length === 0 && (
                 <p className="text-center text-muted-foreground py-4">
                   Complete lessons to unlock achievements!
                 </p>
+              )}
+
+              {getUnlockedAchievements().length > 4 && (
+                <div className="flex justify-center mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {/* Implement view all */}}
+                  >
+                    View All Achievements
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -440,17 +643,17 @@ export default function ProgressPage() {
                   <p className="text-xs text-muted-foreground">Lessons Done</p>
                 </div>
                 <div className="p-4 border rounded-lg">
-                  <p className="text-2xl font-bold text-primary">{progressStats.upcomingLessons}</p>
+                  <p className="text-2xl font-bold text-success">{progressStats.upcomingLessons}</p>
                   <p className="text-xs text-muted-foreground">Upcoming</p>
                 </div>
                 <div className="p-4 border rounded-lg">
-                  <p className="text-2xl font-bold text-red-500">{progressStats.favoriteSubject}</p>
-                  <p className="text-xs text-muted-foreground">Favorite Subject</p>
+                  <p className="text-2xl font-bold text-secondary">{progressStats.uniqueTutors}</p>
+                  <p className="text-xs text-muted-foreground">Tutors</p>
                 </div>
                 <div className="p-4 border rounded-lg">
-                  <p className="text-2xl font-bold text-primary">
-                    {timeframe === 'week' ? getWeeklyProgress() : 
-                     timeframe === 'month' ? getMonthlyProgress() : 
+                  <p className="text-2xl font-bold text-warning">
+                    {timeframe === 'week' ? progressStats.weeklyProgress : 
+                     timeframe === 'month' ? progressStats.monthlyProgress : 
                      progressStats.completedLessons}
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -470,53 +673,46 @@ export default function ProgressPage() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Target className="mr-2 h-5 w-5" />
-            Learning Goals
+            Learning Goals ({goals.filter(g => g.completed).length}/{goals.length})
           </CardTitle>
-          <CardDescription>Set and track your learning objectives</CardDescription>
+          <CardDescription>Track your progress towards learning objectives</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <div className="p-4 border rounded-lg text-center">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                <BookOpen className="h-6 w-6 text-primary" />
-              </div>
-              <h4 className="font-semibold mb-2">Complete 5 Lessons</h4>
-              <Progress 
-                value={Math.min((progressStats.completedLessons / 5) * 100, 100)} 
-                className="h-2 mb-2"
-              />
-              <p className="text-sm text-muted-foreground">
-                {Math.min(progressStats.completedLessons, 5)}/5 completed
-              </p>
-            </div>
-
-            <div className="p-4 border rounded-lg text-center">
-              <div className="w-12 h-12 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Clock className="h-6 w-6 text-success" />
-              </div>
-              <h4 className="font-semibold mb-2">10 Learning Hours</h4>
-              <Progress 
-                value={Math.min((progressStats.totalLearningHours / 10) * 100, 100)} 
-                className="h-2 mb-2"
-              />
-              <p className="text-sm text-muted-foreground">
-                {progressStats.totalLearningHours.toFixed(1)}/10 hours
-              </p>
-            </div>
-
-            <div className="p-4 border rounded-lg text-center">
-              <div className="w-12 h-12 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                <TrendingUp className="h-6 w-6 text-secondary" />
-              </div>
-              <h4 className="font-semibold mb-2">4-Week Streak</h4>
-              <Progress 
-                value={Math.min((progressStats.streak / 4) * 100, 100)} 
-                className="h-2 mb-2"
-              />
-              <p className="text-sm text-muted-foreground">
-                {progressStats.streak}/4 weeks
-              </p>
-            </div>
+            {goals.map((goal) => {
+              const Icon = goal.icon;
+              return (
+                <div 
+                  key={goal.id} 
+                  className={`p-4 border rounded-lg text-center ${
+                    goal.completed ? 'bg-success/5 border-success/20' : 'bg-background'
+                  }`}
+                >
+                  <div className={`w-12 h-12 bg-${goal.color}/10 rounded-full flex items-center justify-center mx-auto mb-3 ${
+                    goal.completed ? 'bg-success/20' : ''
+                  }`}>
+                    <Icon className={`h-6 w-6 text-${goal.color} ${goal.completed ? 'text-success' : ''}`} />
+                  </div>
+                  <h4 className="font-semibold mb-2">{goal.title}</h4>
+                  <p className="text-xs text-muted-foreground mb-3">{goal.description}</p>
+                  <Progress 
+                    value={goal.progress} 
+                    className={`h-2 mb-2 ${goal.completed ? 'bg-success/20' : ''}`}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {goal.current}/{goal.target} {goal.type === 'hours' ? 'hours' : 
+                     goal.type === 'streak' ? 'weeks' : 
+                     goal.type === 'tutors' ? 'tutors' :
+                     goal.type === 'subjects' ? 'subjects' : 'completed'}
+                  </p>
+                  {goal.completed && (
+                    <Badge variant="outline" className="mt-2 bg-success/10 text-success border-success/20">
+                      Completed ✓
+                    </Badge>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
