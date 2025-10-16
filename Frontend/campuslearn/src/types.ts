@@ -71,5 +71,14 @@ export interface TutorWithModulesResponse {
   modules: Module[];
 }
 
+export interface ErrorRecord {
+  id: string;
+  created_at: string;
+  message: string;
+  stack_trace?: string | null;
+  endpoint?: string | null;
+  user_id?: number | null;
+  additional_info?: any | null; // jsonb can be any object
+}
 
  

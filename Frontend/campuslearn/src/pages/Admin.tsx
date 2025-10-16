@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,12 +47,17 @@ import {
   Zap,
 } from 'lucide-react';
 import { LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ErrorRecord } from '@/types';
+import apiClient from '@/services/api';
 
 export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTable, setSelectedTable] = useState('users');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<Record<string, any> | null>(null);
+   const [errors, setErrors] = useState<ErrorRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // System Stats
   const systemStats = [
@@ -130,14 +135,60 @@ export default function Admin() {
     ],
   };
 
-  // Errors & Alerts Data
-  const errors = [
-    { id: 1, type: 'Login Failure', user: 'john@campus.edu', message: 'Wrong password (3 attempts)', time: '10 minutes ago', severity: 'warning' },
-    { id: 2, type: 'NLP Moderation', user: 'mike@campus.edu', message: 'Inappropriate language detected', time: '1 hour ago', severity: 'high' },
-    { id: 3, type: 'API Failure', user: 'System', message: 'Payment gateway timeout', time: '2 hours ago', severity: 'critical' },
-    { id: 4, type: 'Upload Failure', user: 'sarah@campus.edu', message: 'File size exceeds limit', time: '3 hours ago', severity: 'low' },
-    { id: 5, type: 'Reported User', user: 'emma@campus.edu', message: 'Spam behavior reported', time: '5 hours ago', severity: 'high' },
-  ];
+  useEffect(() => {
+  const fetchErrors = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      console.log('🔄 Fetching errors from backend...');
+      
+     
+      
+      // Now try the real endpoint
+      const response = await apiClient.get('/api/errors', { timeout: 15000 });
+      
+      console.log('✅ Main endpoint response:', response);
+      console.log('📊 Response data type:', typeof response.data);
+      console.log('📊 Is array?:', Array.isArray(response.data));
+      
+      if (Array.isArray(response.data)) {
+        setErrors(response.data);
+        console.log(`✅ Successfully loaded ${response.data.length} errors`);
+        
+        // Debug the first error's date format
+        if (response.data.length > 0) {
+          console.log('📅 First error date raw:', response.data[0].created_at);
+          console.log('📅 First error date type:', typeof response.data[0].created_at);
+        }
+      } else {
+        console.error('❌ Unexpected response structure:', response.data);
+        setError('Unexpected data format: Expected array but got ' + typeof response.data);
+        setErrors([]);
+      }
+      
+    } catch (err: any) {
+      console.error('❌ Error fetching errors:', err);
+      
+      if (err.code === 'ECONNABORTED') {
+        setError('Backend timeout: Spring Boot server not responding on localhost:9090. Please check: 1) Server is running, 2) Port 9090 is available, 3) No firewall blocking');
+      } else if (err.response) {
+        setError(`Backend error: ${err.response.status} - ${err.response.statusText}`);
+      } else if (err.request) {
+        setError('No connection to backend. Make sure Spring Boot is running: ./mvnw spring-boot:run');
+      } else {
+        setError(err.message || 'Unknown error occurred');
+      }
+      setErrors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchErrors();
+}, []);
+ 
+
 
   // Forum Posts Data
   const forumPosts = [
@@ -535,35 +586,72 @@ export default function Admin() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5" />
-                Errors & Alerts Center
+                System Errors Log
               </CardTitle>
-              <CardDescription>Monitor platform errors and security alerts</CardDescription>
+              <CardDescription>Monitor and track platform errors from the database</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {errors.map((error) => (
-                  <div key={error.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge className={getSeverityColor(error.severity)}>
-                          {error.severity}
-                        </Badge>
-                        <span className="font-semibold">{error.type}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-1">{error.user}</p>
-                      <p className="text-sm">{error.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{error.time}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <CheckCircle className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[250px]">ID</TableHead>
+                      <TableHead className="min-w-[150px]">Created At</TableHead>
+                      <TableHead className="min-w-[250px]">Message</TableHead>
+                      <TableHead className="min-w-[200px]">Stack Trace</TableHead>
+                      <TableHead className="min-w-[150px]">Endpoint</TableHead>
+                      <TableHead className="min-w-[100px]">User ID</TableHead>
+                      <TableHead className="min-w-[200px]">Additional Info</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {errors.map((error) => (
+                      <TableRow key={error.id} className="hover:bg-muted/50">
+                        <TableCell className="font-mono text-xs">
+                          {error.id}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {new Date(error.created_at).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="max-w-[300px]">
+                          <div className="text-sm truncate" title={error.message}>
+                            {error.message}
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-[250px]">
+                          {error.stack_trace ? (
+                            <details className="cursor-pointer">
+                              <summary className="text-xs text-primary hover:underline">View trace</summary>
+                              <pre className="text-xs mt-2 p-2 bg-muted rounded whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto">
+                                {error.stack_trace}
+                              </pre>
+                            </details>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm font-mono">
+                          {error.endpoint || <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {error.user_id || <span className="text-muted-foreground">—</span>}
+                        </TableCell>
+                        <TableCell className="max-w-[250px]">
+                          {error.additional_info ? (
+                            <details className="cursor-pointer">
+                              <summary className="text-xs text-primary hover:underline">View JSON</summary>
+                              <pre className="text-xs mt-2 p-2 bg-muted rounded whitespace-pre-wrap break-words max-h-[200px] overflow-y-auto">
+                                {JSON.stringify(error.additional_info, null, 2)}
+                              </pre>
+                            </details>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
