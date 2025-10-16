@@ -100,7 +100,6 @@ export default function TutorsPage() {
     fetchTutorsWithModules();
   }, [toast]);
 
-  // 🧠 Apply button handler
   const handleApply = async (tutorId: number) => {
     if (!user?.id) {
       toast({ title: 'Not logged in', description: 'Please log in to apply for a tutor.', variant: 'destructive' });
