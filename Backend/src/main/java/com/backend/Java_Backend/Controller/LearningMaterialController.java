@@ -27,6 +27,8 @@ public class LearningMaterialController {
     @Autowired
     private SupabaseStorageService storageService; // Add this
 
+    private static final String LEARNING_MATERIALS_BUCKET = "learning-materials";
+
     @Autowired
     public LearningMaterialController(LearningMaterialService learningMaterialService) {
         this.learningMaterialService = learningMaterialService;
@@ -58,7 +60,7 @@ public class LearningMaterialController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    //@PreAuthorize("isAuthenticated()")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/upload")
     public ResponseEntity<?> createLearningMaterialWithFile(
             @RequestParam("title") String title,
@@ -81,7 +83,7 @@ public class LearningMaterialController {
             int uploaderId = Integer.parseInt(principal);
 
             // Upload file to Supabase bucket and get URL
-            String fileUrl = storageService.uploadFile(file);
+            String fileUrl = storageService.uploadFile(file, LEARNING_MATERIALS_BUCKET);
 
             // Create learning material
             LearningMaterial material = new LearningMaterial();
@@ -130,9 +132,24 @@ public class LearningMaterialController {
     @PreAuthorize("hasRole('ADMIN') or hasPermission(#id, 'LearningMaterial', 'own')")
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteLearningMaterial(@PathVariable UUID id) {
-        if (learningMaterialService.getMaterialById(id).isPresent()) {
-            learningMaterialService.deleteMaterial(id);
-            return ResponseEntity.noContent().build();
+        Optional<LearningMaterial> materialOpt = learningMaterialService.getMaterialById(id);
+        if (materialOpt.isPresent()) {
+            LearningMaterial material = materialOpt.get();
+
+            try {
+                // Delete file from storage first
+                if (material.getFile_url() != null) {
+                    storageService.deleteFile(material.getFile_url(), LEARNING_MATERIALS_BUCKET);
+                }
+
+                // Then delete from database
+                learningMaterialService.deleteMaterial(id);
+                return ResponseEntity.noContent().build();
+
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Collections.singletonMap("error", "Failed to delete learning material files: " + e.getMessage()));
+            }
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Collections.singletonMap("error", "Learning material not found"));
