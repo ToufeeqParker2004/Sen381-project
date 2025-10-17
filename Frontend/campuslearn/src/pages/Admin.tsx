@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,12 +47,21 @@ import {
   Zap,
 } from 'lucide-react';
 import { LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { ErrorRecord, ErrorResponse } from '@/types';
+import apiClient from '@/services/api';
 
 export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTable, setSelectedTable] = useState('users');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<Record<string, any> | null>(null);
+   const [errors, setErrors] = useState<ErrorRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const pageSize = 10; // Number of records per page
 
   // System Stats
   const systemStats = [
@@ -130,14 +139,51 @@ export default function Admin() {
     ],
   };
 
-  // Errors & Alerts Data
-  const errors = [
-    { id: 1, type: 'Login Failure', user: 'john@campus.edu', message: 'Wrong password (3 attempts)', time: '10 minutes ago', severity: 'warning' },
-    { id: 2, type: 'NLP Moderation', user: 'mike@campus.edu', message: 'Inappropriate language detected', time: '1 hour ago', severity: 'high' },
-    { id: 3, type: 'API Failure', user: 'System', message: 'Payment gateway timeout', time: '2 hours ago', severity: 'critical' },
-    { id: 4, type: 'Upload Failure', user: 'sarah@campus.edu', message: 'File size exceeds limit', time: '3 hours ago', severity: 'low' },
-    { id: 5, type: 'Reported User', user: 'emma@campus.edu', message: 'Spam behavior reported', time: '5 hours ago', severity: 'high' },
-  ];
+  useEffect(() => {
+  const fetchErrors = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await apiClient.get<ErrorResponse>(`/api/errors?page=0&size=${pageSize}`);
+      
+      setErrors(response.data.errors);
+      setHasMore(response.data.hasMore);
+      setPage(0);
+      
+    } catch (err: any) {
+      console.error('Error fetching errors:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch errors');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchErrors();
+}, []);
+ 
+const loadMoreErrors = async () => {
+  if (loadingMore || !hasMore) return;
+  
+  try {
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    
+    const response = await apiClient.get<ErrorResponse>(
+      `/api/errors?page=${nextPage}&size=${pageSize}`
+    );
+    
+    setErrors(prev => [...prev, ...response.data.errors]);
+    setHasMore(response.data.hasMore);
+    setPage(nextPage);
+    
+  } catch (err: any) {
+    console.error('Error loading more errors:', err);
+    setError('Failed to load more errors');
+  } finally {
+    setLoadingMore(false);
+  }
+};
 
   // Forum Posts Data
   const forumPosts = [
@@ -529,105 +575,130 @@ export default function Admin() {
           </Card>
         </TabsContent>
 
-        {/* Errors & Alerts Tab */}
-        <TabsContent value="errors" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Errors & Alerts Center
-              </CardTitle>
-              <CardDescription>Monitor platform errors and security alerts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {errors.map((error) => (
-                  <div key={error.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge className={getSeverityColor(error.severity)}>
-                          {error.severity}
-                        </Badge>
-                        <span className="font-semibold">{error.type}</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-1">{error.user}</p>
-                      <p className="text-sm">{error.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{error.time}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <CheckCircle className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Forum & Content Moderation Tab */}
-        <TabsContent value="forum" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Forum & Content Moderation
-              </CardTitle>
-              <CardDescription>Review, edit, or delete forum posts and learning materials</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
+       {/* Errors & Alerts Tab */}
+<TabsContent value="errors" className="space-y-6">
+  <Card>
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <AlertTriangle className="h-5 w-5" />
+        System Errors Log
+      </CardTitle>
+      <CardDescription>
+        Showing {errors.length} errors {hasMore && `(of ${errors.length}+)`}
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-sm text-muted-foreground">Loading errors...</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-destructive/15 border border-destructive/50 text-destructive px-4 py-3 rounded-md">
+          <div className="flex items-center gap-2">
+            <XCircle className="h-4 w-4" />
+            <strong>Error:</strong> {error}
+          </div>
+        </div>
+      )}
+      
+      {/* Success State */}
+      {!loading && !error && (
+        <div className="space-y-4">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[100px]">ID</TableHead>
+                  <TableHead className="min-w-[150px]">Created At</TableHead>
+                  <TableHead className="min-w-[200px]">Message</TableHead>
+                  <TableHead className="min-w-[150px]">Endpoint</TableHead>
+                  <TableHead className="min-w-[100px]">User ID</TableHead>
+                  <TableHead className="min-w-[200px]">Stack Trace</TableHead>
+                  <TableHead className="min-w-[150px]">Additional Info</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {errors.length === 0 ? (
                   <TableRow>
-                    <TableHead>Post Title</TableHead>
-                    <TableHead>Author</TableHead>
-                    <TableHead>Replies</TableHead>
-                    <TableHead>Flags</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No errors found in the system
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {forumPosts.map((post) => (
-                    <TableRow key={post.id}>
-                      <TableCell className="font-medium">{post.title}</TableCell>
-                      <TableCell>{post.author}</TableCell>
-                      <TableCell>{post.replies}</TableCell>
-                      <TableCell>
-                        {post.flags > 0 ? (
-                          <Badge variant="destructive">{post.flags} flags</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                ) : (
+                  errors.map((error) => (
+                    <TableRow key={error.id} className="hover:bg-muted/50">
+                      <TableCell className="font-mono text-xs">
+                        {error.id ? error.id.slice(0, 8) + '...' : 'N/A'}
                       </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(post.status)}>
-                          {post.status}
-                        </Badge>
+                      <TableCell className="text-xs">
+                        {error.created_at || "Invalid Date"}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{post.date}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-1">
-                          <Button variant="ghost" size="sm" title="View Post">
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="sm" title="Delete Post">
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                      <TableCell className="max-w-[200px]">
+                        <div className="text-sm line-clamp-2" title={error.message}>
+                          {error.message || 'N/A'}
                         </div>
                       </TableCell>
+                      <TableCell className="text-sm font-mono">
+                        {error.endpoint || <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {error.user_id || <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="max-w-[200px]">
+                        {error.stack_trace || "-"}
+                      </TableCell>
+                      <TableCell className="max-w-[150px]">
+                        {error.additional_info}
+                      </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="flex justify-center pt-4">
+              <Button 
+                onClick={loadMoreErrors} 
+                disabled={loadingMore}
+                variant="outline"
+                className="min-w-[120px]"
+              >
+                {loadingMore ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Load More
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+          
+          {/* No More Results */}
+          {!hasMore && errors.length > 0 && (
+            <div className="text-center py-4 text-muted-foreground">
+              No more errors to load
+            </div>
+          )}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+</TabsContent>
 
         {/* Reports & Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
