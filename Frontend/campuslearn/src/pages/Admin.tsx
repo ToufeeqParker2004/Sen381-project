@@ -161,6 +161,7 @@ export default function Admin() {
 
   fetchErrors();
 }, []);
+console.log(errors)
  
 const loadMoreErrors = async () => {
   if (loadingMore || !hasMore) return;
@@ -638,7 +639,7 @@ const loadMoreErrors = async () => {
                         {error.id ? error.id.slice(0, 8) + '...' : 'N/A'}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {error.created_at || "Invalid Date"}
+                        {error.createdAt || "Invalid Date"}
                       </TableCell>
                       <TableCell className="max-w-[200px]">
                         <div className="text-sm line-clamp-2" title={error.message}>
@@ -649,10 +650,11 @@ const loadMoreErrors = async () => {
                         {error.endpoint || <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {error.user_id || <span className="text-muted-foreground">—</span>}
+                        {error.userId || <span className="text-muted-foreground">—</span>}
                       </TableCell>
                       <TableCell className="max-w-[200px]">
-                        {error.stack_trace || "-"}
+                        {/* {error.stackTrace || "-"} */}
+                        -
                       </TableCell>
                       <TableCell className="max-w-[150px]">
                         {error.additional_info}
