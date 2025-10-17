@@ -34,7 +34,7 @@ public class ErrorController {
 
         List<ErrorDto> errors = errorService.getErrorsPaginated(page, size);
         long totalErrors = errorService.getTotalErrorCount();
-        boolean hasMore = (page + 1) * size < totalErrors;
+        boolean hasMore = (long) (page + 1) * size < totalErrors;
 
         Map<String, Object> response = new HashMap<>();
         response.put("errors", errors);
