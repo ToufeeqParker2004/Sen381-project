@@ -81,4 +81,11 @@ export interface ErrorRecord {
   additional_info?: any | null; // jsonb can be any object
 }
 
+export interface ErrorResponse {
+  errors: ErrorRecord[];
+  page: number;
+  size: number;
+  total: number;
+  hasMore: boolean;
+}
  
