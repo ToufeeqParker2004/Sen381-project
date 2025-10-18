@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import { Bell, Check, Trash2, ExternalLink, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useNotifications, Notification } from '@/hooks/useNotifications'; // Import Notification type
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -26,7 +27,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function NotificationsPage() {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, refreshNotifications } = useNotifications();
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead, 
+    deleteNotification,  // Get delete functions
+    deleteAllNotifications // Get delete functions
+  } = useNotifications();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; notificationId: string | null }>({
@@ -34,6 +42,7 @@ export function NotificationsPage() {
     notificationId: null,
   });
   const [activeTab, setActiveTab] = useState('all');
+  const navigate = useNavigate(); // Initialize navigate
 
   // Filter notifications based on search term, filter type, and active tab
   const filteredNotifications = notifications.filter((notification) => {
@@ -63,11 +72,9 @@ export function NotificationsPage() {
 
   const handleDeleteNotification = async (notificationId: string) => {
     try {
-      // You'll need to add this function to your useNotifications hook
-      // For now, this is a placeholder
-      console.log('Deleting notification:', notificationId);
-      // await deleteNotification(notificationId);
-      refreshNotifications();
+      // Use the function from your hook
+      await deleteNotification(notificationId);
+      // No need to refresh, hook updates state
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -75,13 +82,24 @@ export function NotificationsPage() {
 
   const handleDeleteAll = async () => {
     try {
-      // You'll need to add this function to your useNotifications hook
-      // For now, this is a placeholder
-      console.log('Deleting all notifications');
-      // await deleteAllNotifications();
-      refreshNotifications();
+      // Use the function from your hook
+      await deleteAllNotifications();
+      // No need to refresh, hook updates state
     } catch (error) {
       console.error('Error deleting all notifications:', error);
+    }
+  };
+
+  // Handle clicking on a notification item
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read if it's unread
+    if (notification.status === 'unread') {
+      markAsRead(notification.id);
+    }
+    
+    // Navigate if it's a message
+    if (notification.notification_type === 'new_message') {
+      navigate('/messages'); // Navigate to messages page
     }
   };
 
@@ -119,6 +137,7 @@ export function NotificationsPage() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
+      {/* ... (rest of the header, search, and tabs are unchanged) ... */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <Bell className="h-8 w-8 text-primary" />
@@ -224,10 +243,11 @@ export function NotificationsPage() {
               <div
                 key={notification.id}
                 className={cn(
-                  "p-4 transition-colors hover:bg-accent/50 group relative",
+                  "p-4 transition-colors hover:bg-accent/50 group relative cursor-pointer", // Added cursor-pointer
                   notification.status === 'unread' && 
                     "bg-blue-50 dark:bg-blue-950/20 border-l-2 border-l-blue-500"
                 )}
+                onClick={() => handleNotificationClick(notification)} // Added onClick handler
               >
                 <div className="flex gap-4">
                   <div className="flex-shrink-0 text-2xl">
@@ -264,7 +284,10 @@ export function NotificationsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleMarkAsRead(notification.id)}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Stop propagation
+                            handleMarkAsRead(notification.id);
+                          }}
                           className="h-8 text-xs"
                         >
                           <Check className="h-3 w-3 mr-1" />
@@ -275,10 +298,13 @@ export function NotificationsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setDeleteDialog({
-                          open: true,
-                          notificationId: notification.id
-                        })}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Stop propagation
+                          setDeleteDialog({
+                            open: true,
+                            notificationId: notification.id
+                          });
+                        }}
                         className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="h-3 w-3 mr-1" />
@@ -303,7 +329,7 @@ export function NotificationsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleDeleteAll}
+            onClick={handleDeleteAll} // This now works
             className="text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="h-4 w-4 mr-2" />
@@ -326,7 +352,7 @@ export function NotificationsPage() {
             <AlertDialogAction
               onClick={() => {
                 if (deleteDialog.notificationId) {
-                  handleDeleteNotification(deleteDialog.notificationId);
+                  handleDeleteNotification(deleteDialog.notificationId); // This now works
                 }
               }}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"

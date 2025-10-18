@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useNotifications, Notification } from '@/hooks/useNotifications'; // Import Notification type
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,9 +21,16 @@ export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const navigate = useNavigate();
 
-  const handleNotificationClick = (notificationId: string) => {
-    markAsRead(notificationId);
-    // You can add navigation logic here based on notification type
+  // Updated to accept the full notification object
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification.id);
+    
+    // Add navigation logic here
+    if (notification.notification_type === 'new_message') {
+      navigate('/messages'); // Navigate to messages page
+      setIsOpen(false); // Close the dropdown
+    }
+    // You could add else-if blocks for other notification types
   };
 
   const formatTime = (timestamp: string) => {
@@ -113,7 +120,7 @@ export function NotificationBell() {
                     ? "bg-blue-50 dark:bg-blue-950/20 border-l-2 border-l-blue-500" 
                     : "hover:bg-accent/50"
                 )}
-                onClick={() => handleNotificationClick(notification.id)}
+                onClick={() => handleNotificationClick(notification)} // Pass the full object
               >
                 <div className="flex gap-3 w-full">
                   <div className="flex-shrink-0 text-lg">

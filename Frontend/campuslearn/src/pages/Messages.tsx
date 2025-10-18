@@ -194,7 +194,7 @@ export default function Messages() {
       enrichedThreads.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       setConversations(enrichedThreads);
-    } catch (err) {
+    } catch (err){
       console.error('Error fetching threads:', err);
       if (!silent) toast({ title: 'Error', description: 'Failed to load conversations', variant: 'destructive' });
     } finally {
@@ -256,10 +256,10 @@ export default function Messages() {
   useEffect(() => {
     if (!selectedChat) return;
 
-    // 1️⃣ Initial fetch once when chat is opened (silent = no flicker)
+    // 1. Initial fetch once when chat is opened (silent = no flicker)
     fetchChatData(true);
 
-    // 2️⃣ Subscribe to Supabase Realtime for messages
+    // 2. Subscribe to Supabase Realtime for messages
     const channel = supabase
       .channel(`messages_thread_${selectedChat}`)
       .on(
@@ -293,16 +293,22 @@ export default function Messages() {
               return updated;
             });
 
-            // Update the conversation list with the new last message
-            setConversations(prev => prev.map(conv => 
-              conv.id === selectedChat 
-                ? { 
-                    ...conv, 
-                    lastMessage: newMsg.content,
-                    timestamp: newMsg.timestamp || new Date().toISOString()
-                  }
-                : conv
-            ));
+            // *** FIX: Update the conversation list with the new last message AND re-sort ***
+            setConversations(prev => {
+              const updatedList = prev.map(conv => 
+                conv.id === selectedChat 
+                  ? { 
+                      ...conv, 
+                      lastMessage: newMsg.content,
+                      timestamp: newMsg.timestamp || new Date().toISOString()
+                    }
+                  : conv
+              );
+              // Re-sort the list to bring the updated chat to the top
+              updatedList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+              return updatedList;
+            });
+            
           } else if (payload.eventType === 'DELETE') {
             setMessages((prev) => prev.filter((m) => m.id !== payload.old.id));
           } else if (payload.eventType === 'UPDATE') {
@@ -325,7 +331,7 @@ export default function Messages() {
       )
       .subscribe();
 
-    // 3️⃣ Cleanup
+    // 3. Cleanup
     return () => {
       supabase.removeChannel(channel);
     };
@@ -472,16 +478,26 @@ export default function Messages() {
       };
       await axios.post(`${API_BASE_URL}/messages`, messageDTO);
 
-      // Update the conversation list with the new last message immediately
-      setConversations(prev => prev.map(conv => 
-        conv.id === selectedChat 
-          ? { 
-              ...conv, 
-              lastMessage: messageText,
-              timestamp: new Date().toISOString()
-            }
-          : conv
-      ));
+      // *** FIX: Update the conversation list with the new last message AND re-sort ***
+      const newTimestamp = new Date().toISOString();
+      const updatedMessage = messageText; // The message we just sent
+
+      setConversations(prev => {
+        const updatedList = prev.map(conv => 
+          conv.id === selectedChat 
+            ? { 
+                ...conv, 
+                lastMessage: updatedMessage,
+                timestamp: newTimestamp
+              }
+            : conv
+        );
+        
+        // Now, sort the updated list
+        updatedList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        
+        return updatedList;
+      });
 
       setMessageText('');
     } catch (err) {
