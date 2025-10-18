@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Music, X, Minimize2, Maximize2 } from 'lucide-react';
@@ -7,6 +7,50 @@ import { cn } from '@/lib/utils';
 export function PersistentMusicPlayer() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging && isMinimized) {
+        e.preventDefault();
+        const deltaX = e.clientX - dragStart.x;
+        const deltaY = e.clientY - dragStart.y;
+        setPosition(prev => ({
+          x: prev.x + deltaX,
+          y: prev.y + deltaY
+        }));
+        setDragStart({ x: e.clientX, y: e.clientY });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.body.style.userSelect = '';
+    };
+
+    if (isDragging) {
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragStart, isMinimized]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isMinimized && e.target === e.currentTarget) {
+      e.preventDefault();
+      setIsDragging(true);
+      setDragStart({ x: e.clientX, y: e.clientY });
+    }
+  };
 
   if (!isOpen) {
     return (
@@ -22,12 +66,24 @@ export function PersistentMusicPlayer() {
 
   return (
     <Card 
+      ref={cardRef}
       className={cn(
-        "fixed bottom-6 right-6 z-50 shadow-2xl transition-all duration-300",
-        isMinimized ? "w-80" : "w-[95vw] md:w-[90vw] lg:w-[1200px]"
+        "fixed z-50 shadow-2xl transition-all duration-300",
+        isMinimized ? "w-80 cursor-move" : "w-[95vw] md:w-[90vw] lg:w-[1200px]",
+        isMinimized ? "" : "bottom-6 right-6"
       )}
+      style={isMinimized ? {
+        bottom: `${24 - position.y}px`,
+        right: `${24 - position.x}px`,
+      } : undefined}
     >
-      <div className="p-3 border-b flex items-center justify-between bg-muted/50">
+      <div 
+        className={cn(
+          "p-3 border-b flex items-center justify-between bg-muted/50",
+          isMinimized && "cursor-move"
+        )}
+        onMouseDown={handleMouseDown}
+      >
         <div className="flex items-center gap-2">
           <Music className="h-4 w-4 text-primary" />
           <h3 className="font-semibold text-sm">Study Vibes</h3>
