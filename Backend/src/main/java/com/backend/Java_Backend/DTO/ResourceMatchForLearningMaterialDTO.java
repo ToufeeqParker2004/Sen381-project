@@ -3,7 +3,7 @@ package com.backend.Java_Backend.DTO;
 public class ResourceMatchForLearningMaterialDTO {
     private int resourceId;
     private StudentDTO student;
-    private TutorDTO tutor;
+    private TutorDetailsDTO tutor; // Changed to TutorDetailsDTO
 
     // Getters and Setters
     public int getResourceId() {
@@ -22,11 +22,11 @@ public class ResourceMatchForLearningMaterialDTO {
         this.student = student;
     }
 
-    public TutorDTO getTutor() {
+    public TutorDetailsDTO getTutor() {
         return tutor;
     }
 
-    public void setTutor(TutorDTO tutor) {
+    public void setTutor(TutorDetailsDTO tutor) {
         this.tutor = tutor;
     }
 }

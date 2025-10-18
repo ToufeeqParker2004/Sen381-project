@@ -1,9 +1,6 @@
 package com.backend.Java_Backend.Services;
 
-import com.backend.Java_Backend.DTO.ModuleDTO;
-import com.backend.Java_Backend.DTO.TutorDTO;
-import com.backend.Java_Backend.DTO.TutorModuleDTO;
-import com.backend.Java_Backend.DTO.TutorWithModulesDTO;
+import com.backend.Java_Backend.DTO.*;
 import com.backend.Java_Backend.Models.Modules;
 import com.backend.Java_Backend.Models.Tutor;
 import com.backend.Java_Backend.Models.TutorModule;
@@ -69,7 +66,7 @@ public class TutorModuleService {
     }
 
     public TutorWithModulesDTO findByTutorIdWithDetails(int tutorId) {
-        TutorDTO tutor = tutorService.getTutorById(tutorId);
+        TutorDetailsDTO tutor = tutorService.getTutorById(tutorId);
         if (tutor == null) {
             return null;
         }
@@ -83,7 +80,7 @@ public class TutorModuleService {
     }
 
     public TutorWithModulesDTO findByTutorIdAndModuleIdWithDetails(int tutorId, int moduleId) {
-        TutorDTO tutor = tutorService.getTutorById(tutorId);
+        TutorDetailsDTO tutor = tutorService.getTutorById(tutorId);
         if (tutor == null) {
             return null;
         }

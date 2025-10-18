@@ -1,7 +1,7 @@
 // TutorService.java (updated with module management)
 package com.backend.Java_Backend.Services;
 
-import com.backend.Java_Backend.DTO.TutorDTO;
+import com.backend.Java_Backend.DTO.TutorDetailsDTO;
 import com.backend.Java_Backend.DTO.updateTutorDTO;
 import com.backend.Java_Backend.Models.*;
 import com.backend.Java_Backend.Repository.ModuleRepository;
@@ -31,7 +31,7 @@ public class TutorService {
     @Autowired
     private ModuleRepository modulesRepository;
 
-    public TutorDTO getTutorById(Integer id) {
+    public TutorDetailsDTO getTutorById(Integer id) {
         Optional<Tutor> tutorOpt = tutorRepository.findById(id);
         return tutorOpt.map(tutor -> {
             Optional<Student> studentOpt = studentRepository.findById(tutor.getStudent_id());
@@ -40,17 +40,21 @@ public class TutorService {
                             .map(tm -> tm.getId().getModuleId())
                             .collect(Collectors.toList()) :
                     List.of();
-            return new TutorDTO(
+            return studentOpt.map(student -> new TutorDetailsDTO(
                     tutor.getId(),
                     tutor.getStudent_id(),
                     tutor.getCreated_at(),
-                    studentOpt.map(Student::getEmail).orElse(null),
+                    student.getName(),
+                    student.getEmail(),
+                    student.getPhoneNumber(),
+                    student.getBio(),
+                    student.getLocation(),
                     moduleIds
-            );
+            )).orElse(null);
         }).orElse(null);
     }
 
-    public TutorDTO getTutorByStudentId(Integer studentId) {
+    public TutorDetailsDTO getTutorDetailsByStudentId(Integer studentId) {
         Optional<Tutor> tutorOpt = tutorRepository.findByStudent_id(studentId);
         return tutorOpt.map(tutor -> {
             Optional<Student> studentOpt = studentRepository.findById(studentId);
@@ -59,13 +63,17 @@ public class TutorService {
                             .map(tm -> tm.getId().getModuleId())
                             .collect(Collectors.toList()) :
                     List.of();
-            return new TutorDTO(
+            return studentOpt.map(student -> new TutorDetailsDTO(
                     tutor.getId(),
                     studentId,
                     tutor.getCreated_at(),
-                    studentOpt.map(Student::getEmail).orElse(null),
+                    student.getName(),
+                    student.getEmail(),
+                    student.getPhoneNumber(),
+                    student.getBio(),
+                    student.getLocation(),
                     moduleIds
-            );
+            )).orElse(null);
         }).orElse(null);
     }
 
@@ -77,7 +85,7 @@ public class TutorService {
         return false;
     }
 
-    public TutorDTO createTutor(Integer studentId) {
+    public TutorDetailsDTO createTutor(Integer studentId) {
         Optional<Student> studentOpt = studentRepository.findById(studentId);
         if (studentOpt.isEmpty()) {
             return null;
@@ -88,16 +96,20 @@ public class TutorService {
         }
         Tutor tutor = new Tutor(new Timestamp(System.currentTimeMillis()), studentId);
         tutor = tutorRepository.save(tutor);
-        return new TutorDTO(
+        return new TutorDetailsDTO(
                 tutor.getId(),
                 studentId,
                 tutor.getCreated_at(),
+                studentOpt.get().getName(),
                 studentOpt.get().getEmail(),
+                studentOpt.get().getPhoneNumber(),
+                studentOpt.get().getBio(),
+                studentOpt.get().getLocation(),
                 List.of()
         );
     }
 
-    public TutorDTO updateTutor(Integer id, updateTutorDTO updateDTO) {
+    public TutorDetailsDTO updateTutor(Integer id, updateTutorDTO updateDTO) {
         Optional<Tutor> tutorOpt = tutorRepository.findById(id);
         return tutorOpt.map(tutor -> {
             if (updateDTO.getCreated_at() != null) {
@@ -110,17 +122,21 @@ public class TutorService {
                             .map(tm -> tm.getId().getModuleId())
                             .collect(Collectors.toList()) :
                     List.of();
-            return new TutorDTO(
+            return studentOpt.map(student -> new TutorDetailsDTO(
                     tutor.getId(),
                     tutor.getStudent_id(),
                     tutor.getCreated_at(),
-                    studentOpt.map(Student::getEmail).orElse(null),
+                    student.getName(),
+                    student.getEmail(),
+                    student.getPhoneNumber(),
+                    student.getBio(),
+                    student.getLocation(),
                     moduleIds
-            );
+            )).orElse(null);
         }).orElse(null);
     }
 
-    public List<TutorDTO> getAllTutors() {
+    public List<TutorDetailsDTO> getAllTutors() {
         return tutorRepository.findAll().stream()
                 .map(tutor -> {
                     Optional<Student> studentOpt = studentRepository.findById(tutor.getStudent_id());
@@ -129,18 +145,23 @@ public class TutorService {
                                     .map(tm -> tm.getId().getModuleId())
                                     .collect(Collectors.toList()) :
                             List.of();
-                    return new TutorDTO(
+                    return studentOpt.map(student -> new TutorDetailsDTO(
                             tutor.getId(),
                             tutor.getStudent_id(),
                             tutor.getCreated_at(),
-                            studentOpt.map(Student::getEmail).orElse(null),
+                            student.getName(),
+                            student.getEmail(),
+                            student.getPhoneNumber(),
+                            student.getBio(),
+                            student.getLocation(),
                             moduleIds
-                    );
+                    )).orElse(null);
                 })
+                .filter(dto -> dto != null)
                 .collect(Collectors.toList());
     }
 
-    public TutorDTO assignModuleToTutor(Integer tutorId, Integer moduleId) {
+    public TutorDetailsDTO assignModuleToTutor(Integer tutorId, Integer moduleId) {
         Optional<Tutor> tutorOpt = tutorRepository.findById(tutorId);
         Optional<Modules> moduleOpt = modulesRepository.findById(moduleId);
         if (tutorOpt.isEmpty() || moduleOpt.isEmpty()) {
@@ -157,7 +178,7 @@ public class TutorService {
         return getTutorById(tutorId);
     }
 
-    public TutorDTO removeModuleFromTutor(Integer tutorId, Integer moduleId) {
+    public TutorDetailsDTO removeModuleFromTutor(Integer tutorId, Integer moduleId) {
         Optional<Tutor> tutorOpt = tutorRepository.findById(tutorId);
         if (tutorOpt.isEmpty()) {
             return null;

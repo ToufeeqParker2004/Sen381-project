@@ -5,14 +5,15 @@ import java.util.UUID;
 
 public class LearningMaterialDTO {
     private UUID id;
-    private int topicId;
-    private int moduleId;
+    private Integer topicId; // Changed to Integer
+    private Integer moduleId; // Changed to Integer
     private Integer uploaderId;
     private String title;
     private String documentType;
     private String fileUrl;
     private Timestamp createdAt;
     private String[] tags;
+    private TutorDetailsDTO uploaderDetails;
 
     // Getters and Setters
     public UUID getId() {
@@ -23,19 +24,19 @@ public class LearningMaterialDTO {
         this.id = id;
     }
 
-    public int getTopicId() {
+    public Integer getTopicId() {
         return topicId;
     }
 
-    public void setTopicId(int topicId) {
+    public void setTopicId(Integer topicId) {
         this.topicId = topicId;
     }
 
-    public int getModuleId() {
+    public Integer getModuleId() {
         return moduleId;
     }
 
-    public void setModuleId(int moduleId) {
+    public void setModuleId(Integer moduleId) {
         this.moduleId = moduleId;
     }
 
@@ -85,5 +86,13 @@ public class LearningMaterialDTO {
 
     public void setTags(String[] tags) {
         this.tags = tags;
+    }
+
+    public TutorDetailsDTO getUploaderDetails() {
+        return uploaderDetails;
+    }
+
+    public void setUploaderDetails(TutorDetailsDTO uploaderDetails) {
+        this.uploaderDetails = uploaderDetails;
     }
 }

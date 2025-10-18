@@ -3,8 +3,8 @@ package com.backend.Java_Backend.DTO;
 public class ReadResourcesDTO {
     private int id;
     private StudentDTO student;
+    private TutorDetailsDTO tutor;
     private LearningMaterialDTO learningMaterial;
-    private TutorDTO tutor;
 
     // Getters and Setters
     public int getId() {
@@ -23,19 +23,19 @@ public class ReadResourcesDTO {
         this.student = student;
     }
 
+    public TutorDetailsDTO getTutor() {
+        return tutor;
+    }
+
+    public void setTutor(TutorDetailsDTO tutor) {
+        this.tutor = tutor;
+    }
+
     public LearningMaterialDTO getLearningMaterial() {
         return learningMaterial;
     }
 
     public void setLearningMaterial(LearningMaterialDTO learningMaterial) {
         this.learningMaterial = learningMaterial;
-    }
-
-    public TutorDTO getTutor() {
-        return tutor;
-    }
-
-    public void setTutor(TutorDTO tutor) {
-        this.tutor = tutor;
     }
 }

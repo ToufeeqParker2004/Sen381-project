@@ -51,8 +51,8 @@ public class GlobalExceptionHandler {
         // Extract user ID from JWT (Spring Security example)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
-            // Assuming JWT contains user ID in principal or details
-            // Adjust based on your JWT structure (e.g., sub claim)
+            // JWT contains user ID in principal or details
+            // Adjust based on  JWT structure
             return authentication.getName();  // Or extract from JWT claims
         }
         return "anonymous";

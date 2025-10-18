@@ -1,6 +1,7 @@
 package com.backend.Java_Backend.Controller;
 
-import com.backend.Java_Backend.DTO.TutorDTO;
+
+import com.backend.Java_Backend.DTO.TutorDetailsDTO;
 import com.backend.Java_Backend.DTO.TutorModuleDTO;
 import com.backend.Java_Backend.DTO.TutorWithModulesDTO;
 import com.backend.Java_Backend.DTO.updateTutorDTO;
@@ -31,14 +32,14 @@ public class TutorController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<?> getAllTutors() {
-        List<TutorDTO> tutors = tutorService.getAllTutors();
+        List<TutorDetailsDTO> tutors = tutorService.getAllTutors();
         return ResponseEntity.ok(tutors);
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public ResponseEntity<?> getTutorById(@PathVariable Integer id) {
-        TutorDTO tutor = tutorService.getTutorById(id);
+        TutorDetailsDTO tutor = tutorService.getTutorById(id);
         if (tutor == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", "Tutor not found"));
@@ -46,10 +47,10 @@ public class TutorController {
         return ResponseEntity.ok(tutor);
     }
 
-    //@PreAuthorize("hasRole('ADMIN') or authentication.principal == #studentId.toString()")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/student/{studentId}")
     public ResponseEntity<?> getTutorByStudentId(@PathVariable Integer studentId) {
-        TutorDTO tutor = tutorService.getTutorByStudentId(studentId);
+        TutorDetailsDTO tutor = tutorService.getTutorDetailsByStudentId(studentId);
         if (tutor == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", "Tutor not found for student ID: " + studentId));
@@ -60,7 +61,7 @@ public class TutorController {
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<?> createTutor(@RequestBody Integer studentId) {
-        TutorDTO tutor = tutorService.createTutor(studentId);
+        TutorDetailsDTO tutor = tutorService.createTutor(studentId);
         if (tutor == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Collections.singletonMap("error", "Invalid student ID or tutor already exists"));
@@ -71,7 +72,7 @@ public class TutorController {
     @PreAuthorize("hasRole('ADMIN') or hasPermission(#id, 'Tutor', 'own')")
     @PutMapping("/{id}")
     public ResponseEntity<?> updateTutor(@PathVariable Integer id, @RequestBody updateTutorDTO updateDTO) {
-        TutorDTO updatedTutor = tutorService.updateTutor(id, updateDTO);
+        TutorDetailsDTO updatedTutor = tutorService.updateTutor(id, updateDTO);
         if (updatedTutor == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Collections.singletonMap("error", "Tutor not found"));
@@ -96,7 +97,7 @@ public class TutorController {
         try {
             String studentIdStr = (String) authentication.getPrincipal();
             int studentId = Integer.parseInt(studentIdStr);
-            TutorDTO tutor = tutorService.getTutorByStudentId(studentId);
+            TutorDetailsDTO tutor = tutorService.getTutorDetailsByStudentId(studentId);
             if (tutor == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(Collections.singletonMap("error", "Tutor profile not found"));
@@ -189,6 +190,4 @@ public class TutorController {
         }
         return ResponseEntity.noContent().build();
     }
-
-
 }

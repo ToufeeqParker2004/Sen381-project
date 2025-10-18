@@ -1,27 +1,24 @@
 package com.backend.Java_Backend.Models;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-
 import java.sql.Timestamp;
 import java.util.UUID;
 
 @Entity
 @Table(name = "learning_materials")
 public class LearningMaterial {
+
     @Id
     @GeneratedValue
-    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private UUID id;
 
-    @Column(name = "topic_id", nullable = false)
-    private int topic_id;
+    @Column(name = "topic_id")
+    private Integer topic_id; // Changed to Integer to allow null
 
-    @Column(name = "module_id", nullable = false)
-    private int module_id;
+    @Column(name = "module_id")
+    private Integer module_id; // Changed to Integer to allow null
 
-    @Column(name = "uploader_id", nullable = false)
+    @Column(name = "uploader_id")
     private Integer uploader_id;
 
     @Column(name = "title")
@@ -33,15 +30,17 @@ public class LearningMaterial {
     @Column(name = "file_url")
     private String file_url;
 
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Column(name = "created_at")
     private Timestamp created_at;
 
     @Column(name = "tags")
     private String[] tags;
 
-    public LearningMaterial() {}
+    // Default constructor
+    public LearningMaterial() {
+    }
 
+    // Getters and Setters
     public UUID getId() {
         return id;
     }
@@ -50,19 +49,19 @@ public class LearningMaterial {
         this.id = id;
     }
 
-    public int getTopic_id() {
+    public Integer getTopic_id() {
         return topic_id;
     }
 
-    public void setTopic_id(int topic_id) {
+    public void setTopic_id(Integer topic_id) {
         this.topic_id = topic_id;
     }
 
-    public int getModule_id() {
+    public Integer getModule_id() {
         return module_id;
     }
 
-    public void setModule_id(int module_id) {
+    public void setModule_id(Integer module_id) {
         this.module_id = module_id;
     }
 
