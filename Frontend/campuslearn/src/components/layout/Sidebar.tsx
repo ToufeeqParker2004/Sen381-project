@@ -56,7 +56,8 @@ const navigationItems = [
   { icon: Bot, label: 'AI Tutor', path: '/ai-tutor' },
   
   // Admin navigation
-  { icon: Settings, label: 'Admin Panel', path: '/admin', adminOnly: true },
+  { icon: Settings, label: 'Admin Dashboard', path: '/admin', adminOnly: true },
+  { icon: FileText, label: 'Tutor Applications', path: '/tutor-applications', adminOnly: true },
 ];
 
 export function Sidebar({ mode, onModeChange, className, isMobile = false, isOpen = false, onClose }: SidebarProps) {
