@@ -21,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+
 import {
   Settings,
   Users,
@@ -701,6 +702,7 @@ const loadMoreErrors = async () => {
     </CardContent>
   </Card>
 </TabsContent>
+
 
         {/* Reports & Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
