@@ -9,9 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { User as UserIcon, Mail, Phone, MapPin, GraduationCap, LogOut, Upload } from 'lucide-react';
+import { User as UserIcon, Mail, Phone, MapPin, GraduationCap, LogOut, Upload, FileText, ChevronDown } from 'lucide-react';
 import type { User } from '@/context/AuthContext';
 import { useEffect } from 'react';
+import { TimeSlotSelector } from '@/components/ui/TimeSlotSelector';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const Profile = () => {
@@ -21,12 +23,31 @@ const Profile = () => {
   const [profilePhoto, setProfilePhoto] = useState(user?.avatar || '');
   const [photoPreview, setPhotoPreview] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qualificationFileRef = useRef<HTMLInputElement>(null);
+  const [qualificationFile, setQualificationFile] = useState<File | null>(null);
   const [tutorApplication, setTutorApplication] = useState({
-    subjects: '',
-    qualifications: '',
+    subjects: [] as string[],
     experience: '',
-    availability: ''
+    availability: [] as Array<{ day: string; times: string[] }>
   });
+
+  const SUBJECTS = [
+    'Mathematics',
+    'Computer Science',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'English',
+    'History',
+    'Geography',
+    'Economics',
+    'Business Studies',
+    'Accounting',
+    'Engineering',
+    'Statistics',
+    'Psychology',
+    'Other'
+  ];
 
   const [subscribed, setSubscribed] = useState<boolean>(false);
 
@@ -64,6 +85,37 @@ const Profile = () => {
     fileInputRef.current?.click();
   };
 
+  const handleQualificationUpload = () => {
+    qualificationFileRef.current?.click();
+  };
+
+  const handleQualificationFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        toast({
+          title: 'Invalid file type',
+          description: 'Please select a PDF file.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Please select a PDF smaller than 10MB.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setQualificationFile(file);
+      toast({
+        title: 'File selected',
+        description: `${file.name} is ready to upload.`,
+      });
+    }
+  };
+
   const handleSaveProfile = () => {
     const firstNameInput = (document.getElementById('firstName') as HTMLInputElement).value;
     const lastNameInput = (document.getElementById('lastName') as HTMLInputElement).value;
@@ -87,11 +139,57 @@ const Profile = () => {
   };
 
   const handleTutorApplication = () => {
+    // Validate all required fields
+    if (tutorApplication.subjects.length === 0) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please select at least one subject you can tutor.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!qualificationFile) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please upload your most recent transcript.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!tutorApplication.experience.trim()) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please describe your teaching/tutoring experience.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (tutorApplication.availability.length === 0) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please add at least one availability time slot.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     updateUser({ tutorApplicationStatus: 'pending' });
     toast({
       title: 'Application Submitted',
       description: 'Your tutor application has been submitted for review.',
     });
+  };
+
+  const toggleSubject = (subject: string) => {
+    setTutorApplication(prev => ({
+      ...prev,
+      subjects: prev.subjects.includes(subject)
+        ? prev.subjects.filter(s => s !== subject)
+        : [...prev.subjects, subject]
+    }));
   };
 
   const getTutorStatusBadge = () => {
@@ -253,6 +351,34 @@ const Profile = () => {
           </CardContent>
         </Card>
 
+        {/* Tutor Availability Management */}
+        {user.isTutor && (
+          <Card className="shadow-custom-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" />
+                Tutor Availability
+              </CardTitle>
+              <CardDescription>Manage your tutoring availability schedule</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="tutor-availability">Update Your Availability</Label>
+                <TimeSlotSelector
+                  value={tutorApplication.availability}
+                  onChange={(slots) => {
+                    setTutorApplication({ ...tutorApplication, availability: slots });
+                    toast({
+                      title: 'Availability Updated',
+                      description: 'Your tutoring schedule has been updated.',
+                    });
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Tutor Application */}
         {(!user.isTutor && user.tutorApplicationStatus !== 'pending') && (
           <Card className="shadow-custom-md">
@@ -265,23 +391,69 @@ const Profile = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="subjects">Subjects You Can Tutor</Label>
-                <Input
-                  id="subjects"
-                  placeholder="e.g., Mathematics, Computer Science, Physics"
-                  value={tutorApplication.subjects}
-                  onChange={(e) => setTutorApplication({ ...tutorApplication, subjects: e.target.value })}
-                />
+                <Label>Subjects You Can Tutor (Select Multiple)</Label>
+                <Card className="p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {SUBJECTS.map(subject => (
+                      <div key={subject} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`subject-${subject}`}
+                          checked={tutorApplication.subjects.includes(subject)}
+                          onCheckedChange={() => toggleSubject(subject)}
+                        />
+                        <label
+                          htmlFor={`subject-${subject}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {subject}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {tutorApplication.subjects.length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-xs text-muted-foreground mb-2">Selected subjects:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {tutorApplication.subjects.map(subject => (
+                          <Badge key={subject} variant="secondary">
+                            {subject}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="qualifications">Qualifications</Label>
-                <Textarea
-                  id="qualifications"
-                  placeholder="List your relevant qualifications and certifications"
-                  value={tutorApplication.qualifications}
-                  onChange={(e) => setTutorApplication({ ...tutorApplication, qualifications: e.target.value })}
+                <Label htmlFor="qualifications">Most Recent Transcript (PDF)</Label>
+                <div className="flex items-center gap-3">
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    onClick={handleQualificationUpload}
+                    className="gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {qualificationFile ? 'Change PDF' : 'Upload PDF'}
+                  </Button>
+                  {qualificationFile && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <FileText className="h-4 w-4" />
+                      <span className="truncate max-w-[200px]">{qualificationFile.name}</span>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="file"
+                  ref={qualificationFileRef}
+                  onChange={handleQualificationFileChange}
+                  accept=".pdf"
+                  className="hidden"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Upload your most recent academic transcript as a PDF (max 10MB)
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -296,11 +468,9 @@ const Profile = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="availability">Availability</Label>
-                <Textarea
-                  id="availability"
-                  placeholder="When are you available to tutor? (days, times, etc.)"
+                <TimeSlotSelector
                   value={tutorApplication.availability}
-                  onChange={(e) => setTutorApplication({ ...tutorApplication, availability: e.target.value })}
+                  onChange={(slots) => setTutorApplication({ ...tutorApplication, availability: slots })}
                 />
               </div>
 

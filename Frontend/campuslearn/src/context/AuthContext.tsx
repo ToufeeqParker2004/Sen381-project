@@ -91,13 +91,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
+      // Admin account - manual login
+      if (identifier === 'admin@campus.edu' && password === 'admin123') {
+        setUser({
+          id: 'admin-user',
+          name: 'Admin User',
+          identifier,
+          avatar: '',
+          isAdmin: true,
+          isTutor: false,
+          tutorApplicationStatus: 'none',
+        });
+        return true;
+      }
+
+      // Student demo account
+      if (identifier === 'student@campus.edu' && password === 'student123') {
+        setUser({
+          id: 'student-user',
+          name: 'Demo Student',
+          identifier,
+          avatar: '',
+          isAdmin: false,
+          isTutor: false,
+          tutorApplicationStatus: 'none',
+        });
+        return true;
+      }
+
+      // Tutor demo account
+      if (identifier === 'tutor@campus.edu' && password === 'tutor123') {
+        setUser({
+          id: 'tutor-user',
+          name: 'Demo Tutor',
+          identifier,
+          avatar: '',
+          isAdmin: false,
+          isTutor: true,
+          tutorApplicationStatus: 'approved',
+        });
+        return true;
+      }
+
+      // Microsoft demo account
       if (identifier === 'microsoft@belgiumcampus.edu' && password === 'microsoft') {
         setUser({
           id: 'microsoft',
           name: 'Microsoft User',
           identifier,
           avatar: '',
-          isAdmin: true,
+          isAdmin: false,
           isTutor: true,
           tutorApplicationStatus: 'approved',
         });
