@@ -1,4 +1,4 @@
-package com.backend.Java_Backend.Repositories;
+package com.backend.Java_Backend.Repository;
 
 import com.backend.Java_Backend.Models.PersonalEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
