@@ -107,6 +107,7 @@ export default function ProgressPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [timeframe, setTimeframe] = useState<'week' | 'month' | 'all'>('month');
+  const [showAllAchievements, setShowAllAchievements] = useState(false);
 
   useEffect(() => {
     fetchStudentLessons();
@@ -128,7 +129,6 @@ export default function ProgressPage() {
       const data = await response.json();
       setLessons(data);
       calculateProgressStats(data);
-      calculateSubjectProgress(data);
     } catch (error) {
       console.error('Error fetching student lessons:', error);
     }
@@ -160,12 +160,12 @@ export default function ProgressPage() {
     const favoriteSubject = Object.entries(subjectCounts)
       .sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A';
 
-    // Calculate unique tutors
-    const uniqueTutors = new Set(lessonsData.map(lesson => lesson.tutorName)).size;
+    // Calculate unique tutors from COMPLETED lessons only
+    const completedLessonsData = lessonsData.filter(lesson => lesson.status === 'completed');
+    const uniqueTutors = new Set(completedLessonsData.map(lesson => lesson.tutorName)).size;
 
     // Calculate streak
-    const completedLessonDates = lessonsData
-      .filter(lesson => lesson.status === 'completed')
+    const completedLessonDates = completedLessonsData
       .map(lesson => new Date(lesson.startDatetime).toDateString());
 
     const streak = calculateStreak(completedLessonDates);
@@ -193,8 +193,14 @@ export default function ProgressPage() {
     };
 
     setProgressStats(stats);
-    calculateGoals(stats);
-    calculateAchievements(stats);
+    
+    // Calculate subject progress first, then goals and achievements
+    const subjectProgressData = calculateSubjectProgress(lessonsData);
+    setSubjectProgress(subjectProgressData);
+    
+    // Now calculate goals with the updated subject progress
+    calculateGoals(stats, subjectProgressData);
+    calculateAchievements(stats, subjectProgressData);
   };
 
   const calculateStreak = (dates: string[]): number => {
@@ -221,7 +227,7 @@ export default function ProgressPage() {
     return streak;
   };
 
-  const calculateSubjectProgress = (lessonsData: Lesson[]) => {
+  const calculateSubjectProgress = (lessonsData: Lesson[]): SubjectProgress[] => {
     const subjectMap = lessonsData.reduce((acc, lesson) => {
       if (!acc[lesson.subject]) {
         acc[lesson.subject] = {
@@ -243,7 +249,7 @@ export default function ProgressPage() {
       progress: data.total > 0 ? (data.completed / data.total) * 100 : 0,
     }));
 
-    setSubjectProgress(progress);
+    return progress;
   };
 
   const getWeeklyProgress = (lessonsData: Lesson[] = lessons) => {
@@ -268,7 +274,9 @@ export default function ProgressPage() {
     ).length;
   };
 
-  const calculateGoals = (stats: ProgressStats) => {
+  const calculateGoals = (stats: ProgressStats, subjectProgressData: SubjectProgress[]) => {
+    const completedSubjectsCount = subjectProgressData.filter(subj => subj.progress === 100).length;
+    
     const newGoals: Goal[] = [
       {
         id: 'goal-1',
@@ -323,11 +331,11 @@ export default function ProgressPage() {
         title: 'Master 2 Subjects',
         description: 'Complete all lessons in subjects',
         target: 2,
-        current: subjectProgress.filter(subj => subj.progress === 100).length,
-        progress: Math.min((subjectProgress.filter(subj => subj.progress === 100).length / 2) * 100, 100),
+        current: completedSubjectsCount,
+        progress: Math.min((completedSubjectsCount / 2) * 100, 100),
         icon: GraduationCap,
         color: 'primary',
-        completed: subjectProgress.filter(subj => subj.progress === 100).length >= 2,
+        completed: completedSubjectsCount >= 2,
         type: 'subjects'
       },
       {
@@ -351,7 +359,9 @@ export default function ProgressPage() {
     setProgressStats(prev => ({ ...prev, goalsAchieved }));
   };
 
-  const calculateAchievements = (stats: ProgressStats) => {
+  const calculateAchievements = (stats: ProgressStats, subjectProgressData: SubjectProgress[]) => {
+    const completedSubjectsCount = subjectProgressData.filter(subj => subj.progress === 100).length;
+    
     const newAchievements: Achievement[] = [
       {
         id: 'ach-1',
@@ -407,7 +417,7 @@ export default function ProgressPage() {
         description: 'Master your first subject',
         icon: Brain,
         color: 'secondary',
-        unlocked: subjectProgress.some(subj => subj.progress === 100)
+        unlocked: completedSubjectsCount >= 1
       },
       {
         id: 'ach-8',
@@ -426,6 +436,13 @@ export default function ProgressPage() {
 
   const getUnlockedAchievements = () => achievements.filter(ach => ach.unlocked);
   const getLockedAchievements = () => achievements.filter(ach => !ach.unlocked);
+
+  const getDisplayedAchievements = () => {
+    if (showAllAchievements) {
+      return achievements;
+    }
+    return getUnlockedAchievements().slice(0, 4);
+  };
 
   return (
     <div className="space-y-6">
@@ -578,10 +595,15 @@ export default function ProgressPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {getUnlockedAchievements().slice(0, 4).map((achievement) => {
+              {getDisplayedAchievements().map((achievement) => {
                 const Icon = achievement.icon;
                 return (
-                  <div key={achievement.id} className="flex items-center p-3 border rounded-lg bg-muted/20">
+                  <div 
+                    key={achievement.id} 
+                    className={`flex items-center p-3 border rounded-lg ${
+                      achievement.unlocked ? 'bg-muted/20' : 'bg-muted/10 opacity-60'
+                    }`}
+                  >
                     <div className={`p-2 bg-${achievement.color}/10 rounded-lg mr-3`}>
                       <Icon className={`h-4 w-4 text-${achievement.color}`} />
                     </div>
@@ -600,28 +622,34 @@ export default function ProgressPage() {
                         </div>
                       )}
                     </div>
-                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                      Unlocked ✓
-                    </Badge>
+                    {achievement.unlocked ? (
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                        Unlocked ✓
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-muted/50 text-muted-foreground">
+                        Locked
+                      </Badge>
+                    )}
                   </div>
                 );
               })}
 
-              {getUnlockedAchievements().length === 0 && (
+              {getUnlockedAchievements().length === 0 && !showAllAchievements && (
                 <p className="text-center text-muted-foreground py-4">
                   Complete lessons to unlock achievements!
                 </p>
               )}
 
-              {getUnlockedAchievements().length > 4 && (
+              {achievements.length > 4 && (
                 <div className="flex justify-center mt-2">
                   <Button
                     variant="outline"
                     size="sm"
                     className="text-xs"
-                    onClick={() => {/* Implement view all */}}
+                    onClick={() => setShowAllAchievements(!showAllAchievements)}
                   >
-                    View All Achievements
+                    {showAllAchievements ? 'Show Less' : 'View All Achievements'}
                   </Button>
                 </div>
               )}
@@ -647,8 +675,8 @@ export default function ProgressPage() {
                   <p className="text-xs text-muted-foreground">Upcoming</p>
                 </div>
                 <div className="p-4 border rounded-lg">
-                  <p className="text-2xl font-bold text-secondary">{progressStats.uniqueTutors}</p>
-                  <p className="text-xs text-muted-foreground">Tutors</p>
+                  <p className="text-2xl font-bold text-secondary">{progressStats.favoriteSubject}</p>
+                  <p className="text-xs text-muted-foreground">Top Subject</p>
                 </div>
                 <div className="p-4 border rounded-lg">
                   <p className="text-2xl font-bold text-warning">
