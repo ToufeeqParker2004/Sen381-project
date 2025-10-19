@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   format,
@@ -55,6 +55,16 @@ import supabase from '@/lib/supabase';
 const API_BASE_URL = 'http://localhost:9090/messaging';
 const STUDENTS_API_BASE_URL = 'http://localhost:9090/student';
 
+// Frontend Interface. 'content' is our internal name.
+interface Message {
+  id: string;
+  senderId: number;
+  content: string; // <-- This is our internal state property
+  timestamp: string;
+  isOwn: boolean;
+  senderName: string;
+}
+
 interface Conversation {
   id: string;
   name: string;
@@ -64,15 +74,6 @@ interface Conversation {
   avatar: string;
   online: boolean;
   role: string;
-}
-
-interface Message {
-  id: string;
-  senderId: number;
-  content: string;
-  timestamp: string;
-  isOwn: boolean;
-  senderName: string;
 }
 
 interface Participant {
@@ -128,71 +129,76 @@ export default function Messages() {
     return () => axios.interceptors.request.eject(interceptor);
   }, []);
 
-  // Fetch threads function (with silent mode for polling)
-  const fetchThreads = async (silent: boolean = false) => {
+
+  // --- REAL-TIME DATA FETCHING (NO POLLING) ---
+
+  // Helper to fetch details for a single thread
+  const enrichThread = useCallback(async (threadId: string, createdAt?: string): Promise<Conversation> => {
+    if (!currentUserId) throw new Error("Current user ID is not available");
+    try {
+      const [participantsRes, messagesRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/participants/thread/${threadId}`),
+        // This hits your API, which returns a MessageDTO
+        axios.get(`${API_BASE_URL}/messages/thread/${threadId}?sort=desc&limit=1`),
+      ]);
+
+      const participantsData: Participant[] = participantsRes.data || [];
+      const otherParticipants = await Promise.all(
+        participantsData
+          .filter((p) => p.studentId !== currentUserId)
+          .map(async (p) => {
+            try {
+              const sRes = await axios.get(`${STUDENTS_API_BASE_URL}/${p.studentId}`);
+              return sRes.data.name;
+            } catch {
+              return `User ${p.studentId}`;
+            }
+          })
+      );
+
+      const latestMessage = messagesRes.data && messagesRes.data.length > 0 ? messagesRes.data[0] : null;
+
+      return {
+        id: threadId,
+        name: otherParticipants.join(', ') || 'Self Chat',
+        // *** FIX: Read from 'content' (from MessageDTO) ***
+        lastMessage: latestMessage ? latestMessage.content : 'No messages yet',
+        timestamp: latestMessage ? latestMessage.timestamp : createdAt || new Date().toISOString(),
+        unread: 0,
+        avatar: '/api/placeholder/40/40',
+        online: false,
+        role: otherParticipants.length > 1 ? 'Group Chat' : 'Direct Chat',
+      };
+    } catch (err) {
+      console.error('Error enriching thread:', err);
+      // Fallback
+      return {
+        id: threadId,
+        name: `Thread ${threadId.slice(0, 8)}`,
+        lastMessage: 'No messages yet',
+        timestamp: createdAt || new Date().toISOString(),
+        unread: 0,
+        avatar: '/api/placeholder/40/40',
+        online: false,
+        role: 'Chat',
+      };
+    }
+  }, [currentUserId]); // Depends on currentUserId
+
+  // Fetch initial list of threads
+  const fetchThreads = useCallback(async (silent: boolean = false) => {
     if (!currentUserId) return;
     try {
       if (!silent) setIsLoading(true);
+      // This hits your GET /threads/student/{studentId} endpoint
       const res = await axios.get(`${API_BASE_URL}/threads/student/${currentUserId}`);
-      const threads = res.data || [];
+      const threads: { threadId: string; created_at?: string }[] = res.data || [];
 
       const enrichedThreads = await Promise.all(
-        threads.map(async (thread: { threadId: string; created_at?: string }) => {
-          try {
-            const [participantsRes, messagesRes] = await Promise.all([
-              axios.get(`${API_BASE_URL}/participants/thread/${thread.threadId}`),
-              axios.get(`${API_BASE_URL}/messages/thread/${thread.threadId}?sort=desc&limit=1`), // Get only the latest message
-            ]);
-
-            const participantsData: Participant[] = participantsRes.data || [];
-            const otherParticipants = await Promise.all(
-              participantsData
-                .filter((p) => p.studentId !== currentUserId)
-                .map(async (p) => {
-                  try {
-                    const sRes = await axios.get(`${STUDENTS_API_BASE_URL}/${p.studentId}`);
-                    return sRes.data.name;
-                  } catch {
-                    return `User ${p.studentId}`;
-                  }
-                })
-            );
-
-            // Get the most recent message (first one in the array since we sorted by desc)
-            const latestMessage = messagesRes.data && messagesRes.data.length > 0
-              ? messagesRes.data[0] // Get the first message (most recent)
-              : null;
-
-            return {
-              id: thread.threadId,
-              name: otherParticipants.join(', ') || 'Self Chat',
-              lastMessage: latestMessage ? latestMessage.content : 'No messages yet',
-              timestamp: latestMessage ? latestMessage.timestamp : thread.created_at || new Date().toISOString(),
-              unread: 0,
-              avatar: '/api/placeholder/40/40',
-              online: false,
-              role: otherParticipants.length > 1 ? 'Group Chat' : 'Direct Chat',
-            } as Conversation;
-          } catch (err) {
-            console.error('Error enriching thread:', err);
-            // Fallback minimal conversation
-            return {
-              id: thread.threadId,
-              name: `Thread ${thread.threadId.slice(0, 8)}`,
-              lastMessage: 'No messages yet',
-              timestamp: thread.created_at || new Date().toISOString(),
-              unread: 0,
-              avatar: '/api/placeholder/40/40',
-              online: false,
-              role: 'Chat',
-            } as Conversation;
-          }
-        })
+        threads.map(async (thread) => enrichThread(thread.threadId, thread.created_at))
       );
 
-      // Sort by timestamp descending (most recent first)
       enrichedThreads.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
       setConversations(enrichedThreads);
     } catch (err){
       console.error('Error fetching threads:', err);
@@ -200,72 +206,146 @@ export default function Messages() {
     } finally {
       if (!silent) setIsLoading(false);
     }
-  };
+  }, [currentUserId, toast, enrichThread]);
 
-  // Initial fetch and polling for threads
+  // 1. Initial fetch for threads (runs once)
   useEffect(() => {
     fetchThreads();
-    const interval = setInterval(() => fetchThreads(true), 10000); // Poll every 10 seconds silently
-    return () => clearInterval(interval);
-  }, [currentUserId, toast]);
+  }, [fetchThreads]);
 
-  // Fetch chat data function (with silent mode for polling)
-  const fetchChatData = async (silent: boolean = false) => {
-    if (!selectedChat) return;
-    try {
-      if (!silent) setIsChatLoading(true);
-      const [participantsRes, messagesRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/participants/thread/${selectedChat}`),
-        axios.get(`${API_BASE_URL}/messages/thread/${selectedChat}`),
-      ]);
+  // 2. Subscribe to REAL-TIME conversation list changes
+  useEffect(() => {
+    if (!currentUserId) return;
 
-      const participantData: Participant[] = await Promise.all(
-        (participantsRes.data || []).map(async (p: Participant) => {
-          try {
-            const sRes = await axios.get(`${STUDENTS_API_BASE_URL}/${p.studentId}`);
-            return { ...p, studentName: sRes.data.name };
-          } catch {
-            return { ...p, studentName: `User ${p.studentId}` };
+    // Listens for when *this* user is added/removed from a chat
+    const channel = supabase
+      .channel(`user_thread_changes_${currentUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT and DELETE
+          schema: 'public',
+          table: 'thread_participants',
+          filter: `student_id=eq.${currentUserId}`,
+        },
+        async (payload) => {
+          
+          if (payload.eventType === 'INSERT') {
+            console.log('User added to new thread:', payload);
+            const newThreadId = payload.new.thread_id;
+            const newConversation = await enrichThread(newThreadId, payload.new.created_at);
+            
+            setConversations((prev) => {
+              // Add new chat to the top, avoiding duplicates
+              if (prev.find(c => c.id === newConversation.id)) return prev;
+              return [newConversation, ...prev];
+            });
+
+          } else if (payload.eventType === 'DELETE') {
+            console.log('User removed from thread:', payload);
+            const removedThreadId = payload.old.thread_id;
+            if (!removedThreadId) return;
+            
+            setConversations((prev) => prev.filter(c => c.id !== removedThreadId));
+            
+            if (selectedChat === removedThreadId) {
+              setSelectedChat(null);
+              if (isMobile) setMobileView('conversations');
+            }
           }
-        })
-      );
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId, enrichThread, isMobile, selectedChat]);
 
-      setParticipants(participantData);
-
-      const msgs: Message[] = (messagesRes.data || []).map((m: any) => ({
-        id: m.id,
-        senderId: m.senderId,
-        content: m.content,
-        timestamp: m.timestamp || new Date().toISOString(),
-        isOwn: m.senderId === currentUserId,
-        senderName: participantData.find((p) => p.studentId === m.senderId)?.studentName || `User ${m.senderId}`,
-      }));
-
-      // Sort messages by timestamp ascending (oldest first)
-      msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      setMessages(msgs);
-    } catch (err) {
-      console.error('Error fetching chat data:', err);
-      if (!silent) toast({ title: 'Error', description: 'Failed to load chat', variant: 'destructive' });
-    } finally {
-      if (!silent) setIsChatLoading(false);
+  // 3. Fetch initial chat data when a chat is selected
+  useEffect(() => {
+    if (!selectedChat) {
+      setMessages([]);
+      setParticipants([]);
+      return;
     }
-  };
 
-  // Fetch participants & messages for selected chat, plus polling
+    const fetchInitialChatData = async () => {
+      try {
+        setIsChatLoading(true);
+        const [participantsRes, messagesRes] = await Promise.all([
+          // This returns List<ThreadParticipantDTO>
+          axios.get(`${API_BASE_URL}/participants/thread/${selectedChat}`),
+          // This returns List<MessageDTO>
+          axios.get(`${API_BASE_URL}/messages/thread/${selectedChat}`),
+        ]);
+
+        // A. Load Participants
+        const participantData: Participant[] = await Promise.all(
+          (participantsRes.data || []).map(async (p: Participant) => {
+            try {
+              const sRes = await axios.get(`${STUDENTS_API_BASE_URL}/${p.studentId}`);
+              return { ...p, studentName: sRes.data.name };
+            } catch {
+              return { ...p, studentName: `User ${p.studentId}` };
+            }
+          })
+        );
+        setParticipants(participantData);
+
+        // B. Load Messages
+        const msgs: Message[] = (messagesRes.data || []).map((m: any) => ({
+          id: m.id,
+          senderId: m.senderId,
+          // *** FIX: Read from 'content' (from MessageDTO) ***
+          content: m.content,
+          timestamp: m.timestamp || new Date().toISOString(),
+          isOwn: m.senderId === currentUserId,
+          // *** FIX (TYPO): Use p.studentId (from Participant DTO) ***
+          senderName: participantData.find((p) => p.studentId === m.senderId)?.studentName || `User ${m.senderId}`,
+        }));
+
+        msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        setMessages(msgs);
+
+        // *** FIX (RACE CONDITION):
+        // Re-map sender names for any messages that arrived via Supabase *before*
+        // the participant list was finished loading.
+        setMessages(prevMsgs => 
+          prevMsgs.map(msg => {
+            // If the senderName is a placeholder, try to find the real name
+            if (msg.senderName.startsWith('User ')) {
+              const participant = participantData.find(p => p.studentId === msg.senderId);
+              if (participant && participant.studentName) {
+                return { ...msg, senderName: participant.studentName };
+              }
+            }
+            return msg; // Otherwise, keep the message as is
+          })
+        );
+
+      } catch (err) {
+        console.error('Error fetching chat data:', err);
+        toast({ title: 'Error', description: 'Failed to load chat', variant: 'destructive' });
+      } finally {
+        setIsChatLoading(false);
+      }
+    };
+
+    fetchInitialChatData();
+  }, [selectedChat, currentUserId, toast]);
+
+  // 4. Subscribe to REAL-TIME messages for the *selected* chat
   useEffect(() => {
     if (!selectedChat) return;
 
-    // 1. Initial fetch once when chat is opened (silent = no flicker)
-    fetchChatData(true);
-
-    // 2. Subscribe to Supabase Realtime for messages
+    // This listens to the *database* 'messages' table
     const channel = supabase
       .channel(`messages_thread_${selectedChat}`)
       .on(
         'postgres_changes',
         {
-          event: '*', // INSERT / DELETE / UPDATE
+          event: '*',
           schema: 'public',
           table: 'messages',
           filter: `thread_id=eq.${selectedChat}`,
@@ -275,36 +355,43 @@ export default function Messages() {
 
           if (payload.eventType === 'INSERT') {
             const newMsg = payload.new;
+
+            // ** FIX: Ignore echos of our own messages (handled by optimistic UI)
+            if (newMsg.sender_id === currentUserId) {
+              return;
+            }
+
+            // This code now only runs for messages from *other* users
             const newMessage: Message = {
               id: newMsg.id,
               senderId: newMsg.sender_id,
-              content: newMsg.content,
+              // *** FIX: Read from 'message_text' (from DB column) ***
+              content: newMsg.message_text,
               timestamp: newMsg.timestamp || new Date().toISOString(),
-              isOwn: newMsg.sender_id === currentUserId,
+              isOwn: false,
               senderName:
                 participants.find((p) => p.studentId === newMsg.sender_id)
-                  ?.studentName || `User ${newMsg.sender_id}`,
+                  ?.studentName || `User ${newMsg.sender_id}`, // This might fail in a race, but the loader-effect will patch it
             };
 
-            // Add new message and sort to maintain chronological order
             setMessages((prev) => {
               const updated = [...prev, newMessage];
               updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
               return updated;
             });
 
-            // *** FIX: Update the conversation list with the new last message AND re-sort ***
+            // Update conversation list with new last message and re-sort
             setConversations(prev => {
               const updatedList = prev.map(conv => 
                 conv.id === selectedChat 
                   ? { 
                       ...conv, 
-                      lastMessage: newMsg.content,
+                      // *** FIX: Read from 'message_text' (from DB column) ***
+                      lastMessage: newMsg.message_text,
                       timestamp: newMsg.timestamp || new Date().toISOString()
                     }
                   : conv
               );
-              // Re-sort the list to bring the updated chat to the top
               updatedList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
               return updatedList;
             });
@@ -317,12 +404,12 @@ export default function Messages() {
                 m.id === payload.new.id
                   ? {
                       ...m,
-                      content: payload.new.content,
+                      // *** FIX: Read from 'message_text' (from DB column) ***
+                      content: payload.new.message_text,
                       timestamp: payload.new.timestamp || m.timestamp,
                     }
                   : m
               );
-              // Re-sort after update
               updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
               return updated;
             });
@@ -331,16 +418,16 @@ export default function Messages() {
       )
       .subscribe();
 
-    // 3. Cleanup
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedChat, currentUserId, participants]);
+  }, [selectedChat, currentUserId, participants]); // No infinite loop
 
-  // Fetch all students when new message modal opens (only once)
+  // --- END REAL-TIME ---
+
+  // Fetch all students when new message modal opens
   useEffect(() => {
-    if (!isNewMessageModalOpen) return;
-    if (allStudents.length > 0) return;
+    if (!isNewMessageModalOpen || allStudents.length > 0) return;
 
     const fetchAllStudents = async () => {
       try {
@@ -352,7 +439,6 @@ export default function Messages() {
         toast({ title: 'Error', description: 'Failed to load users', variant: 'destructive' });
       }
     };
-
     fetchAllStudents();
   }, [isNewMessageModalOpen, allStudents.length, currentUserId, toast]);
 
@@ -394,7 +480,6 @@ export default function Messages() {
       return;
     }
 
-    // Prevent duplicate one-on-one
     if (selectedUsers.length === 1) {
       const duplicate = await checkDuplicateOneOnOne(selectedUsers[0]);
       if (duplicate) {
@@ -404,13 +489,12 @@ export default function Messages() {
     }
 
     try {
-      // Create thread
+      // Create thread - This hits POST /threads with an empty DTO
+      // Your backend controller populates it.
       const threadResp = await axios.post(`${API_BASE_URL}/threads`, {});
       const threadId = threadResp.data?.threadId || threadResp.data?.id || threadResp.data;
 
-      if (!threadId) {
-        throw new Error('Invalid threadId from server');
-      }
+      if (!threadId) throw new Error('Invalid threadId from server');
 
       // Add current user as participant
       await axios.post(`${API_BASE_URL}/participants`, { threadId, studentId: currentUserId });
@@ -422,34 +506,10 @@ export default function Messages() {
         })
       );
 
-      // Build thread name from selectedUsers (fetch names)
-      const participantNames = await Promise.all(
-        selectedUsers.map(async (id) => {
-          try {
-            const r = await axios.get(`${STUDENTS_API_BASE_URL}/${id}`);
-            return r.data?.name || `User ${id}`;
-          } catch {
-            return `User ${id}`;
-          }
-        })
-      );
+      // The real-time subscription on 'thread_participants' will
+      // automatically add this new thread to our list.
+      // We just need to open it.
 
-      const threadName = participantNames.join(', ');
-
-      // Insert new conversation at top
-      const newConv: Conversation = {
-        id: threadId,
-        name: threadName,
-        lastMessage: 'Say hello!',
-        timestamp: new Date().toISOString(),
-        unread: 0,
-        avatar: '/api/placeholder/40/40',
-        online: false,
-        role: selectedUsers.length > 1 ? 'Group Chat' : 'Direct Chat',
-      };
-      setConversations((prev) => [newConv, ...prev]);
-
-      // Open the new chat
       setSelectedChat(threadId);
       if (isMobile) setMobileView('chat');
 
@@ -466,43 +526,68 @@ export default function Messages() {
     }
   };
 
-  // Send message
+  // Send message with OPTIMISTIC UI
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedChat || !currentUserId) return;
+    
+    // --- START OPTIMISTIC UI ---
+    
+    const messageContent = messageText;
+    const newTimestamp = new Date().toISOString();
+    const tempId = `temp_${Date.now()}`;
+
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: currentUserId,
+      content: messageContent, // Use internal 'content' property
+      timestamp: newTimestamp,
+      isOwn: true,
+      senderName: 'You',
+    };
+
+    setMessages((prev) => {
+      const updated = [...prev, optimisticMessage];
+      updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      return updated;
+    });
+
+    setConversations(prev => {
+      const updatedList = prev.map(conv => 
+        conv.id === selectedChat 
+          ? { 
+              ...conv, 
+              lastMessage: messageContent,
+              timestamp: newTimestamp
+            }
+          : conv
+      );
+      updatedList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      return updatedList;
+    });
+
+    setMessageText('');
+
+    // --- END OPTIMISTIC UI ---
+
+    // 6. Send to backend in background
     try {
       const messageDTO = {
         threadId: selectedChat,
         senderId: currentUserId,
-        content: messageText,
-        timestamp: new Date().toISOString(),
+        // *** FIX: Send 'content' to match MessageDTO.java ***
+        content: messageContent,
+        timestamp: newTimestamp,
       };
+      
+      // This hits POST /messages
       await axios.post(`${API_BASE_URL}/messages`, messageDTO);
-
-      // *** FIX: Update the conversation list with the new last message AND re-sort ***
-      const newTimestamp = new Date().toISOString();
-      const updatedMessage = messageText; // The message we just sent
-
-      setConversations(prev => {
-        const updatedList = prev.map(conv => 
-          conv.id === selectedChat 
-            ? { 
-                ...conv, 
-                lastMessage: updatedMessage,
-                timestamp: newTimestamp
-              }
-            : conv
-        );
-        
-        // Now, sort the updated list
-        updatedList.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        
-        return updatedList;
-      });
-
-      setMessageText('');
+      
     } catch (err) {
       console.error('Error sending message:', err);
       toast({ title: 'Error', description: 'Failed to send message', variant: 'destructive' });
+      // Rollback on failure
+      setMessages((prev) => prev.filter(m => m.id !== tempId));
+      setMessageText(messageContent);
     }
   };
 
@@ -515,14 +600,13 @@ export default function Messages() {
     setMessageText((p) => p + char);
   };
 
-  // Fixed groupMessagesByDate function - maintains chronological order (oldest first)
+  // --- Date Formatting and Grouping ---
+
   const groupMessagesByDate = (messages: Message[]) => {
     const groups: { date: string; messages: Message[] }[] = [];
     let currentDate = '';
     
-    // Messages should already be sorted chronologically (oldest first)
     messages.forEach((msg) => {
-      // Ensure timestamp exists and is valid
       const validTimestamp = msg.timestamp || new Date().toISOString();
       const msgDate = format(parseISO(validTimestamp), 'yyyy-MM-dd');
       
@@ -537,15 +621,13 @@ export default function Messages() {
     return groups;
   };
 
-  // Fixed date formatting functions with proper timestamp validation
   const formatDateHeader = (date: string) => {
     try {
       const parsed = parseISO(date);
       if (isToday(parsed)) return 'Today';
       if (isYesterday(parsed)) return 'Yesterday';
       return format(parsed, 'MMMM d, yyyy');
-    } catch (error) {
-      console.error('Error formatting date header:', error);
+    } catch {
       return 'Unknown date';
     }
   };
@@ -554,8 +636,7 @@ export default function Messages() {
     try {
       const validTimestamp = timestamp || new Date().toISOString();
       return format(parseISO(validTimestamp), 'h:mm a');
-    } catch (error) {
-      console.error('Error formatting message time:', error);
+    } catch {
       return 'Unknown time';
     }
   };
@@ -564,8 +645,7 @@ export default function Messages() {
     try {
       const validTimestamp = timestamp || new Date().toISOString();
       return formatDistanceToNow(parseISO(validTimestamp), { addSuffix: true });
-    } catch (error) {
-      console.error('Error formatting conversation time:', error);
+    } catch {
       return 'Recently';
     }
   };
@@ -574,10 +654,12 @@ export default function Messages() {
 
   if (!isAuthenticated) return <div>Redirecting to login...</div>;
 
+  // --- RENDER ---
+
   return (
     <>
       <div className="space-y-6">
-        {/* Header - show on desktop or when on conversations view on mobile */}
+        {/* Header */}
         {(!isMobile || mobileView === 'conversations') && (
           <div className="flex items-center justify-between">
             <div>
@@ -592,8 +674,10 @@ export default function Messages() {
         )}
 
         {isMobile ? (
+          // --- MOBILE VIEW ---
           <>
             {mobileView === 'conversations' ? (
+              // Mobile: Conversations List
               <Card className="h-[calc(100vh-120px)] rounded-xl shadow-md">
                 <CardHeader className="p-4">
                   <CardTitle className="text-lg">Chats</CardTitle>
@@ -615,15 +699,12 @@ export default function Messages() {
                           className="flex items-center p-3 cursor-pointer transition-colors hover:bg-muted/50 active:bg-muted rounded-md mx-2"
                           onClick={() => { setSelectedChat(conversation.id); setMobileView('chat'); }}
                         >
-                          <div className="relative mr-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarImage src={conversation.avatar} />
-                              <AvatarFallback className="text-base font-semibold">
-                                {conversation.name.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                          </div>
-
+                          <Avatar className="h-10 w-10 mr-3">
+                            <AvatarImage src={conversation.avatar} />
+                            <AvatarFallback className="text-base font-semibold">
+                              {conversation.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
                               <h4 className="font-medium truncate text-base">{conversation.name}</h4>
@@ -645,6 +726,7 @@ export default function Messages() {
                 </CardContent>
               </Card>
             ) : (
+              // Mobile: Chat Window
               currentChat && (
                 <Card className="h-[calc(100vh-80px)] flex flex-col rounded-xl shadow-md">
                   <CardHeader className="border-b p-3">
@@ -694,10 +776,7 @@ export default function Messages() {
                   <CardContent className="flex-1 p-3 overflow-y-auto">
                     {isChatLoading ? (
                       <div className="flex-1 flex items-center justify-center">
-                        <div className="text-center">
-                          <MessageCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4 animate-pulse" />
-                          <h3 className="text-lg font-semibold mb-2">Loading messages...</h3>
-                        </div>
+                        <MessageCircle className="h-12 w-12 text-muted-foreground animate-pulse" />
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -716,8 +795,8 @@ export default function Messages() {
                                 <div
                                   className={`max-w-[80%] px-3 py-1.5 rounded-2xl text-sm ${message.isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
                                 >
-                                  {currentChat.role === 'Group Chat' && (
-                                    <p className="text-xs font-semibold mb-0.5">{message.isOwn ? 'You' : message.senderName}</p>
+                                  {currentChat.role === 'Group Chat' && !message.isOwn && (
+                                    <p className="text-xs font-semibold mb-0.5">{message.senderName}</p>
                                   )}
                                   <p>{message.content}</p>
                                   <p className={`text-xs mt-0.5 ${message.isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
@@ -774,7 +853,7 @@ export default function Messages() {
             )}
           </>
         ) : (
-          /* Desktop layout */
+          // --- DESKTOP LAYOUT ---
           <div className="grid gap-6 lg:grid-cols-3 h-[calc(100vh-200px)]">
             {/* Conversations List */}
             <Card className="lg:col-span-1">
@@ -798,12 +877,10 @@ export default function Messages() {
                         className={`flex items-center p-4 cursor-pointer transition-colors hover:bg-muted/50 ${selectedChat === conversation.id ? 'bg-primary/10 border-r-2 border-primary' : ''}`}
                         onClick={() => setSelectedChat(conversation.id)}
                       >
-                        <div className="relative mr-3">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={conversation.avatar} />
-                            <AvatarFallback>{conversation.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                        </div>
+                        <Avatar className="h-12 w-12 mr-3">
+                          <AvatarImage src={conversation.avatar} />
+                          <AvatarFallback>{conversation.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
                             <h4 className="font-medium truncate">{conversation.name}</h4>
@@ -874,7 +951,9 @@ export default function Messages() {
                             {group.messages.map((message) => (
                               <div key={message.id} className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                                  {currentChat?.role === 'Group Chat' && <p className="text-xs font-semibold mb-1">{message.isOwn ? 'You' : message.senderName}</p>}
+                                  {currentChat?.role === 'Group Chat' && !message.isOwn && (
+                                    <p className="text-xs font-semibold mb-1">{message.senderName}</p>
+                                  )}
                                   <p className="text-sm">{message.content}</p>
                                   <p className={`text-xs mt-1 ${message.isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{formatMessageTime(message.timestamp)}</p>
                                 </div>
@@ -895,7 +974,6 @@ export default function Messages() {
                             <EmojiPicker onEmojiClick={addEmoji} />
                           </div>
                         )}
-
                         <Textarea
                           placeholder="Type your message..."
                           className="min-h-[40px] max-h-32 resize-none"
@@ -908,13 +986,10 @@ export default function Messages() {
                             }
                           }}
                         />
-
                         <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center space-x-2">
-                            <Button variant="ghost" size="sm" onClick={() => setShowEmojiPicker((s) => !s)}>
-                              <Smile className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button variant="ghost" size="sm" onClick={() => setShowEmojiPicker((s) => !s)}>
+                            <Smile className="h-4 w-4" />
+                          </Button>
                           <Button onClick={handleSendMessage} disabled={!messageText.trim()} className="bg-gradient-primary hover:opacity-90">
                             <Send className="h-4 w-4" />
                           </Button>
@@ -996,19 +1071,18 @@ export default function Messages() {
               if (!deleteThreadId || !currentUserId) return;
               try {
                 if (deleteType === 'delete') {
+                  // This hits DELETE /threads/{threadId}
                   await axios.delete(`${API_BASE_URL}/threads/${deleteThreadId}`);
                   toast({ title: 'Success', description: 'Conversation deleted' });
                 } else {
+                  // This hits DELETE /participants/{threadId}/{studentId}
                   await axios.delete(`${API_BASE_URL}/participants/${deleteThreadId}/${currentUserId}`);
                   toast({ title: 'Success', description: 'You have left the conversation' });
                 }
-                setConversations(prev => prev.filter(c => c.id !== deleteThreadId));
-                if (selectedChat === deleteThreadId) {
-                  setSelectedChat(null);
-                  if (isMobile) setMobileView('conversations');
-                }
+                // The real-time 'DELETE' handler for 'thread_participants'
+                // will automatically remove the chat from the list.
               } catch (err) {
-                console.error('Error deleting thread:', err);
+                console.error('Error deleting/leaving thread:', err);
                 toast({ title: 'Error', description: 'Failed to perform action', variant: 'destructive' });
               } finally {
                 setDeleteThreadId(null);
