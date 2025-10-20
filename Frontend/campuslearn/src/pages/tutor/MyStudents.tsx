@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Users, Search, Mail, Calendar, TrendingUp, TrendingDown, 
+import {
+  Users, Search, Mail, Calendar, TrendingUp, TrendingDown,
   BookOpen, Award, Target, BarChart3, Clock, CheckCircle2,
-  Star, Zap, Trophy, Brain, GraduationCap, Lightbulb, 
+  Star, Zap, Trophy, Brain, GraduationCap, Lightbulb,
   BookCheck, UserCheck, AlertTriangle, Clock4, Download,
   MessageCircle, FileText
 } from 'lucide-react';
@@ -136,9 +136,43 @@ export default function MyStudents() {
       if (!bookingsResponse.ok) throw new Error('Failed to fetch bookings');
       const bookings: Booking[] = await bookingsResponse.json();
 
-      const studentProgressMap = calculateStudentProgress(bookings);
+      // Create a set of unique student IDs from bookings
+      const studentIds = [...new Set(bookings.map(booking => booking.studentId))];
+
+      // Fetch complete student data for each student ID
+      const studentPromises = studentIds.map(async (studentId) => {
+        try {
+          const studentResponse = await fetch(`http://localhost:9090/student/${studentId}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          });
+
+          if (studentResponse.ok) {
+            return await studentResponse.json();
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error fetching student ${studentId}:`, error);
+          return null;
+        }
+      });
+
+      const studentDataArray = await Promise.all(studentPromises);
+      const studentDataMap = new Map();
+
+      // Create a map of student ID to student data for easy lookup
+      studentDataArray.forEach(student => {
+        if (student) {
+          studentDataMap.set(student.id, student);
+        }
+      });
+
+      const studentProgressMap = calculateStudentProgress(bookings, studentDataMap);
       const studentProgressArray = Array.from(studentProgressMap.values());
-      
+
       setStudents(studentProgressArray);
       calculateTutorStats(studentProgressArray, bookings);
       calculatePerformanceMetrics(studentProgressArray);
@@ -154,15 +188,18 @@ export default function MyStudents() {
     }
   };
 
-  const calculateStudentProgress = (bookings: Booking[]): Map<number, StudentProgress> => {
+  const calculateStudentProgress = (bookings: Booking[], studentDataMap: Map<number, any>): Map<number, StudentProgress> => {
     const studentMap = new Map<number, StudentProgress>();
 
     bookings.forEach(booking => {
       if (!studentMap.has(booking.studentId)) {
+        // Get student data from the map, or use booking data as fallback
+        const studentData = studentDataMap.get(booking.studentId);
+
         studentMap.set(booking.studentId, {
           studentId: booking.studentId,
-          studentName: booking.studentName || 'Unknown Student',
-          studentEmail: booking.studentEmail || 'No email',
+          studentName: studentData?.name || booking.studentName || 'Unknown Student',
+          studentEmail: studentData?.email || booking.studentEmail || 'No email',
           totalLessons: 0,
           completedLessons: 0,
           completionRate: 0,
@@ -178,10 +215,10 @@ export default function MyStudents() {
 
       const student = studentMap.get(booking.studentId)!;
       student.totalLessons++;
-      
+
       if (booking.status === 'completed') {
         student.completedLessons++;
-        
+
         const start = new Date(booking.startDatetime);
         const end = new Date(booking.endDatetime);
         const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
@@ -198,7 +235,7 @@ export default function MyStudents() {
         };
         student.subjectProgress.push(subjectProgress);
       }
-      
+
       subjectProgress.totalLessons++;
       if (booking.status === 'completed') {
         subjectProgress.lessonsCompleted++;
@@ -212,7 +249,7 @@ export default function MyStudents() {
       student.averageSessionLength = student.completedLessons > 0 ? student.totalLearningHours / student.completedLessons : 0;
       student.attendance = student.totalLessons > 0 ? (student.completedLessons / student.totalLessons) * 100 : 0;
       student.streak = calculateStudentStreak(bookings, student.studentId);
-      
+
       if (student.totalLessons === 0) {
         student.status = 'inactive';
       } else if (student.completionRate < 50 || student.streak < 2) {
@@ -256,16 +293,16 @@ export default function MyStudents() {
   const calculateTutorStats = (students: StudentProgress[], bookings: Booking[]) => {
     const activeStudents = students.filter(s => s.status === 'active').length;
     const atRiskStudents = students.filter(s => s.status === 'at-risk').length;
-    const averageCompletionRate = students.length > 0 
-      ? students.reduce((acc, s) => acc + s.completionRate, 0) / students.length 
-      : 0;
-    
-    const totalTeachingHours = students.reduce((acc, s) => acc + s.totalLearningHours, 0);
-    const studentEngagement = students.length > 0 
-      ? (activeStudents / students.length) * 100 
+    const averageCompletionRate = students.length > 0
+      ? students.reduce((acc, s) => acc + s.completionRate, 0) / students.length
       : 0;
 
-    const upcomingSessions = bookings.filter(b => 
+    const totalTeachingHours = students.reduce((acc, s) => acc + s.totalLearningHours, 0);
+    const studentEngagement = students.length > 0
+      ? (activeStudents / students.length) * 100
+      : 0;
+
+    const upcomingSessions = bookings.filter(b =>
       b.status === 'accepted' && new Date(b.startDatetime) > new Date()
     ).length;
 
@@ -379,7 +416,7 @@ export default function MyStudents() {
 
       if (threadsResponse.ok) {
         const threads = await threadsResponse.json();
-        
+
         // Look for existing conversation with this student
         for (const thread of threads) {
           const participantsResponse = await fetch(`http://localhost:9090/messaging/participants/thread/${thread.threadId}`, {
@@ -387,11 +424,11 @@ export default function MyStudents() {
               'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
             },
           });
-          
+
           if (participantsResponse.ok) {
             const participants = await participantsResponse.json();
             const hasStudent = participants.some((p: any) => p.studentId === student.studentId);
-            
+
             if (hasStudent) {
               // Navigate to existing conversation
               navigate('/messages', { state: { selectedThread: thread.threadId } });
@@ -412,7 +449,7 @@ export default function MyStudents() {
       });
 
       if (!createThreadResponse.ok) throw new Error('Failed to create thread');
-      
+
       const threadData = await createThreadResponse.json();
       const threadId = threadData.threadId || threadData.id;
 
@@ -438,7 +475,7 @@ export default function MyStudents() {
 
       // Navigate to the new conversation
       navigate('/messages', { state: { selectedThread: threadId } });
-      
+
     } catch (error) {
       console.error('Error creating conversation:', error);
       toast({
@@ -451,125 +488,125 @@ export default function MyStudents() {
 
   // Generate PDF Report
   const generateStudentReport = async (student: StudentProgress) => {
-  setIsGeneratingPDF(true);
-  try {
-    const doc = new jsPDF();
-    
-    // Title
-    doc.setFontSize(20);
-    doc.setTextColor(41, 128, 185);
-    doc.text('Student Progress Report', 105, 20, { align: 'center' });
-    
-    // Student Information
-    doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Student: ${student.studentName}`, 20, 40);
-    doc.text(`Email: ${student.studentEmail}`, 20, 50);
-    doc.text(`Report Date: ${new Date().toLocaleDateString()}`, 20, 60);
-    doc.text(`Status: ${student.status.toUpperCase()}`, 20, 70);
-    
-    // Key Metrics
-    doc.setFontSize(14);
-    doc.setTextColor(41, 128, 185);
-    doc.text('Key Performance Metrics', 20, 90);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    const metrics = [
-      ['Completion Rate', `${student.completionRate.toFixed(1)}%`],
-      ['Total Lessons', student.totalLessons.toString()],
-      ['Completed Lessons', student.completedLessons.toString()],
-      ['Learning Hours', student.totalLearningHours.toFixed(1)],
-      ['Current Streak', `${student.streak} weeks`],
-      ['Attendance Rate', `${student.attendance.toFixed(1)}%`]
-    ];
-    
-    autoTable(doc, {
-      startY: 95,
-      head: [['Metric', 'Value']],
-      body: metrics,
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] },
-    });
+    setIsGeneratingPDF(true);
+    try {
+      const doc = new jsPDF();
 
-    // Subject Progress
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
-    doc.setFontSize(14);
-    doc.setTextColor(41, 128, 185);
-    doc.text('Subject Progress', 20, finalY);
-    
-    const subjectData = student.subjectProgress.map(subject => [
-      subject.subject,
-      `${subject.lessonsCompleted}/${subject.totalLessons}`,
-      `${subject.progress.toFixed(1)}%`
-    ]);
-    
-    autoTable(doc, {
-      startY: finalY + 5,
-      head: [['Subject', 'Lessons Completed', 'Progress']],
-      body: subjectData,
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] },
-    });
+      // Title
+      doc.setFontSize(20);
+      doc.setTextColor(41, 128, 185);
+      doc.text('Student Progress Report', 105, 20, { align: 'center' });
 
-    // Goals Progress
-    const goalsY = (doc as any).lastAutoTable.finalY + 15;
-    doc.setFontSize(14);
-    doc.setTextColor(41, 128, 185);
-    doc.text('Learning Goals', 20, goalsY);
-    
-    const goals = getStudentGoals(student);
-    const goalsData = goals.map(goal => [
-      goal.title,
-      `${goal.current}/${goal.target}`,
-      `${goal.progress.toFixed(1)}%`,
-      goal.completed ? 'Completed' : 'In Progress'
-    ]);
-    
-    autoTable(doc, {
-      startY: goalsY + 5,
-      head: [['Goal', 'Progress', 'Completion', 'Status']],
-      body: goalsData,
-      theme: 'grid',
-      headStyles: { fillColor: [41, 128, 185] },
-    });
+      // Student Information
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Student: ${student.studentName}`, 20, 40);
+      doc.text(`Email: ${student.studentEmail}`, 20, 50);
+      doc.text(`Report Date: ${new Date().toLocaleDateString()}`, 20, 60);
+      doc.text(`Status: ${student.status.toUpperCase()}`, 20, 70);
 
-    // Footer
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Generated by TutorApp - Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+      // Key Metrics
+      doc.setFontSize(14);
+      doc.setTextColor(41, 128, 185);
+      doc.text('Key Performance Metrics', 20, 90);
+
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      const metrics = [
+        ['Completion Rate', `${student.completionRate.toFixed(1)}%`],
+        ['Total Lessons', student.totalLessons.toString()],
+        ['Completed Lessons', student.completedLessons.toString()],
+        ['Learning Hours', student.totalLearningHours.toFixed(1)],
+        ['Current Streak', `${student.streak} weeks`],
+        ['Attendance Rate', `${student.attendance.toFixed(1)}%`]
+      ];
+
+      autoTable(doc, {
+        startY: 95,
+        head: [['Metric', 'Value']],
+        body: metrics,
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185] },
+      });
+
+      // Subject Progress
+      const finalY = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFontSize(14);
+      doc.setTextColor(41, 128, 185);
+      doc.text('Subject Progress', 20, finalY);
+
+      const subjectData = student.subjectProgress.map(subject => [
+        subject.subject,
+        `${subject.lessonsCompleted}/${subject.totalLessons}`,
+        `${subject.progress.toFixed(1)}%`
+      ]);
+
+      autoTable(doc, {
+        startY: finalY + 5,
+        head: [['Subject', 'Lessons Completed', 'Progress']],
+        body: subjectData,
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185] },
+      });
+
+      // Goals Progress
+      const goalsY = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFontSize(14);
+      doc.setTextColor(41, 128, 185);
+      doc.text('Learning Goals', 20, goalsY);
+
+      const goals = getStudentGoals(student);
+      const goalsData = goals.map(goal => [
+        goal.title,
+        `${goal.current}/${goal.target}`,
+        `${goal.progress.toFixed(1)}%`,
+        goal.completed ? 'Completed' : 'In Progress'
+      ]);
+
+      autoTable(doc, {
+        startY: goalsY + 5,
+        head: [['Goal', 'Progress', 'Completion', 'Status']],
+        body: goalsData,
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185] },
+      });
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`Generated by TutorApp - Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+      }
+
+      // Save the PDF
+      doc.save(`student-report-${student.studentName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
+
+      toast({
+        title: 'Success',
+        description: 'PDF report generated successfully',
+      });
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF report',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsGeneratingPDF(false);
     }
-
-    // Save the PDF
-    doc.save(`student-report-${student.studentName.replace(/\s+/g, '-').toLowerCase()}.pdf`);
-    
-    toast({
-      title: 'Success',
-      description: 'PDF report generated successfully',
-    });
-    
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    toast({
-      title: 'Error',
-      description: 'Failed to generate PDF report',
-      variant: 'destructive'
-    });
-  } finally {
-    setIsGeneratingPDF(false);
-  }
-};
+  };
 
   const filteredStudents = students.filter(student => {
     if (!student) return false;
-    
+
     const searchLower = searchQuery.toLowerCase();
     const nameMatch = student.studentName?.toLowerCase().includes(searchLower) || false;
     const emailMatch = student.studentEmail?.toLowerCase().includes(searchLower) || false;
-    const subjectMatch = student.subjectProgress?.some(subject => 
+    const subjectMatch = student.subjectProgress?.some(subject =>
       subject?.subject?.toLowerCase().includes(searchLower)
     ) || false;
 
@@ -606,7 +643,7 @@ export default function MyStudents() {
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
-        
+
       </div>
     );
   }
@@ -715,12 +752,18 @@ export default function MyStudents() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Student List */}
+        {/* Student List */}
         <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Student Overview</CardTitle>
-              <CardDescription>
-                <div className="flex items-center gap-2 mt-4">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="flex-shrink-0">
+              <div className="flex flex-col space-y-4">
+                <div>
+                  <CardTitle>Student Overview</CardTitle>
+                  <CardDescription>
+                    Browse and manage all your students
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search students..."
@@ -729,16 +772,15 @@ export default function MyStudents() {
                     className="max-w-sm"
                   />
                 </div>
-              </CardDescription>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="flex-1 overflow-hidden">
+              <div className="space-y-4 h-full overflow-y-auto max-h-[calc(100vh-300px)]">
                 {filteredStudents.map((student) => (
-                  <div 
-                    key={student.studentId} 
-                    className={`p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer ${
-                      selectedStudent?.studentId === student.studentId ? 'ring-2 ring-primary' : ''
-                    }`}
+                  <div
+                    key={student.studentId}
+                    className={`p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer ${selectedStudent?.studentId === student.studentId ? 'ring-2 ring-primary' : ''
+                      }`}
                     onClick={() => setSelectedStudent(student)}
                   >
                     <div className="flex items-center justify-between">
@@ -749,7 +791,7 @@ export default function MyStudents() {
                             {student.studentName?.split(' ').map(n => n[0]).join('') || 'US'}
                           </AvatarFallback>
                         </Avatar>
-                        
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-medium truncate">{student.studentName}</p>
@@ -905,18 +947,18 @@ export default function MyStudents() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3">
-                    <Button 
+                    <Button
                       onClick={() => handleMessageStudent(selectedStudent)}
-                      variant="outline" 
+                      variant="outline"
                       className="h-auto py-3 flex flex-col gap-2"
                     >
                       <MessageCircle className="h-5 w-5" />
                       <span className="text-xs">Message</span>
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => generateStudentReport(selectedStudent)}
                       disabled={isGeneratingPDF}
-                      variant="outline" 
+                      variant="outline"
                       className="h-auto py-3 flex flex-col gap-2"
                     >
                       {isGeneratingPDF ? (
@@ -1010,11 +1052,10 @@ export default function MyStudents() {
                 <div className="text-right">
                   <div className="flex items-center gap-1 justify-end">
                     {getTrendIcon(metric.trend)}
-                    <span className={`text-sm ${
-                      metric.trend === 'up' ? 'text-success' : 
-                      metric.trend === 'down' ? 'text-destructive' : 
-                      'text-muted-foreground'
-                    }`}>
+                    <span className={`text-sm ${metric.trend === 'up' ? 'text-success' :
+                      metric.trend === 'down' ? 'text-destructive' :
+                        'text-muted-foreground'
+                      }`}>
                       {metric.change > 0 ? '+' : ''}{metric.change}%
                     </span>
                   </div>
