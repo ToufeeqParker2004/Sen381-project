@@ -64,6 +64,10 @@ export default function Admin() {
   const [hasMore, setHasMore] = useState(true);
   const pageSize = 10; // Number of records per page
 
+  const powerURL ="https://app.powerbi.com/view?r=eyJrIjoiZWNkNmVhYzQtNDliZC00YzFkLTljMTQtMmQ0ZThlZWM0YjU1IiwidCI6ImVhMWE5MDliLTY2MDAtNGEyNS04MmE1LTBjNmVkN2QwNTEzYiIsImMiOjl9&pageName=35a3420a0cb3b9bccc5e";
+
+ 
+
   // System Stats
   const systemStats = [
     { label: 'Total Users', value: '2,847', change: '+12%', icon: Users, color: 'text-primary' },
@@ -222,6 +226,8 @@ const loadMoreErrors = async () => {
     { id: 4, admin: 'Admin User', action: 'Approved resource', target: 'Physics Notes.pdf', timestamp: '2024-01-14 08:20', details: 'Content verification' },
   ];
 
+  
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active':
@@ -335,7 +341,7 @@ const loadMoreErrors = async () => {
       {/* Main Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="overview">Reports</TabsTrigger>
           <TabsTrigger value="database">Database</TabsTrigger>
           <TabsTrigger value="errors">Errors</TabsTrigger>
           <TabsTrigger value="forum">Forum</TabsTrigger>
@@ -345,77 +351,16 @@ const loadMoreErrors = async () => {
 
         {/* Dashboard Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="h-5 w-5" />
-                  User Activity Trends
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={userActivityData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="students" stroke="#000000" strokeWidth={2} />
-                    <Line type="monotone" dataKey="tutors" stroke="#FFD500" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
-                  Module Popularity
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={modulePopularityData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={true}
-                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
-                        const RADIAN = Math.PI / 180;
-                        const radius = outerRadius + 25;
-                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                        
-                        return (
-                          <text 
-                            x={x} 
-                            y={y} 
-                            fill="currentColor" 
-                            textAnchor={x > cx ? 'start' : 'end'} 
-                            dominantBaseline="central"
-                            className="text-xs sm:text-sm"
-                          >
-                            {`${name}: ${(percent * 100).toFixed(0)}%`}
-                          </text>
-                        );
-                      }}
-                      outerRadius="60%"
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {modulePopularityData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <div className="w-full aspect-[16/9] max-h-[90vh] rounded-2xl overflow-hidden">
+           <iframe
+          title="CampusLearn Analytics Dashboard"
+          style={{ width: '100%', height: '100%', border: 'none' }}
+          src={powerURL}
+          allowFullScreen={true}
+        ></iframe>
           </div>
+
+         
 
           {/* System Health */}
           <Card>
