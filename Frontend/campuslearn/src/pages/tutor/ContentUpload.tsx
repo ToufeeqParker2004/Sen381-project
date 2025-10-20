@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import apiClient from '@/services/api';
-import { TutorWithModulesResponse } from '@/types';
+import { Booking, StudentProgress, TutorWithModulesResponse } from '@/types';
 
 interface UploadedContent {
   id: string;
@@ -45,7 +45,10 @@ export default function ContentUpload() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedModule, setSelectedModule] = useState<string>('');
   const [isLoadingModules, setIsLoadingModules] = useState(true);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const [students, setStudents] = useState<StudentProgress[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]); // Array of student IDs
 
   const [tutors, setTutors] = useState<TutorWithModulesResponse[]>([]); // Array with single tutor or empty
 
@@ -80,8 +83,6 @@ export default function ContentUpload() {
 
           setTutors([tutorWithDetails]);
 
-
-
         } catch (error) {
           console.error(`Failed to fetch data for tutor ${tutor.id}:`, error);
 
@@ -97,13 +98,11 @@ export default function ContentUpload() {
           };
 
           setTutors([tutorWithDetails]);
-
         }
       } catch (error) {
         console.error('Error fetching tutors:', error);
         toast({ title: 'Error', description: 'Failed to load tutors', variant: 'destructive' });
         setTutors([]);
-
       } finally {
         setIsLoadingModules(false);
       }
@@ -112,6 +111,271 @@ export default function ContentUpload() {
     fetchTutorsWithModules();
   }, [toast, user.id]);
 
+  useEffect(() => {
+    fetchTutorStudents();
+  }, [user?.id]);
+
+  const fetchTutorStudents = async () => {
+    if (!user?.id) return;
+
+    try {
+      const tutorResponse = await apiClient.get(`/tutors/student/${user.id}`);
+      const tutorData = tutorResponse.data;
+
+      const bookingsResponse = await apiClient.get(`/api/bookings/tutor/${tutorData.id}`);
+      const bookings: Booking[] = bookingsResponse.data;
+
+      // Create a set of unique student IDs from bookings
+      const studentIds = [...new Set(bookings.map(booking => booking.studentId))];
+
+      // Fetch complete student data for each student ID
+      const studentPromises = studentIds.map(async (studentId) => {
+        try {
+          const studentResponse = await apiClient.get(`/student/${studentId}`);
+          return studentResponse.data;
+        } catch (error) {
+          console.error(`Error fetching student ${studentId}:`, error);
+          return null;
+        }
+      });
+
+      const studentDataArray = await Promise.all(studentPromises);
+      const studentDataMap = new Map();
+
+      // Create a map of student ID to student data for easy lookup
+      studentDataArray.forEach(student => {
+        if (student) {
+          studentDataMap.set(student.id, student);
+        }
+      });
+     
+      const studentProgressMap = calculateStudentProgress(bookings, studentDataMap);
+      const studentProgressArray = Array.from(studentProgressMap.values());
+
+      setStudents(studentProgressArray);
+      
+    } catch (error) {
+      console.error('Error fetching tutor students:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load student data',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateStudentProgress = (bookings: Booking[], studentDataMap: Map<number, any>): Map<number, StudentProgress> => {
+    const studentMap = new Map<number, StudentProgress>();
+
+    bookings.forEach(booking => {
+      if (!studentMap.has(booking.studentId)) {
+        // Get student data from the map, or use booking data as fallback
+        const studentData = studentDataMap.get(booking.studentId);
+
+        studentMap.set(booking.studentId, {
+          studentId: booking.studentId,
+          studentName: studentData?.name || booking.studentName || 'Unknown Student',
+          studentEmail: studentData?.email || booking.studentEmail || 'No email',
+          totalLessons: 0,
+          completedLessons: 0,
+          completionRate: 0,
+          totalLearningHours: 0,
+          averageSessionLength: 0,
+          subjectProgress: [],
+          lastActive: new Date(booking.startDatetime).toLocaleDateString(),
+          status: 'active',
+          streak: 0,
+          attendance: 0
+        });
+      }
+
+      const student = studentMap.get(booking.studentId)!;
+      student.totalLessons++;
+
+      if (booking.status === 'completed') {
+        student.completedLessons++;
+
+        const start = new Date(booking.startDatetime);
+        const end = new Date(booking.endDatetime);
+        const duration = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        student.totalLearningHours += duration;
+      }
+
+      let subjectProgress = student.subjectProgress.find(sp => sp.subject === booking.subject);
+      if (!subjectProgress) {
+        subjectProgress = {
+          subject: booking.subject || 'Unknown Subject',
+          lessonsCompleted: 0,
+          totalLessons: 0,
+          progress: 0
+        };
+        student.subjectProgress.push(subjectProgress);
+      }
+
+      subjectProgress.totalLessons++;
+      if (booking.status === 'completed') {
+        subjectProgress.lessonsCompleted++;
+      }
+      subjectProgress.progress = (subjectProgress.lessonsCompleted / subjectProgress.totalLessons) * 100;
+    });
+
+    // Calculate additional metrics
+    studentMap.forEach(student => {
+      student.completionRate = student.totalLessons > 0 ? (student.completedLessons / student.totalLessons) * 100 : 0;
+      student.averageSessionLength = student.completedLessons > 0 ? student.totalLearningHours / student.completedLessons : 0;
+      student.attendance = student.totalLessons > 0 ? (student.completedLessons / student.totalLessons) * 100 : 0;
+      student.streak = calculateStudentStreak(bookings, student.studentId);
+
+      if (student.totalLessons === 0) {
+        student.status = 'inactive';
+      } else if (student.completionRate < 50 || student.streak < 2) {
+        student.status = 'at-risk';
+      } else {
+        student.status = 'active';
+      }
+    });
+
+    return studentMap;
+  };
+
+  const calculateStudentStreak = (bookings: Booking[], studentId: number): number => {
+    const studentBookings = bookings
+      .filter(b => b.studentId === studentId && b.status === 'completed')
+      .map(b => new Date(b.startDatetime).toDateString())
+      .sort();
+
+    if (studentBookings.length === 0) return 0;
+
+    const uniqueDates = [...new Set(studentBookings)].sort();
+    let streak = 1;
+    let currentStreak = 1;
+
+    for (let i = 1; i < uniqueDates.length; i++) {
+      const prevDate = new Date(uniqueDates[i - 1]);
+      const currDate = new Date(uniqueDates[i]);
+      const diffDays = Math.ceil((currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 7) {
+        currentStreak++;
+        streak = Math.max(streak, currentStreak);
+      } else {
+        currentStreak = 1;
+      }
+    }
+
+    return streak;
+  };
+
+  // File validation function
+  const validateFile = (file: File): string | null => {
+    const validTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'video/mp4',
+      'video/avi',
+      'video/quicktime',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif'
+    ];
+    
+    const maxSize = 100 * 1024 * 1024; // 100MB
+
+    if (!validTypes.includes(file.type)) {
+      return 'File type not supported. Please upload PDF, Word, PowerPoint, video, or image files.';
+    }
+
+    if (file.size > maxSize) {
+      return 'File size must be less than 100MB';
+    }
+
+    return null;
+  };
+
+  // Add this function to link learning materials to students via Resources table
+  const linkMaterialToStudents = async (materialId: string, studentIds: string[]) => {
+  try {
+    console.log('🔗 Starting to link material to students...');
+    console.log('Material ID:', materialId);
+    console.log('Student IDs:', studentIds);
+    console.log('Tutor:', tutors[0]?.tutor);
+
+    // Create resource links for each selected student
+    const linkPromises = studentIds.map(async (studentId) => {
+      const resourceData = {
+        studentId: parseInt(studentId),
+        learningMaterialsId: materialId, // ✅ Fixed: with 's'
+        tutorId: tutors[0]?.tutor?.id,
+        moduleId: tutors[0]?.modules?.find(m => 
+          m.module_code === selectedModule || m.module_name === selectedModule
+        )?.id
+      };
+
+      console.log('📤 Sending resource data:', resourceData);
+
+      const response = await apiClient.post('/resources', resourceData);
+      console.log('✅ Resource created for student', studentId, ':', response.data);
+      return response;
+    });
+
+    await Promise.all(linkPromises);
+    console.log(`✅ Successfully linked material ${materialId} to ${studentIds.length} students`);
+  } catch (error: any) {
+    console.error('❌ Error linking material to students:', error);
+    console.error('Error response:', error.response?.data);
+    throw new Error('Failed to share content with selected students');
+  }
+};
+
+  // Test function for minimal upload
+  const testMinimalUpload = async () => {
+    if (!selectedFile) {
+      toast({
+        title: "No file selected",
+        description: "Please select a file first",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    console.log('🧪 Starting minimal upload test...');
+    
+    const formData = new FormData();
+    formData.append('title', 'Test File - ' + Date.now());
+    formData.append('document_type', 'PDF');
+    formData.append('module_id', '1'); // Hardcode known good module
+    formData.append('uploader_id', '1'); // Hardcode known good tutor
+    formData.append('topic_id', '1');
+    formData.append('file', selectedFile);
+
+    // Log FormData contents for debugging
+    console.log('📋 FormData contents for test:');
+    for (let [key, value] of formData.entries()) {
+      console.log(`  ${key}:`, value);
+    }
+
+    try {
+      const response = await apiClient.post('/learning-materials/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      console.log('✅ Minimal test upload successful:', response.data);
+      toast({ title: "Test upload successful!" });
+    } catch (error: any) {
+      console.error('❌ Minimal test upload failed:', error);
+      console.error('Error details:', error.response?.data);
+      toast({ 
+        title: "Test upload failed", 
+        description: error.response?.data?.error || error.message,
+        variant: "destructive" 
+      });
+    }
+  };
 
   // Map file types to document types
   const getDocumentType = (file: File): string => {
@@ -142,6 +406,16 @@ export default function ContentUpload() {
   };
 
   const handleFileSelect = (file: File) => {
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast({
+        title: "Invalid file",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSelectedFile(file);
     if (!title) {
       setTitle(file.name.split('.').slice(0, -1).join('.'));
@@ -175,160 +449,181 @@ export default function ContentUpload() {
   };
 
   const handleUpload = async () => {
-  if (!title || !selectedModule || !selectedFile) {
-    toast({
-      title: "Missing information",
-      description: "Please fill in all fields and select a file",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  setIsUploading(true);
-  setUploadProgress(0);
-
-  try {
-    // Debug: Log current state
-    console.log('Upload state:', {
-      title,
-      selectedModule,
-      selectedFile: selectedFile?.name,
-      tutors: tutors[0],
-      modules: tutors[0]?.modules,
-      modulesCount: tutors[0]?.modules?.length
-    });
-
-    const formData = new FormData();
-    formData.append('title', title);
-    formData.append('document_type', getDocumentType(selectedFile));
-
-    // Check if modules are loaded
-    if (!tutors[0]?.modules?.length) {
-      throw new Error('No modules available. Please wait for modules to load.');
+    if (!title || !selectedModule || !selectedFile || selectedStudents.length === 0) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all fields, select a file, and choose at least one student",
+        variant: "destructive",
+      });
+      return;
     }
 
-    // Find the selected module with better error handling
-    const selectedModuleObj = tutors[0].modules.find(m => 
-      m.module_code === selectedModule || m.module_name === selectedModule
-    );
-    
-    console.log('Found module:', selectedModuleObj);
-    console.log('Available modules:', tutors[0].modules.map(m => ({
-      code: m.module_code,
-      name: m.module_name,
-      id: m.id
-    })));
-
-    if (!selectedModuleObj) {
-      throw new Error(`Module "${selectedModule}" not found in your assigned modules. Available modules: ${tutors[0].modules.map(m => m.module_name).join(', ')}`);
-    }
-
-    if (!selectedModuleObj.id) {
-      throw new Error('Module ID is missing for the selected module');
-    }
-
-    formData.append('module_id', selectedModuleObj.id.toString());
-
-    // Check if tutor data is available
-    if (tutors[0]?.tutor?.id) {
-      formData.append('uploader_id', tutors[0].tutor.id.toString());
-    } else {
-      throw new Error('Tutor information not available');
-    }
-
-    formData.append('topic_id', '1');
-    formData.append('file', selectedFile);
-
-    if (description) {
-      formData.append('tags', description);
-    }
-
-       const response = await apiClient.post('/learning-materials/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total) {
-          const progress = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
-          );
-          setUploadProgress(progress);
-        }
-      },
-    });
-
-    const savedMaterial = response.data;
-
-    const fileType = selectedFile.type.includes('video') ? 'video' :
-      selectedFile.type.includes('image') ? 'image' : 'document';
-
-    const newUpload: UploadedContent = {
-      id: savedMaterial.id,
-      title: savedMaterial.title,
-      type: fileType,
-      module: selectedModule,
-      uploadDate: new Date().toISOString().split('T')[0],
-      file_url: savedMaterial.file_url,
-    };
-
-    setUploads([newUpload, ...uploads]);
-
-    // Reset form
-    setTitle('');
-    setSelectedModule('');
-    setDescription('');
-    setSelectedFile(null);
+    setIsUploading(true);
     setUploadProgress(0);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
 
-    toast({
-      title: "Content uploaded successfully!",
-      description: "Your content has been uploaded to Supabase Storage",
-    });
-
-  } catch (error) {
-    console.error('Upload error details:', {
-      error,
-      tutors: tutors[0],
-      selectedModule,
-      availableModules: tutors[0]?.modules?.map(m => m.module_name)
-    });
-    
-    toast({
-      title: "Upload failed",
-      description: error instanceof Error ? error.message : "Failed to upload content",
-      variant: "destructive",
-    });
-  } finally {
-    setIsUploading(false);
-  }
-};
-
-  const handleRemove = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:8080/learning-materials/${id}`, {
-        method: 'DELETE',
+      console.log('🚀 Starting upload process...');
+      console.log('📊 Upload state:', {
+        title,
+        selectedModule,
+        selectedFile: selectedFile?.name,
+        selectedStudents,
+        tutors: tutors[0],
+        modules: tutors[0]?.modules,
+        modulesCount: tutors[0]?.modules?.length
+      });
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('document_type', getDocumentType(selectedFile));
+
+      // Check if modules are loaded
+      if (!tutors[0]?.modules?.length) {
+        throw new Error('No modules available. Please wait for modules to load.');
+      }
+
+      // Find the selected module with better error handling
+      const selectedModuleObj = tutors[0].modules.find(m => 
+        m.module_code === selectedModule || m.module_name === selectedModule
+      );
+      
+      console.log('🔍 Selected Module Object:', selectedModuleObj);
+      console.log('📋 Available modules:', tutors[0].modules.map(m => ({
+        code: m.module_code,
+        name: m.module_name,
+        id: m.id
+      })));
+
+      if (!selectedModuleObj) {
+        throw new Error(`Module "${selectedModule}" not found in your assigned modules. Available modules: ${tutors[0].modules.map(m => m.module_name).join(', ')}`);
+      }
+
+      if (!selectedModuleObj.id) {
+        throw new Error('Module ID is missing for the selected module');
+      }
+
+      formData.append('module_id', selectedModuleObj.id.toString());
+
+      // Check if tutor data is available
+      if (tutors[0]?.tutor?.id) {
+        formData.append('uploader_id', tutors[0]?.tutor?.id.toString());
+      } else {
+        throw new Error('Tutor information not available');
+      }
+
+      formData.append('topic_id', '1');
+      formData.append('file', selectedFile);
+
+      if (description) {
+        formData.append('tags', description);
+      }
+
+      // Log FormData contents for debugging
+      console.log('📦 FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}:`, value);
+      }
+
+      console.log('📤 Sending upload request to backend...');
+      const response = await apiClient.post('/learning-materials/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            setUploadProgress(progress);
+            console.log(`📊 Upload progress: ${progress}%`);
+          }
         },
       });
 
-      if (!response.ok) {
-        throw new Error('Delete failed');
+      console.log('✅ Upload successful, response:', response.data);
+      const savedMaterial = response.data;
+
+      // ✅ Link the learning material to selected students via Resources table
+      console.log('🔗 Linking material to students...');
+      await linkMaterialToStudents(savedMaterial.id, selectedStudents);
+
+      const fileType = selectedFile.type.includes('video') ? 'video' :
+        selectedFile.type.includes('image') ? 'image' : 'document';
+
+      const newUpload: UploadedContent = {
+        id: savedMaterial.id,
+        title: savedMaterial.title,
+        type: fileType,
+        module: selectedModule,
+        uploadDate: new Date().toISOString().split('T')[0],
+        file_url: savedMaterial.file_url,
+      };
+
+      setUploads([newUpload, ...uploads]);
+
+      // Reset form
+      setTitle('');
+      setSelectedModule('');
+      setSelectedStudents([]); // Reset student selection
+      setDescription('');
+      setSelectedFile(null);
+      setUploadProgress(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
 
+      toast({
+        title: "Content uploaded successfully!",
+        description: `Your content has been uploaded and shared with ${selectedStudents.length} student(s)`,
+      });
+
+    } catch (error: any) {
+      console.error('❌ Upload error details:', {
+        error: error.response?.data || error.message,
+        errorStack: error.stack,
+        tutors: tutors[0],
+        selectedModule,
+        availableModules: tutors[0]?.modules?.map(m => m.module_name)
+      });
+      
+      // More detailed error logging
+      if (error.response) {
+        console.error('📡 Response error details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        console.error('🌐 No response received:', error.request);
+      } else {
+        console.error('⚙️ Request setup error:', error.message);
+      }
+      
+      toast({
+        title: "Upload failed",
+        description: error.response?.data?.error || error.message || "Failed to upload content",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemove = async (id: string) => {
+    try {
+      await apiClient.delete(`/learning-materials/${id}`);
+      
       setUploads(uploads.filter(u => u.id !== id));
       toast({
         title: "Content deleted",
         description: "The content has been removed from both storage and database",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Delete error:', error);
       toast({
         title: "Delete failed",
-        description: "Failed to delete content",
+        description: error.response?.data?.error || "Failed to delete content",
         variant: "destructive",
       });
     }
@@ -336,17 +631,11 @@ export default function ContentUpload() {
 
   const handleDownload = async (content: UploadedContent) => {
     try {
-      const response = await fetch(`http://localhost:8080/learning-materials/${content.id}/download`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
+      const response = await apiClient.get(`/learning-materials/${content.id}/download`, {
+        responseType: 'blob',
       });
 
-      if (!response.ok) {
-        throw new Error('Download failed');
-      }
-
-      const blob = await response.blob();
+      const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -360,11 +649,11 @@ export default function ContentUpload() {
         title: "Download started",
         description: "Your file is being downloaded",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Download error:', error);
       toast({
         title: "Download failed",
-        description: "Failed to download file",
+        description: error.response?.data?.error || "Failed to download file",
         variant: "destructive",
       });
     }
@@ -380,38 +669,6 @@ export default function ContentUpload() {
       description: "The selected file has been removed",
     });
   };
-  /*
-    // Load existing uploads on component mount
-    const loadUploads = async () => {
-      try {
-        const response = await fetch('http://localhost:8080/learning-materials', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-  
-        if (response.ok) {
-          const materials = await response.json();
-          // Transform backend data to frontend format
-          const transformedUploads = materials.map((material: any) => ({
-            id: material.id,
-            title: material.title,
-            type: material.document_type?.toLowerCase() || 'document',
-            module: `CS${material.module_id}`, // Map module_id back to module code
-            uploadDate: new Date(material.created_at).toISOString().split('T')[0],
-            file_url: material.file_url,
-          }));
-          setUploads(transformedUploads);
-        }
-      } catch (error) {
-        console.error('Failed to load uploads:', error);
-      }
-    };
-  
-    // Call loadUploads on component mount
-    useState(() => {
-      loadUploads();
-    });*/
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -454,6 +711,50 @@ export default function ContentUpload() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Send to Students</Label>
+              <div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-2">
+                {students.length === 0 ? (
+                  <p className="text-sm text-muted-foreground p-2">No students available</p>
+                ) : (
+                  students.map((student) => (
+                    <div key={student.studentId} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`student-${student.studentId}`}
+                        checked={selectedStudents.includes(student.studentId.toString())}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedStudents([...selectedStudents, student.studentId.toString()]);
+                          } else {
+                            setSelectedStudents(selectedStudents.filter(id => id !== student.studentId.toString()));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <label 
+                        htmlFor={`student-${student.studentId}`}
+                        className="text-sm flex-1 cursor-pointer"
+                      >
+                        <span className="font-medium">{student.studentName}</span>
+                        {student.studentEmail && (
+                          <span className="text-muted-foreground ml-2">({student.studentEmail})</span>
+                        )}
+                      </label>
+                    </div>
+                  ))
+                )}
+              </div>
+              
+              {selectedStudents.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-muted-foreground">
+                    Sharing with {selectedStudents.length} student(s)
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -547,23 +848,34 @@ export default function ContentUpload() {
               </div>
             )}
 
-            <Button
-              className="w-full"
-              onClick={handleUpload}
-              disabled={isUploading || !title || !selectedFile || !selectedFile}
-            >
-              {isUploading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Upload Content
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                onClick={handleUpload}
+                disabled={isUploading || !title || !selectedFile || !selectedModule || selectedStudents.length === 0}
+              >
+                {isUploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload & Share Content
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={testMinimalUpload}
+                disabled={!selectedFile}
+                title="Test with minimal data to isolate issues"
+              >
+                Test Upload
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

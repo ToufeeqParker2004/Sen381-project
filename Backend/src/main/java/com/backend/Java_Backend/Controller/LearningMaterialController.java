@@ -76,7 +76,7 @@ public class LearningMaterialController {
             @RequestParam("document_type") String documentType,
             @RequestParam(value = "topic_id", required = false) Integer topicId,
             @RequestParam(value = "module_id", required = false) Integer moduleId,
-            @RequestParam(value = "tags", required = false) String[] tags,
+            @RequestParam(value = "tags", required = false) String tags, // Changed from String[] to String
             @RequestParam("file") MultipartFile file,
             Authentication authentication) {
 
@@ -92,15 +92,15 @@ public class LearningMaterialController {
             int studentId = Integer.parseInt(principal);
             logger.debug("Authenticated user student_id: {}", studentId);
 
-            // Get or create Tutor for the student_id
-            TutorDetailsDTO tutorDetails = tutorService.createTutor(studentId);
+            // ✅ FIX: Get existing tutor instead of trying to create new one
+            TutorDetailsDTO tutorDetails = tutorService.getTutorDetailsByStudentId(studentId);
             if (tutorDetails == null) {
-                logger.error("Failed to get or create Tutor for student_id: {}", studentId);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                        .body(Collections.singletonMap("error", "Failed to create tutor for uploader"));
+                logger.error("No tutor found for student_id: {}. User needs to have a tutor account.", studentId);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Collections.singletonMap("error", "Tutor account required to upload materials"));
             }
             int tutorId = tutorDetails.getId();
-            logger.debug("Using tutor_id: {} for uploader_id", tutorId);
+            logger.debug("Using existing tutor_id: {} for uploader_id", tutorId);
 
             String fileUrl = storageService.uploadFile(file);
 
@@ -109,25 +109,20 @@ public class LearningMaterialController {
             material.setDocument_type(documentType);
             material.setTopic_id(topicId);
             material.setModule_id(moduleId);
-            material.setTags(tags);
-            material.setUploader_id(tutorId); // Use tutor_id, not student_id
+
+            // Handle tags - convert String to String[] if needed
+            if (tags != null && !tags.trim().isEmpty()) {
+                material.setTags(new String[]{tags});
+            }
+
+            material.setUploader_id(tutorId);
             material.setFile_url(fileUrl);
             material.setCreated_at(Timestamp.from(Instant.now()));
 
             LearningMaterial savedMaterial = learningMaterialService.saveLearningMaterial(material);
 
-            // Convert to DTO for response
-            LearningMaterialDTO savedMaterialDTO = new LearningMaterialDTO();
-            savedMaterialDTO.setId(savedMaterial.getId());
-            savedMaterialDTO.setTopicId(savedMaterial.getTopic_id());
-            savedMaterialDTO.setModuleId(savedMaterial.getModule_id());
-            savedMaterialDTO.setUploaderId(savedMaterial.getUploader_id());
-            savedMaterialDTO.setTitle(savedMaterial.getTitle());
-            savedMaterialDTO.setDocumentType(savedMaterial.getDocument_type());
-            savedMaterialDTO.setFileUrl(savedMaterial.getFile_url());
-            savedMaterialDTO.setCreatedAt(savedMaterial.getCreated_at());
-            savedMaterialDTO.setTags(savedMaterial.getTags());
-            savedMaterialDTO.setUploaderDetails(tutorService.getTutorById(tutorId));
+            // Convert to DTO for response using the service method
+            LearningMaterialDTO savedMaterialDTO = learningMaterialService.convertToDTO(savedMaterial);
 
             logger.debug("Successfully created LearningMaterial with ID: {}", savedMaterial.getId());
             return ResponseEntity.ok(savedMaterialDTO);

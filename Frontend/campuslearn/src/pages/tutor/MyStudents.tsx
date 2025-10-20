@@ -17,72 +17,8 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Booking, PerformanceMetric, StudentGoal, StudentProgress, TutorStats } from '@/types';
 
-interface Booking {
-  id: string;
-  studentId: number;
-  studentName: string;
-  studentEmail: string;
-  subject: string;
-  status: string;
-  startDatetime: string;
-  endDatetime: string;
-  tutorName: string;
-}
-
-interface StudentProgress {
-  studentId: number;
-  studentName: string;
-  studentEmail: string;
-  totalLessons: number;
-  completedLessons: number;
-  completionRate: number;
-  totalLearningHours: number;
-  averageSessionLength: number;
-  subjectProgress: SubjectProgress[];
-  lastActive: string;
-  status: 'active' | 'inactive' | 'at-risk';
-  streak: number;
-  attendance: number;
-}
-
-interface SubjectProgress {
-  subject: string;
-  lessonsCompleted: number;
-  totalLessons: number;
-  progress: number;
-}
-
-interface TutorStats {
-  totalStudents: number;
-  activeStudents: number;
-  atRiskStudents: number;
-  averageCompletionRate: number;
-  totalTeachingHours: number;
-  studentEngagement: number;
-  upcomingSessions: number;
-  favoriteSubject: string;
-}
-
-interface StudentGoal {
-  id: string;
-  title: string;
-  description: string;
-  target: number;
-  current: number;
-  progress: number;
-  icon: React.ComponentType<any>;
-  color: string;
-  completed: boolean;
-  studentId: number;
-}
-
-interface PerformanceMetric {
-  label: string;
-  value: number;
-  change: number;
-  trend: 'up' | 'down' | 'neutral';
-}
 
 export default function MyStudents() {
   const { user } = useAuth();
@@ -102,6 +38,8 @@ export default function MyStudents() {
     upcomingSessions: 0,
     favoriteSubject: 'N/A'
   });
+
+  
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetric[]>([]);
   const [timeframe, setTimeframe] = useState<'week' | 'month' | 'all'>('month');
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
