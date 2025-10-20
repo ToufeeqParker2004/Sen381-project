@@ -28,7 +28,7 @@ public class LearningMaterialService {
     }
 
     // Helper method to convert LearningMaterial to DTO with tutor details
-    private LearningMaterialDTO convertToDTO(LearningMaterial material) {
+    public LearningMaterialDTO convertToDTO(LearningMaterial material) {
         logger.debug("Converting LearningMaterial ID: {}, uploader_id: {}", material.getId(), material.getUploader_id());
 
         LearningMaterialDTO dto = new LearningMaterialDTO();
