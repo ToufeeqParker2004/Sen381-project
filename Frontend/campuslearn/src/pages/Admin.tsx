@@ -50,23 +50,22 @@ import {
 import { LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ErrorRecord, ErrorResponse } from '@/types';
 import apiClient from '@/services/api';
+import { userService, User } from '@/services/userServices';
 
 export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTable, setSelectedTable] = useState('users');
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<Record<string, any> | null>(null);
-   const [errors, setErrors] = useState<ErrorRecord[]>([]);
+  const [errors, setErrors] = useState<ErrorRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const pageSize = 10; // Number of records per page
+  const pageSize = 10;
 
-  const powerURL ="https://app.powerbi.com/view?r=eyJrIjoiZWNkNmVhYzQtNDliZC00YzFkLTljMTQtMmQ0ZThlZWM0YjU1IiwidCI6ImVhMWE5MDliLTY2MDAtNGEyNS04MmE1LTBjNmVkN2QwNTEzYiIsImMiOjl9&pageName=35a3420a0cb3b9bccc5e";
-
- 
+  const powerURL = "https://app.powerbi.com/view?r=eyJrIjoiZWNkNmVhYzQtNDliZC00YzFkLTljMTQtMmQ0ZThlZWM0YjU1IiwidCI6ImVhMWE5MDliLTY2MDAtNGEyNS04MmE1LTBjNmVkN2QwNTEzYiIsImMiOjl9&pageName=35a3420a0cb3b9bccc5e";
 
   // System Stats
   const systemStats = [
@@ -76,47 +75,8 @@ export default function Admin() {
     { label: 'API Uptime', value: '99.9%', change: '0%', icon: Server, color: 'text-warning' },
   ];
 
-  // User Management Data
-  const users = [
-    {
-      id: 1,
-      name: 'Sarah Wilson',
-      email: 'sarah.wilson@campus.edu',
-      role: 'Tutor',
-      status: 'Active',
-      joinDate: '2023-09-15',
-      lastActive: '2 hours ago',
-      avatar: '/api/placeholder/40/40'
-    },
-    {
-      id: 2,
-      name: 'Mike Chen',
-      email: 'mike.chen@campus.edu',
-      role: 'Student',
-      status: 'Active',
-      joinDate: '2023-10-02',
-      lastActive: '5 minutes ago',
-      avatar: '/api/placeholder/40/40'
-    },
-    {
-      id: 3,
-      name: 'Emma Rodriguez',
-      email: 'emma.rodriguez@campus.edu',
-      role: 'Tutor',
-      status: 'Suspended',
-      joinDate: '2023-11-10',
-      lastActive: '1 day ago',
-      avatar: '/api/placeholder/40/40'
-    },
-  ];
-
-  // Database Tables Data
-  const databaseTables = {
-    users: [
-      { id: 1, name: 'John Doe', email: 'john@campus.edu', role: 'Student', status: 'Active' },
-      { id: 2, name: 'Jane Smith', email: 'jane@campus.edu', role: 'Tutor', status: 'Active' },
-      { id: 3, name: 'Bob Johnson', email: 'bob@campus.edu', role: 'Student', status: 'Active' },
-    ],
+  const [databaseTables, setDatabaseTables] = useState({
+    users: [] as User[],
     tutors: [
       { id: 1, name: 'Prof. Adams', expertise: 'Mathematics', rating: 4.8, sessions: 234 },
       { id: 2, name: 'Dr. Brown', expertise: 'Physics', rating: 4.9, sessions: 189 },
@@ -142,54 +102,170 @@ export default function Admin() {
       { id: 2, title: 'Physics Lab Manual', uploadedBy: 'Tutor B', size: '5.1 MB', downloads: 78 },
       { id: 3, title: 'Chemistry Textbook', uploadedBy: 'Tutor C', size: '12.4 MB', downloads: 123 },
     ],
-  };
+  });
 
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+
+  // Fetch users on component mount
   useEffect(() => {
-  const fetchErrors = async () => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await apiClient.get<ErrorResponse>(`/api/errors?page=0&size=${pageSize}`);
-      
-      setErrors(response.data.errors);
-      setHasMore(response.data.hasMore);
-      setPage(0);
-      
+      setUsersLoading(true);
+      setUsersError(null);
+      const usersData = await userService.getUsers();
+      setDatabaseTables(prev => ({
+        ...prev,
+        users: usersData
+      }));
     } catch (err: any) {
-      console.error('Error fetching errors:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to fetch errors');
+      console.error('Error fetching users:', err);
+      setUsersError(err.response?.data?.message || err.message || 'Failed to fetch users');
     } finally {
-      setLoading(false);
+      setUsersLoading(false);
     }
   };
 
-  fetchErrors();
-}, []);
-console.log(errors)
- 
-const loadMoreErrors = async () => {
-  if (loadingMore || !hasMore) return;
-  
+  const handleEditRecord = (record: Record<string, any>) => {
+    setSelectedRecord(record);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveRecord = async (updatedRecord: Record<string, any>) => {
   try {
-    setLoadingMore(true);
-    const nextPage = page + 1;
+    if (selectedTable === 'users') {
+      if (updatedRecord.id) {
+        // Update existing user - don't send password for updates
+        const { id, createdAt, password, ...updateData } = updatedRecord;
+        console.log('Updating user with data:', updateData);
+        
+        const updatedUser = await userService.updateUser(id, updateData);
+        
+        setDatabaseTables(prev => ({
+          ...prev,
+          users: prev.users.map(user => 
+            user.id === id ? updatedUser : user
+          )
+        }));
+      } else {
+        // Create new user - ALWAYS send the hash, ignore what user sees in UI
+        const createUserData = {
+          name: updatedRecord.name || '',
+          email: updatedRecord.email || '',
+          phoneNumber: updatedRecord.phoneNumber || '',
+          bio: updatedRecord.bio || '',
+          location: updatedRecord.location || '',
+          password: '2YEJxmSRl/fL0L2MFoRlUjdZ5ec2kg+8+gdUh4WtePo=', // Always send the hash
+          createdAt: new Date().toISOString()
+        };
+        
+        console.log('Creating user with data:', createUserData);
+        
+        if (!createUserData.name || !createUserData.email) {
+          setUsersError('Name and email are required fields');
+          return;
+        }
+        
+        const newUser = await userService.createUser(createUserData);
+        setDatabaseTables(prev => ({
+          ...prev,
+          users: [...prev.users, newUser]
+        }));
+      }
+    }
     
-    const response = await apiClient.get<ErrorResponse>(
-      `/api/errors?page=${nextPage}&size=${pageSize}`
-    );
-    
-    setErrors(prev => [...prev, ...response.data.errors]);
-    setHasMore(response.data.hasMore);
-    setPage(nextPage);
-    
+    setEditDialogOpen(false);
+    setSelectedRecord(null);
+    setUsersError(null);
   } catch (err: any) {
-    console.error('Error loading more errors:', err);
-    setError('Failed to load more errors');
-  } finally {
-    setLoadingMore(false);
+    console.error('Error saving record:', err);
+    setUsersError(err.response?.data?.message || err.message || 'Failed to save record');
   }
 };
+
+  const handleDeleteRecord = async (record: Record<string, any>) => {
+    if (!confirm('Are you sure you want to delete this record?')) {
+      return;
+    }
+
+    try {
+      if (selectedTable === 'users') {
+        await userService.deleteUser(record.id);
+        
+        // Update local state
+        setDatabaseTables(prev => ({
+          ...prev,
+          users: prev.users.filter(user => user.id !== record.id)
+        }));
+      }
+      // Add similar logic for other tables if needed
+    } catch (err: any) {
+      console.error('Error deleting record:', err);
+      setUsersError('Failed to delete record');
+    }
+  };
+
+  const handleCreateUser = () => {
+  setSelectedRecord({
+    name: '',
+    email: '',
+    phoneNumber: '',
+    bio: '',
+    location: '',
+    password: 'pass123', // Show "pass123" in UI but we'll override with hash in handleSaveRecord
+    createdAt: new Date().toISOString()
+  });
+  setEditDialogOpen(true);
+};
+
+  useEffect(() => {
+    const fetchErrors = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await apiClient.get<ErrorResponse>(`/api/errors?page=0&size=${pageSize}`);
+        
+        setErrors(response.data.errors);
+        setHasMore(response.data.hasMore);
+        setPage(0);
+        
+      } catch (err: any) {
+        console.error('Error fetching errors:', err);
+        setError(err.response?.data?.message || err.message || 'Failed to fetch errors');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchErrors();
+  }, []);
+
+  const loadMoreErrors = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      
+      const response = await apiClient.get<ErrorResponse>(
+        `/api/errors?page=${nextPage}&size=${pageSize}`
+      );
+      
+      setErrors(prev => [...prev, ...response.data.errors]);
+      setHasMore(response.data.hasMore);
+      setPage(nextPage);
+      
+    } catch (err: any) {
+      console.error('Error loading more errors:', err);
+      setError('Failed to load more errors');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Forum Posts Data
   const forumPosts = [
@@ -226,8 +302,6 @@ const loadMoreErrors = async () => {
     { id: 4, admin: 'Admin User', action: 'Approved resource', target: 'Physics Notes.pdf', timestamp: '2024-01-14 08:20', details: 'Content verification' },
   ];
 
-  
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active':
@@ -258,17 +332,6 @@ const loadMoreErrors = async () => {
       default:
         return 'bg-muted text-muted-foreground';
     }
-  };
-
-  const handleEditRecord = (record: Record<string, any>) => {
-    setSelectedRecord(record);
-    setEditDialogOpen(true);
-  };
-
-  const handleSaveRecord = (updatedRecord: Record<string, any>) => {
-    // Update the record in the databaseTables state
-    // In a real app, this would make an API call
-    console.log('Saving record:', updatedRecord);
   };
 
   const handleExportCSV = () => {
@@ -306,6 +369,16 @@ const loadMoreErrors = async () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    } catch {
+      return dateString;
+    }
   };
 
   return (
@@ -352,15 +425,13 @@ const loadMoreErrors = async () => {
         {/* Dashboard Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <div className="w-full aspect-[16/9] max-h-[90vh] rounded-2xl overflow-hidden">
-           <iframe
-          title="CampusLearn Analytics Dashboard"
-          style={{ width: '100%', height: '100%', border: 'none' }}
-          src={powerURL}
-          allowFullScreen={true}
-        ></iframe>
+            <iframe
+              title="CampusLearn Analytics Dashboard"
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              src={powerURL}
+              allowFullScreen={true}
+            ></iframe>
           </div>
-
-         
 
           {/* System Health */}
           <Card>
@@ -393,7 +464,6 @@ const loadMoreErrors = async () => {
           </Card>
         </TabsContent>
 
-
         {/* Database Tools Tab */}
         <TabsContent value="database" className="space-y-6">
           <Card>
@@ -406,13 +476,31 @@ const loadMoreErrors = async () => {
                   </CardTitle>
                   <CardDescription>View and edit database tables with CRUD functionality</CardDescription>
                 </div>
-                <Button size="sm" variant="outline" onClick={handleExportCSV}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export CSV
-                </Button>
+                <div className="flex gap-2">
+                  {selectedTable === 'users' && (
+                    <Button size="sm" onClick={handleCreateUser}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add User
+                    </Button>
+                  )}
+                  <Button size="sm" variant="outline" onClick={handleExportCSV}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export CSV
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Error Message */}
+              {usersError && (
+                <div className="bg-destructive/15 border border-destructive/50 text-destructive px-4 py-3 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4" />
+                    <span>{usersError}</span>
+                  </div>
+                </div>
+              )}
+
               <Select value={selectedTable} onValueChange={setSelectedTable}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select table" />
@@ -420,12 +508,18 @@ const loadMoreErrors = async () => {
                 <SelectContent>
                   <SelectItem value="users">Users</SelectItem>
                   <SelectItem value="tutors">Tutors</SelectItem>
-                  <SelectItem value="topics">Topics</SelectItem>
-                  <SelectItem value="messages">Messages</SelectItem>
-                  <SelectItem value="reports">Reports</SelectItem>
-                  <SelectItem value="resources">Resources</SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Loading State */}
+              {usersLoading && selectedTable === 'users' && (
+                <div className="flex justify-center items-center p-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-sm text-muted-foreground">Loading users...</p>
+                  </div>
+                </div>
+              )}
 
               <Table>
                 <TableHeader>
@@ -435,8 +529,10 @@ const loadMoreErrors = async () => {
                         <TableHead>ID</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Joined Date</TableHead>
+                        <TableHead>Bio</TableHead>
                         <TableHead>Actions</TableHead>
                       </>
                     )}
@@ -495,10 +591,25 @@ const loadMoreErrors = async () => {
                 <TableBody>
                   {databaseTables[selectedTable as keyof typeof databaseTables].map((row: any) => (
                     <TableRow key={row.id}>
-                      <TableCell>{row.id}</TableCell>
-                      {Object.entries(row).slice(1).map(([key, value]) => (
-                        <TableCell key={key}>{String(value)}</TableCell>
-                      ))}
+                      <TableCell className="font-medium">{row.id}</TableCell>
+                      {selectedTable === 'users' ? (
+                        <>
+                          <TableCell>{row.name || 'N/A'}</TableCell>
+                          <TableCell>{row.email || 'N/A'}</TableCell>
+                          <TableCell>{row.phoneNumber || 'N/A'}</TableCell>
+                          <TableCell>{row.location || 'N/A'}</TableCell>
+                          <TableCell>{formatDate(row.createdAt)}</TableCell>
+                          <TableCell className="max-w-[200px] truncate" title={row.bio}>
+                            {row.bio || 'N/A'}
+                          </TableCell>
+                        </>
+                      ) : (
+                        Object.entries(row).slice(1).map(([key, value]) => (
+                          <TableCell key={key}>
+                            {String(value)}
+                          </TableCell>
+                        ))
+                      )}
                       <TableCell>
                         <div className="flex space-x-1">
                           <Button 
@@ -509,7 +620,12 @@ const loadMoreErrors = async () => {
                           >
                             <Edit className="h-3 w-3" />
                           </Button>
-                          <Button variant="ghost" size="sm" title="Delete">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            title="Delete"
+                            onClick={() => handleDeleteRecord(row)}
+                          >
                             <Trash2 className="h-3 w-3" />
                           </Button>
                         </div>
@@ -522,132 +638,130 @@ const loadMoreErrors = async () => {
           </Card>
         </TabsContent>
 
-       {/* Errors & Alerts Tab */}
-<TabsContent value="errors" className="space-y-6">
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <AlertTriangle className="h-5 w-5" />
-        System Errors Log
-      </CardTitle>
-      <CardDescription>
-        Showing {errors.length} errors {hasMore && `(of ${errors.length}+)`}
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      {/* Loading State */}
-      {loading && (
-        <div className="flex justify-center items-center p-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-2 text-sm text-muted-foreground">Loading errors...</p>
-          </div>
-        </div>
-      )}
-      
-      {/* Error State */}
-      {error && !loading && (
-        <div className="bg-destructive/15 border border-destructive/50 text-destructive px-4 py-3 rounded-md">
-          <div className="flex items-center gap-2">
-            <XCircle className="h-4 w-4" />
-            <strong>Error:</strong> {error}
-          </div>
-        </div>
-      )}
-      
-      {/* Success State */}
-      {!loading && !error && (
-        <div className="space-y-4">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[100px]">ID</TableHead>
-                  <TableHead className="min-w-[150px]">Created At</TableHead>
-                  <TableHead className="min-w-[200px]">Message</TableHead>
-                  <TableHead className="min-w-[150px]">Endpoint</TableHead>
-                  <TableHead className="min-w-[100px]">User ID</TableHead>
-                  <TableHead className="min-w-[200px]">Stack Trace</TableHead>
-                  <TableHead className="min-w-[150px]">Additional Info</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {errors.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No errors found in the system
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  errors.map((error) => (
-                    <TableRow key={error.id} className="hover:bg-muted/50">
-                      <TableCell className="font-mono text-xs">
-                        {error.id ? error.id.slice(0, 8) + '...' : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-xs">
-                        {error.createdAt || "Invalid Date"}
-                      </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        <div className="text-sm line-clamp-2" title={error.message}>
-                          {error.message || 'N/A'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm font-mono">
-                        {error.endpoint || <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {error.userId || <span className="text-muted-foreground">—</span>}
-                      </TableCell>
-                      <TableCell className="max-w-[200px]">
-                        {/* {error.stackTrace || "-"} */}
-                        -
-                      </TableCell>
-                      <TableCell className="max-w-[150px]">
-                        {error.additional_info}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-          
-          {/* Load More Button */}
-          {hasMore && (
-            <div className="flex justify-center pt-4">
-              <Button 
-                onClick={loadMoreErrors} 
-                disabled={loadingMore}
-                variant="outline"
-                className="min-w-[120px]"
-              >
-                {loadingMore ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Load More
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-          
-          {/* No More Results */}
-          {!hasMore && errors.length > 0 && (
-            <div className="text-center py-4 text-muted-foreground">
-              No more errors to load
-            </div>
-          )}
-        </div>
-      )}
-    </CardContent>
-  </Card>
-</TabsContent>
-
+        {/* Errors & Alerts Tab */}
+        <TabsContent value="errors" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                System Errors Log
+              </CardTitle>
+              <CardDescription>
+                Showing {errors.length} errors {hasMore && `(of ${errors.length}+)`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Loading State */}
+              {loading && (
+                <div className="flex justify-center items-center p-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-sm text-muted-foreground">Loading errors...</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Error State */}
+              {error && !loading && (
+                <div className="bg-destructive/15 border border-destructive/50 text-destructive px-4 py-3 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4" />
+                    <strong>Error:</strong> {error}
+                  </div>
+                </div>
+              )}
+              
+              {/* Success State */}
+              {!loading && !error && (
+                <div className="space-y-4">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[100px]">ID</TableHead>
+                          <TableHead className="min-w-[150px]">Created At</TableHead>
+                          <TableHead className="min-w-[200px]">Message</TableHead>
+                          <TableHead className="min-w-[150px]">Endpoint</TableHead>
+                          <TableHead className="min-w-[100px]">User ID</TableHead>
+                          <TableHead className="min-w-[200px]">Stack Trace</TableHead>
+                          <TableHead className="min-w-[150px]">Additional Info</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {errors.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              No errors found in the system
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          errors.map((error) => (
+                            <TableRow key={error.id} className="hover:bg-muted/50">
+                              <TableCell className="font-mono text-xs">
+                                {error.id ? error.id.slice(0, 8) + '...' : 'N/A'}
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                {error.createdAt || "Invalid Date"}
+                              </TableCell>
+                              <TableCell className="max-w-[200px]">
+                                <div className="text-sm line-clamp-2" title={error.message}>
+                                  {error.message || 'N/A'}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm font-mono">
+                                {error.endpoint || <span className="text-muted-foreground">—</span>}
+                              </TableCell>
+                              <TableCell className="text-sm">
+                                {error.userId || <span className="text-muted-foreground">—</span>}
+                              </TableCell>
+                              <TableCell className="max-w-[200px]">
+                                -
+                              </TableCell>
+                              <TableCell className="max-w-[150px]">
+                                {error.additional_info}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {/* Load More Button */}
+                  {hasMore && (
+                    <div className="flex justify-center pt-4">
+                      <Button 
+                        onClick={loadMoreErrors} 
+                        disabled={loadingMore}
+                        variant="outline"
+                        className="min-w-[120px]"
+                      >
+                        {loadingMore ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                            Loading...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Load More
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {/* No More Results */}
+                  {!hasMore && errors.length > 0 && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No more errors to load
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Reports & Analytics Tab */}
         <TabsContent value="analytics" className="space-y-6">
@@ -754,6 +868,7 @@ const loadMoreErrors = async () => {
         record={selectedRecord}
         tableName={selectedTable}
         onSave={handleSaveRecord}
+        
       />
     </div>
   );

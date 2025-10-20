@@ -61,6 +61,24 @@ export function EditRecordDialog({
 
   const renderField = (key: string, value: any) => {
     const isImmutable = immutableFields.includes(key);
+
+    // Special handling for password field for new users
+  if (key === 'password' && !record.id) {
+    return (
+      <div key={key} className="space-y-2">
+        <Label className="text-muted-foreground">Password</Label>
+        <Input 
+          value="pass123" 
+          readOnly 
+          disabled 
+          className="bg-muted cursor-not-allowed"
+        />
+        <p className="text-xs text-muted-foreground">
+          Default password: pass123 (cannot be changed for new users)
+        </p>
+      </div>
+    );
+  }
     
     if (isImmutable) {
       return (
