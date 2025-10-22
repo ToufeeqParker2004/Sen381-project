@@ -138,7 +138,7 @@ const Profile = () => {
     });
   };
 
-  const handleTutorApplication = () => {
+  const handleTutorApplication = async () => {
     // Validate all required fields
     if (tutorApplication.subjects.length === 0) {
       toast({
@@ -176,10 +176,31 @@ const Profile = () => {
       return;
     }
 
+    // Send confirmation email
+    try {
+      const response = await fetch('https://moikeoljuxygsrnuhfws.supabase.co/functions/v1/send-tutor-application-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1vaWtlb2xqdXh5Z3NybnVoZndzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAwNjkzNjMsImV4cCI6MjA3NTY0NTM2M30.yiIU8-5ECNVFJHgNmQK3TO4KSecjahi85wGNf9gC5Wo'}`,
+        },
+        body: JSON.stringify({
+          name: user?.name || 'Student',
+          email: user?.email || user?.identifier || '',
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to send confirmation email');
+      }
+    } catch (error) {
+      console.error('Error sending confirmation email:', error);
+    }
+
     updateUser({ tutorApplicationStatus: 'pending' });
     toast({
       title: 'Application Submitted',
-      description: 'Your tutor application has been submitted for review.',
+      description: 'Your tutor application has been submitted for review. Check your email for confirmation.',
     });
   };
 
@@ -380,7 +401,7 @@ const Profile = () => {
         )}
 
         {/* Tutor Application */}
-        {(!user.isTutor && user.tutorApplicationStatus !== 'pending') && (
+        {(!user.isTutor && user.tutorApplicationStatus !== 'pending' && !user.isAdmin) && (
           <Card className="shadow-custom-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -489,7 +510,6 @@ const Profile = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <Button variant="outline" className="w-full">Change Password</Button>
-            <Button variant="outline" className="w-full">Two-Factor Authentication</Button>
             <Button variant="outline" className="w-full">Privacy Settings</Button>
           </CardContent>
         </Card>
