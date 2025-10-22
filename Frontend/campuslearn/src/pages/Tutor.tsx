@@ -5,6 +5,59 @@ import { Badge } from '@/components/ui/badge';
 import { BookOpen, Users, Calendar, MessageSquare, Clock, TrendingUp, ChevronRight, Filter, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import emailjs from '@emailjs/browser';
+
+// Add this function to send booking confirmation emails
+const sendBookingAcceptedEmail = async (bookingDetails: {
+  userEmail: string;
+  studentName: string;
+  tutorName: string;
+  subject: string;
+  date: string;
+  time: string;
+}) => {
+  try {
+    const templateParams = {
+      to_email: bookingDetails.userEmail,
+      student_name: bookingDetails.studentName,
+      tutor_name: bookingDetails.tutorName,
+      subject: bookingDetails.subject,
+      date: bookingDetails.date,
+      time: bookingDetails.time,
+      duration: '60 minutes',
+      status: 'accepted',
+    };
+
+    const result = await emailjs.send(
+      'service_tlebz6m', // Your service ID
+      'template_lwczffi', // Your booking confirmation template ID
+      templateParams,
+      'DbLbu0XllEUuRCyeU' // Your public key
+    );
+    
+    console.log('Booking confirmation email sent to:', bookingDetails.userEmail);
+    return true;
+  } catch (error) {
+    console.error('Failed to send booking confirmation email:', error);
+    return false;
+  }
+};
+
+// Add this function to fetch student email if needed
+const fetchStudentEmail = async (studentId: number): Promise<string> => {
+  try {
+    const token = localStorage.getItem('authToken');
+    const res = await fetch(`http://localhost:9090/student/${studentId}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch student');
+    const data = await res.json();
+    return data.email || 'student@example.com';
+  } catch (err) {
+    console.error(`Error fetching student ${studentId}:`, err);
+    return 'student@example.com';
+  }
+};
 
 interface RecentMessage {
   id: string;
@@ -175,6 +228,9 @@ export default function Tutor() {
 
       if (!response.ok) throw new Error('Failed to update status');
 
+      // Get the session details before updating state
+      const session = tutorSessions.find(s => s.id === bookingId);
+      
       // Update local state
       setTutorSessions((prev) => {
         const updated = prev.map((session) =>
@@ -196,10 +252,51 @@ export default function Tutor() {
 
         return updated;
       });
+
+      // Send email notification when booking is accepted
+      if (status === 'accepted' && session) {
+        const start = new Date(session.startDatetime);
+        
+        // Format date and time for email
+        const formattedDate = start.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        
+        const formattedTime = start.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        // Get student email - try from session first, then fetch if needed
+        let studentEmail = session.studentEmail;
+        if (!studentEmail) {
+          studentEmail = await fetchStudentEmail(session.studentId);
+        }
+
+        // Send confirmation email
+        const emailSent = await sendBookingAcceptedEmail({
+          userEmail: studentEmail,
+          studentName: session.studentName,
+          tutorName: user?.name || 'Tutor',
+          subject: session.subject,
+          date: formattedDate,
+          time: formattedTime,
+        });
+
+        console.log('Email notification sent:', emailSent);
+      }
+
     } catch (error) {
       console.error('Error updating booking status:', error);
     }
   };
+
+  // ... rest of your component code remains the same ...
+  // (The filtering, rendering, and other functions stay exactly as you have them)
 
   // Subjects for filter dropdown
   const subjects = Array.from(new Set(tutorSessions.map(s => s.subject))).filter(Boolean);

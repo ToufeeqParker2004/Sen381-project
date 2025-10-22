@@ -10,6 +10,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, BookOpen, Calendar, Clock, User, MapPin, Star, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import emailjs from '@emailjs/browser';
+
 
 interface TutorWithModulesResponse {
   tutor: {
@@ -28,6 +30,46 @@ interface Booking {
   endDatetime: string;
   status: 'pending' | 'accepted' | 'completed' | 'cancelled';
 }
+
+// Replace the entire sendBookingConfirmationEmail function with this:
+const sendBookingConfirmationEmail = async (bookingDetails: {
+  userEmail: string;
+  studentName: string;
+  tutorName: string;
+  subject: string;
+  date: string;
+  time: string;
+}) => {
+  try {
+    const templateParams = {
+      to_email: bookingDetails.userEmail,
+      student_name: bookingDetails.studentName,
+      tutor_name: bookingDetails.tutorName,
+      subject: bookingDetails.subject,
+      date: bookingDetails.date,
+      time: bookingDetails.time,
+      duration: '60 minutes',
+      status: 'pending',
+      booking_date: new Date().toLocaleDateString(),
+      // Add these to use in your template if needed:
+      user_email: bookingDetails.userEmail,
+      to_name: bookingDetails.studentName,
+    };
+
+    const result = await emailjs.send(
+      'service_tlebz6m',
+      'template_v4xkr7z',
+      templateParams,
+      'DbLbu0XllEUuRCyeU' // Add public key here too for security
+    );
+    
+    console.log('Email sent successfully to:', bookingDetails.userEmail);
+    return true;
+  } catch (error) {
+    console.error('Failed to send email to:', bookingDetails.userEmail, error);
+    return false;
+  }
+};
 
 export default function TutorsPage() {
   const { toast } = useToast();
@@ -195,7 +237,7 @@ export default function TutorsPage() {
     setSelectedTime('');
   };
 
-  // Handle booking
+  // Handle booking with email notification
   const handleBookSession = async () => {
     if (!user?.id) {
       toast({ title: 'Authentication Required', description: 'Please log in to book a session.', variant: 'destructive' });
@@ -245,6 +287,7 @@ export default function TutorsPage() {
     }
 
     try {
+      // Create the booking
       const response = await apiClient.post('/api/bookings', {
         tutorId: selectedTutor,
         studentId: Number(user.id),
@@ -255,9 +298,30 @@ export default function TutorsPage() {
         subject: selectedModule,
       });
 
+      // Send email notification
+      const tutor = tutors.find(t => t.tutorId === selectedTutor);
+      const emailSent = await sendBookingConfirmationEmail({
+        userEmail: user.email || '', // Using user's email from auth
+        studentName: user.name || 'Student',
+        tutorName: tutor?.student?.name || 'Tutor',
+        subject: selectedModule,
+        date: selectedDate.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        time: selectedTime
+      });
+
+      // Show appropriate toast message based on email success
       toast({
         title: 'Booking Request Submitted',
-        description: `Your session request for ${selectedModule} has been sent for approval. You will be notified once confirmed.`
+        description: `Your session request for ${selectedModule} has been sent for approval. ${
+          emailSent 
+            ? 'A confirmation email has been sent to your email address.' 
+            : 'Unable to send confirmation email, but your booking was submitted successfully.'
+        }`
       });
 
       // Reset form
@@ -379,7 +443,6 @@ export default function TutorsPage() {
 
         {/* Main Content */}
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
-          {/* Tutors List */}
           {/* Tutors List */}
           <div className="xl:col-span-3 space-y-6">
             {filteredTutors.length === 0 ? (
