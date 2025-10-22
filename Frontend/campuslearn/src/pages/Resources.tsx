@@ -245,10 +245,10 @@ export default function Resources() {
   };
 
   // Add this right after your getResourceColor function (around line 175)
-const isDocumentType = (documentType: string): boolean => {
-  const documentTypes = ['document', 'pdf', 'word', 'excel', 'powerpoint', 'text'];
-  return documentTypes.includes(documentType);
-};
+  const isDocumentType = (documentType: string): boolean => {
+    const documentTypes = ['document', 'pdf', 'word', 'excel', 'powerpoint', 'text'];
+    return documentTypes.includes(documentType);
+  };
 
   if (isLoading) {
     return (
@@ -260,6 +260,100 @@ const isDocumentType = (documentType: string): boolean => {
       </div>
     );
   }
+
+  // Safe slice function to prevent null errors
+  const safeSlice = (array: any[] | null | undefined, start: number, end?: number): any[] => {
+    if (!array) return [];
+    return array.slice(start, end);
+  };
+
+  // Function to render resource card - FIXED VERSION
+  const renderResourceCard = (resource: Match) => {
+    const IconComponent = getResourceIcon(resource.learningMaterial.documentType);
+    const iconColor = getResourceColor(resource.learningMaterial.documentType);
+    
+    // Safe handling of tags array
+    const tags = resource.learningMaterial.tags || [];
+    const displayedTags = safeSlice(tags, 0, 3);
+    const remainingTagsCount = Math.max(0, tags.length - 3);
+    
+    return (
+      <Card key={resource.learningMaterial.id} className="hover:shadow-custom-md transition-shadow">
+        <CardContent className="p-4 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-start space-y-3 md:space-y-0 md:space-x-4">
+            <div className={`p-2 md:p-3 rounded-lg bg-muted self-center md:self-start`}>
+              <IconComponent className={`h-6 w-6 md:h-8 md:w-8 ${iconColor}`} />
+            </div>
+            
+            <div className="flex-1 text-center md:text-left">
+              <div className="flex flex-col md:flex-row md:items-start md:justify-between">
+                <div className="flex-1">
+                  <Link to={`/resources/${resource.learningMaterial.id}`} className="block hover:text-primary transition-colors">
+                    <h3 className="text-base md:text-lg font-semibold mb-1 hover:underline line-clamp-2">
+                      {resource.learningMaterial.title || 'Untitled Resource'}
+                    </h3>
+                  </Link>
+                  
+                  <div className="flex flex-wrap justify-center md:justify-start gap-1 mb-3">
+                    {displayedTags.map(tag => (
+                      <Badge key={tag} variant="outline" className="text-xs">
+                        #{tag}
+                      </Badge>
+                    ))}
+                    {remainingTagsCount > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{remainingTagsCount} more
+                      </Badge>
+                    )}
+                    {tags.length === 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        No tags
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-2 text-xs md:text-sm text-muted-foreground space-y-1 md:space-y-0">
+                    <span className="text-center md:text-left">
+                      by {getUploaderName(resource.learningMaterial.uploaderId)}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-end space-y-2">
+                  <Badge variant="secondary" className="text-xs">
+                    {resource.learningMaterial.topicId || 'General'}
+                  </Badge>
+                  <div className="flex space-x-2">
+                    <DocumentPreview 
+                      documentUrl={resource.learningMaterial.fileUrl}
+                      documentName={resource.learningMaterial.title}
+                      fileType={resource.learningMaterial.documentType}
+                    />
+                    <Button 
+                      size="sm" 
+                      className="bg-gradient-primary hover:opacity-90"
+                      asChild
+                    >
+                      <a 
+                        href={resource.learningMaterial.fileUrl} 
+                        download 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1"
+                      >
+                        <Download className="h-3 w-3" />
+                        Download
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -299,190 +393,106 @@ const isDocumentType = (documentType: string): boolean => {
       </Card>
 
       <Tabs defaultValue="all" className="space-y-6">
-  <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto">
-    <TabsTrigger value="all" className="text-xs md:text-sm">
-      All ({matches.length})
-    </TabsTrigger>
-    <TabsTrigger value="documents" className="text-xs md:text-sm">
-      Documents ({matches.filter(match => isDocumentType(match.learningMaterial.documentType)).length})
-    </TabsTrigger>
-    <TabsTrigger value="videos" className="text-xs md:text-sm">
-      Videos ({matches.filter(match => match.learningMaterial.documentType === 'video').length})
-    </TabsTrigger>
-    <TabsTrigger value="images" className="text-xs md:text-sm">
-      Images ({matches.filter(match => match.learningMaterial.documentType === 'image').length})
-    </TabsTrigger>
-    <TabsTrigger value="links" className="text-xs md:text-sm">
-      Links ({matches.filter(match => match.learningMaterial.documentType === 'link').length})
-    </TabsTrigger>
-  </TabsList>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-auto">
+          <TabsTrigger value="all" className="text-xs md:text-sm">
+            All ({matches.length})
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="text-xs md:text-sm">
+            Documents ({matches.filter(match => isDocumentType(match.learningMaterial.documentType)).length})
+          </TabsTrigger>
+          <TabsTrigger value="videos" className="text-xs md:text-sm">
+            Videos ({matches.filter(match => match.learningMaterial.documentType === 'video').length})
+          </TabsTrigger>
+          <TabsTrigger value="images" className="text-xs md:text-sm">
+            Images ({matches.filter(match => match.learningMaterial.documentType === 'image').length})
+          </TabsTrigger>
+          <TabsTrigger value="links" className="text-xs md:text-sm">
+            Links ({matches.filter(match => match.learningMaterial.documentType === 'link').length})
+          </TabsTrigger>
+        </TabsList>
 
-  {/* Helper function to check if it's a document type */}
-  {(() => {
-    const isDocumentType = (documentType: string): boolean => {
-      const documentTypes = ['document', 'pdf', 'word', 'excel', 'powerpoint', 'text'];
-      return documentTypes.includes(documentType);
-    };
-
-    // Empty State Component
-    const EmptyState: React.FC<{ type: string }> = ({ type }) => (
-      <div className="text-center py-12 border-2 border-dashed border-muted-foreground/25 rounded-lg">
-        {type === 'documents' && <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />}
-        {type === 'videos' && <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4" />}
-        {type === 'images' && <FileImage className="h-12 w-12 text-muted-foreground mx-auto mb-4" />}
-        {type === 'links' && <LinkIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />}
-        <h3 className="text-lg font-semibold mb-2 capitalize">No {type} found</h3>
-        <p className="text-muted-foreground max-w-sm mx-auto">
-          {type === 'documents' && "You don't have any document resources yet."}
-          {type === 'videos' && "You don't have any video resources yet."}
-          {type === 'images' && "You don't have any image resources yet."}
-          {type === 'links' && "You don't have any link resources yet."}
-        </p>
-      </div>
-    );
-
-    // Function to render resource card
-    const renderResourceCard = (resource: Match) => {
-      const IconComponent = getResourceIcon(resource.learningMaterial.documentType);
-      const iconColor = getResourceColor(resource.learningMaterial.documentType);
-      
-      return (
-        <Card key={resource.learningMaterial.id} className="hover:shadow-custom-md transition-shadow">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex flex-col md:flex-row md:items-start space-y-3 md:space-y-0 md:space-x-4">
-              <div className={`p-2 md:p-3 rounded-lg bg-muted self-center md:self-start`}>
-                <IconComponent className={`h-6 w-6 md:h-8 md:w-8 ${iconColor}`} />
-              </div>
-              
-              <div className="flex-1 text-center md:text-left">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between">
-                  <div className="flex-1">
-                    <Link to={`/resources/${resource.learningMaterial.id}`} className="block hover:text-primary transition-colors">
-                      <h3 className="text-base md:text-lg font-semibold mb-1 hover:underline line-clamp-2">
-                        {resource.learningMaterial.title}
-                      </h3>
-                    </Link>
-                    
-                    <div className="flex flex-wrap justify-center md:justify-start gap-1 mb-3">
-                      {resource.learningMaterial.tags.slice(0, 3).map(tag => (
-                        <Badge key={tag} variant="outline" className="text-xs">
-                          #{tag}
-                        </Badge>
-                      ))}
-                      {resource.learningMaterial.tags.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{resource.learningMaterial.tags.length - 3} more
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-2 text-xs md:text-sm text-muted-foreground space-y-1 md:space-y-0">
-                      <span className="text-center md:text-left">
-                        by {getUploaderName(resource.learningMaterial.uploaderId)}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-end space-y-2">
-                    <Badge variant="secondary" className="text-xs">
-                      {resource.learningMaterial.topicId}
-                    </Badge>
-                    <div className="flex space-x-2">
-                      <DocumentPreview 
-                        documentUrl={resource.learningMaterial.fileUrl}
-                        documentName={resource.learningMaterial.title}
-                        fileType={resource.learningMaterial.documentType}
-                      />
-                      <Button 
-                        size="sm" 
-                        className="bg-gradient-primary hover:opacity-90"
-                        asChild
-                      >
-                        <a 
-                          href={resource.learningMaterial.fileUrl} 
-                          download 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1"
-                        >
-                          <Download className="h-3 w-3" />
-                          Download
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* Empty State Component */}
+        {(() => {
+          const EmptyState: React.FC<{ type: string }> = ({ type }) => (
+            <div className="text-center py-12 border-2 border-dashed border-muted-foreground/25 rounded-lg">
+              {type === 'documents' && <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />}
+              {type === 'videos' && <Video className="h-12 w-12 text-muted-foreground mx-auto mb-4" />}
+              {type === 'images' && <FileImage className="h-12 w-12 text-muted-foreground mx-auto mb-4" />}
+              {type === 'links' && <LinkIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />}
+              <h3 className="text-lg font-semibold mb-2 capitalize">No {type} found</h3>
+              <p className="text-muted-foreground max-w-sm mx-auto">
+                {type === 'documents' && "You don't have any document resources yet."}
+                {type === 'videos' && "You don't have any video resources yet."}
+                {type === 'images' && "You don't have any image resources yet."}
+                {type === 'links' && "You don't have any link resources yet."}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      );
-    };
+          );
 
-    return (
-      <>
-        {/* All Tab */}
-        <TabsContent value="all" className="space-y-6">
-          <div className="grid gap-4 md:gap-6">
-            {matches.map(resource => renderResourceCard(resource))}
-          </div>
-        </TabsContent>
+          return (
+            <>
+              {/* All Tab */}
+              <TabsContent value="all" className="space-y-6">
+                <div className="grid gap-4 md:gap-6">
+                  {matches.map(resource => renderResourceCard(resource))}
+                </div>
+              </TabsContent>
 
-        {/* Documents Tab */}
-        <TabsContent value="documents" className="space-y-6">
-          <div className="grid gap-4 md:gap-6">
-            {matches
-              .filter(match => isDocumentType(match.learningMaterial.documentType))
-              .map(resource => renderResourceCard(resource))
-            }
-            {matches.filter(match => isDocumentType(match.learningMaterial.documentType)).length === 0 && (
-              <EmptyState type="documents" />
-            )}
-          </div>
-        </TabsContent>
+              {/* Documents Tab */}
+              <TabsContent value="documents" className="space-y-6">
+                <div className="grid gap-4 md:gap-6">
+                  {matches
+                    .filter(match => isDocumentType(match.learningMaterial.documentType))
+                    .map(resource => renderResourceCard(resource))
+                  }
+                  {matches.filter(match => isDocumentType(match.learningMaterial.documentType)).length === 0 && (
+                    <EmptyState type="documents" />
+                  )}
+                </div>
+              </TabsContent>
 
-        {/* Videos Tab */}
-        <TabsContent value="videos" className="space-y-6">
-          <div className="grid gap-4 md:gap-6">
-            {matches
-              .filter(match => match.learningMaterial.documentType === 'video')
-              .map(resource => renderResourceCard(resource))
-            }
-            {matches.filter(match => match.learningMaterial.documentType === 'video').length === 0 && (
-              <EmptyState type="videos" />
-            )}
-          </div>
-        </TabsContent>
+              {/* Videos Tab */}
+              <TabsContent value="videos" className="space-y-6">
+                <div className="grid gap-4 md:gap-6">
+                  {matches
+                    .filter(match => match.learningMaterial.documentType === 'video')
+                    .map(resource => renderResourceCard(resource))
+                  }
+                  {matches.filter(match => match.learningMaterial.documentType === 'video').length === 0 && (
+                    <EmptyState type="videos" />
+                  )}
+                </div>
+              </TabsContent>
 
-        {/* Images Tab */}
-        <TabsContent value="images" className="space-y-6">
-          <div className="grid gap-4 md:gap-6">
-            {matches
-              .filter(match => match.learningMaterial.documentType === 'image')
-              .map(resource => renderResourceCard(resource))
-            }
-            {matches.filter(match => match.learningMaterial.documentType === 'image').length === 0 && (
-              <EmptyState type="images" />
-            )}
-          </div>
-        </TabsContent>
+              {/* Images Tab */}
+              <TabsContent value="images" className="space-y-6">
+                <div className="grid gap-4 md:gap-6">
+                  {matches
+                    .filter(match => match.learningMaterial.documentType === 'image')
+                    .map(resource => renderResourceCard(resource))
+                  }
+                  {matches.filter(match => match.learningMaterial.documentType === 'image').length === 0 && (
+                    <EmptyState type="images" />
+                  )}
+                </div>
+              </TabsContent>
 
-        {/* Links Tab */}
-        <TabsContent value="links" className="space-y-6">
-          <div className="grid gap-4 md:gap-6">
-            {matches
-              .filter(match => match.learningMaterial.documentType === 'link')
-              .map(resource => renderResourceCard(resource))
-            }
-            {matches.filter(match => match.learningMaterial.documentType === 'link').length === 0 && (
-              <EmptyState type="links" />
-            )}
-          </div>
-        </TabsContent>
-      </>
-    );
-  })()}
-</Tabs>
+              {/* Links Tab */}
+              <TabsContent value="links" className="space-y-6">
+                <div className="grid gap-4 md:gap-6">
+                  {matches
+                    .filter(match => match.learningMaterial.documentType === 'link')
+                    .map(resource => renderResourceCard(resource))
+                  }
+                  {matches.filter(match => match.learningMaterial.documentType === 'link').length === 0 && (
+                    <EmptyState type="links" />
+                  )}
+                </div>
+              </TabsContent>
+            </>
+          );
+        })()}
+      </Tabs>
     </div>
   );
 }
