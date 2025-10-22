@@ -283,14 +283,6 @@ export default function Forum() {
                             <MessageCircle className="mr-1 h-3 w-3" />
                             {post.replies || 0} Comments
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
-                            <Share className="mr-1 h-3 w-3" />
-                            Share
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
-                            <MoreHorizontal className="h-3 w-3" />
-                          </Button>
-                          <span>{post.upvotes || 0} upvotes</span>
                         </div>
                       </div>
                     </div>

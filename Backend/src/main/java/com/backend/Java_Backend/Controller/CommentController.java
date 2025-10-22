@@ -46,7 +46,7 @@ public class CommentController {
 
             if (!allowed) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Collections.singletonMap("error", "Comment blocked by moderation due to inappropriate content"));
+                        .body(Collections.singletonMap("error", "Comment blocked by moderation"));
             }
             Comment comment = commentService.addComment(postId, studentId, content);
             return ResponseEntity.ok(comment);
