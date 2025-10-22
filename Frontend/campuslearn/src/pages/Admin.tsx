@@ -125,13 +125,8 @@ export default function Admin() {
 
   const powerURL = "https://app.powerbi.com/view?r=eyJrIjoiZWNkNmVhYzQtNDliZC00YzFkLTljMTQtMmQ0ZThlZWM0YjU1IiwidCI6ImVhMWE5MDliLTY2MDAtNGEyNS04MmE1LTBjNmVkN2QwNTEzYiIsImMiOjl9&pageName=35a3420a0cb3b9bccc5e";
 
-  // System Stats
-  const systemStats = [
-    { label: 'Total Users', value: '2,847', change: '+12%', icon: Users, color: 'text-primary' },
-    { label: 'Active Tutors', value: '156', change: '+8%', icon: Shield, color: 'text-secondary' },
-    { label: 'Total Topics', value: '1,243', change: '+15%', icon: MessageSquare, color: 'text-success' },
-    { label: 'API Uptime', value: '99.9%', change: '0%', icon: Server, color: 'text-warning' },
-  ];
+
+  
 
   const [databaseTables, setDatabaseTables] = useState({
     users: [] as User[],
@@ -717,25 +712,7 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Dashboard Overview Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {systemStats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="hover:shadow-custom-md transition-shadow">
-              <CardContent className="flex items-center p-6">
-                <div className="p-3 rounded-lg bg-muted mr-4">
-                  <Icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-muted-foreground text-sm">{stat.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      
 
       {/* Main Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
