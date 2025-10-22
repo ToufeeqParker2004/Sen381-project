@@ -4,6 +4,7 @@ import com.backend.Java_Backend.DTO.ApplicantDayAvailabilityDTO;
 import com.backend.Java_Backend.DTO.TutoringApplicationDTO;
 import com.backend.Java_Backend.Models.*;
 import com.backend.Java_Backend.Repository.*;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import okhttp3.*;
 import okhttp3.Response;
@@ -33,6 +34,10 @@ public class TutoringApplicationService {
     private StudentRepository studentRepository;
     @Autowired
     private AvailabilityRepository availabilityRepository;
+    @Autowired
+    private ModuleRepository moduleRepository;
+    @Autowired
+    private TutorModuleRepository tutorModuleRepository;
     @Autowired
     private OkHttpClient httpClient;
     @Autowired
@@ -100,20 +105,33 @@ public class TutoringApplicationService {
         Map<String, List<Map<String, String>>> availabilityJson;
         try {
             if (dto.getAvailabilityJson() != null && !dto.getAvailabilityJson().isEmpty()) {
-                availabilityJson = objectMapper.readValue(dto.getAvailabilityJson(), Map.class);
+                availabilityJson = objectMapper.readValue(dto.getAvailabilityJson(), new TypeReference<Map<String, List<Map<String, String>>>>() {});
             } else {
                 availabilityJson = null;
             }
         } catch (Exception e) {
-            logger.error("Invalid availabilityJson format", e);
+            logger.error("Invalid availabilityJson format: {}", dto.getAvailabilityJson(), e);
             throw new IllegalArgumentException("Invalid availabilityJson format", e);
+        }
+
+        List<String> modules;
+        if (dto.getModules() != null && !dto.getModules().isEmpty()) {
+            logger.debug("Received modules: {}", dto.getModules());
+            modules = dto.getModules().stream()
+                    .filter(module -> module != null && !module.trim().isEmpty())
+                    .map(String::trim)
+                    .collect(Collectors.toList());
+            logger.debug("Processed modules: {}", modules);
+        } else {
+            modules = new ArrayList<>();
+            logger.debug("No modules provided in DTO");
         }
 
         TutoringStudentApplication application = new TutoringStudentApplication();
         application.setStudent(student);
         application.setStatus(ApplicationStatus.PENDING);
         application.setApplicationTranscript(fileName);
-        application.setModules(dto.getModules());
+        application.setModules(modules);
         application.setExperienceDescription(dto.getExperienceDescription());
         application.setAvailabilityJson(availabilityJson);
         application.setCreatedAt(LocalDateTime.now());
@@ -132,7 +150,14 @@ public class TutoringApplicationService {
             }
         }
 
-        return applicationRepository.save(application);
+        try {
+            TutoringStudentApplication savedApplication = applicationRepository.save(application);
+            logger.debug("Saved application with ID: {}, modules: {}", savedApplication.getId(), savedApplication.getModules());
+            return savedApplication;
+        } catch (Exception e) {
+            logger.error("Failed to save application: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to save application", e);
+        }
     }
 
     @Transactional
@@ -141,65 +166,41 @@ public class TutoringApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("Application not found"));
         String fileName = app.getApplicationTranscript();
         if (fileName == null || fileName.isEmpty()) {
-            logger.error("No transcript file found for application ID: {}", applicationId);
-            throw new IllegalArgumentException("No transcript file found for application");
+            throw new IllegalArgumentException("No transcript file associated with this application");
         }
-        // Encode only the file name part, preserving folder slashes
-        String[] pathParts = fileName.split("/", -1);
-        String encodedFileName = fileName;
-        if (pathParts.length > 1) {
-            String folder = String.join("/", Arrays.copyOfRange(pathParts, 0, pathParts.length - 1));
-            String filePart = pathParts[pathParts.length - 1];
-            encodedFileName = folder + "/" + URLEncoder.encode(filePart, StandardCharsets.UTF_8).replace("+", "%20");
-        } else {
-            encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
-        }
-        String signedUrlApi = SUPABASE_URL + "/storage/v1/object/sign/" + BUCKET_NAME + "/" + encodedFileName;
 
-        logger.debug("Attempting to generate signed URL for file: {}, API: {}", fileName, signedUrlApi);
+        String encodedFileName;
         try {
-            String jsonBody = objectMapper.writeValueAsString(new HashMap<String, Object>() {{
-                put("expiresIn", 3600);
-            }});
-            logger.debug("Request body: {}", jsonBody);
-            RequestBody body = RequestBody.create(jsonBody, MediaType.parse("application/json"));
+            encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.toString()).replace("+", "%20");
+        } catch (Exception e) {
+            logger.error("Failed to encode file name: {}", fileName, e);
+            throw new RuntimeException("Failed to encode file name", e);
+        }
+
+        String url = SUPABASE_URL + "/storage/v1/object/sign/" + BUCKET_NAME + "/" + encodedFileName + "?download=true";
+        try {
+            FormBody body = new FormBody.Builder()
+                    .add("expiresIn", "3600")
+                    .build();
             Request request = new Request.Builder()
-                    .url(signedUrlApi)
+                    .url(url)
                     .post(body)
                     .addHeader("Authorization", "Bearer " + SUPABASE_KEY)
-                    .addHeader("Content-Type", "application/json")
                     .build();
             Response response = httpClient.newCall(request).execute();
             if (!response.isSuccessful()) {
                 String responseBody = response.body() != null ? response.body().string() : "No response body";
-                logger.error("Failed to create signed URL for file {}: HTTP {} {} - {}", fileName, response.code(), response.message(), responseBody);
-                // Fallback: Try without transcripts/ prefix
-                String fallbackFileName = fileName.startsWith("transcripts/") ? fileName.substring("transcripts/".length()) : fileName;
-                String encodedFallbackFileName = URLEncoder.encode(fallbackFileName, StandardCharsets.UTF_8).replace("+", "%20");
-                String fallbackSignedUrlApi = SUPABASE_URL + "/storage/v1/object/sign/" + BUCKET_NAME + "/" + encodedFallbackFileName;
-                logger.debug("Retrying with fallback URL: {}", fallbackSignedUrlApi);
-                request = new Request.Builder()
-                        .url(fallbackSignedUrlApi)
-                        .post(body)
-                        .addHeader("Authorization", "Bearer " + SUPABASE_KEY)
-                        .addHeader("Content-Type", "application/json")
-                        .build();
-                response = httpClient.newCall(request).execute();
-                if (!response.isSuccessful()) {
-                    responseBody = response.body() != null ? response.body().string() : "No response body";
-                    logger.error("Fallback failed for file {}: HTTP {} {} - {}", fallbackFileName, response.code(), response.message(), responseBody);
-                    throw new RuntimeException("Failed to create signed URL: HTTP " + response.code() + " " + response.message() + " - " + responseBody);
-                }
+                logger.error("Failed to generate signed URL for {}: HTTP {} {} - {}", fileName, response.code(), response.message(), responseBody);
+                throw new RuntimeException("Failed to generate signed URL: HTTP " + response.code() + " " + response.message() + " - " + responseBody);
             }
-            String responseBody = response.body().string();
-            logger.debug("Signed URL response: {}", responseBody);
-            Map<String, String> responseMap = objectMapper.readValue(responseBody, Map.class);
-            String signedUrl = responseMap.getOrDefault("signedURL", responseMap.get("url"));
+            String responseBody = response.body() != null ? response.body().string() : "{}";
+            Map<String, String> responseMap = objectMapper.readValue(responseBody, new TypeReference<Map<String, String>>() {});
+            String signedUrl = responseMap.get("signedURL") != null ? responseMap.get("signedURL") : responseMap.getOrDefault("url", responseMap.get("signedUrl"));
             if (signedUrl == null) {
                 logger.error("Signed URL not found in response for file {}: {}", fileName, responseBody);
                 throw new RuntimeException("Signed URL not found in response");
             }
-            String finalUrl = signedUrl.startsWith("http") ? signedUrl : SUPABASE_URL + signedUrl;
+            String finalUrl = signedUrl.startsWith("http") ? signedUrl : SUPABASE_URL + "/storage/v1" + signedUrl;
             logger.debug("Generated signed URL: {}", finalUrl);
             response.close();
             return finalUrl;
@@ -219,21 +220,94 @@ public class TutoringApplicationService {
 
         // Check if a Tutor already exists for this student_id
         Integer studentId = app.getStudent().getId();
+        logger.debug("Processing approval for student_id: {}", studentId);
         Tutor tutor = tutorRepository.findByStudent_id(studentId)
                 .orElseGet(() -> {
                     Tutor newTutor = new Tutor();
                     newTutor.setStudent_id(studentId);
                     newTutor.setCreated_at(new Timestamp(System.currentTimeMillis()));
-                    return tutorRepository.save(newTutor);
+                    Tutor savedTutor = tutorRepository.save(newTutor);
+                    logger.debug("Created new tutor with ID: {} for student_id: {}", savedTutor.getId(), studentId);
+                    return savedTutor;
                 });
 
+        // Handle modules, accounting for possible JSON string in modules field
+        List<String> moduleNames;
+        try {
+            List<String> rawModules = app.getModules() != null ? app.getModules() : new ArrayList<>();
+            logger.debug("Raw modules from application: {}", rawModules);
+            if (!rawModules.isEmpty() && rawModules.get(0).startsWith("[") && rawModules.get(0).endsWith("]")) {
+                // Handle case where modules is a single JSON string
+                moduleNames = objectMapper.readValue(rawModules.get(0), new TypeReference<List<String>>() {});
+                logger.debug("Parsed JSON modules: {}", moduleNames);
+            } else {
+                // Handle case where modules is already a List<String>
+                moduleNames = rawModules.stream()
+                        .filter(module -> module != null && !module.trim().isEmpty())
+                        .map(String::trim)
+                        .collect(Collectors.toList());
+                logger.debug("Processed modules: {}", moduleNames);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to parse modules for application ID: {}: {}", applicationId, e.getMessage(), e);
+            throw new IllegalArgumentException("Invalid modules format: " + app.getModules(), e);
+        }
+
+        // Assign modules to tutor
+        List<String> unmatchedModules = new ArrayList<>();
+        if (moduleNames.isEmpty()) {
+            logger.warn("No modules provided for application ID: {}", applicationId);
+        }
+
+        for (String moduleName : moduleNames) {
+            if (moduleName == null || moduleName.trim().isEmpty()) {
+                logger.warn("Skipping empty or null module name for application ID: {}", applicationId);
+                unmatchedModules.add(moduleName);
+                continue;
+            }
+            Optional<Modules> moduleOpt = moduleRepository.findByModuleNameIgnoreCase(moduleName.trim());
+            if (moduleOpt.isPresent()) {
+                Modules module = moduleOpt.get();
+                logger.debug("Found module '{}' with ID: {}", module.getModule_name(), module.getId());
+                TutorModuleId tutorModuleId = new TutorModuleId(tutor.getId(), module.getId());
+                if (!tutorModuleRepository.existsById(tutorModuleId)) {
+                    TutorModule tutorModule = new TutorModule(tutor, module);
+                    try {
+                        tutorModuleRepository.save(tutorModule);
+                        logger.info("Assigned module {} (ID: {}) to tutor {} (ID: {})",
+                                module.getModule_name(), module.getId(), tutor.getId(), tutor.getId());
+                    } catch (Exception e) {
+                        logger.error("Failed to save TutorModule for tutor_id: {}, module_id: {}: {}",
+                                tutor.getId(), module.getId(), e.getMessage(), e);
+                        unmatchedModules.add(moduleName);
+                    }
+                } else {
+                    logger.info("Module {} (ID: {}) already assigned to tutor {} (ID: {})",
+                            module.getModule_name(), module.getId(), tutor.getId(), tutor.getId());
+                }
+            } else {
+                unmatchedModules.add(moduleName);
+                logger.warn("Module not found for name: {} in Modules table", moduleName);
+            }
+        }
+
+        // Log unmatched modules and throw exception if no modules were assigned
+        if (!unmatchedModules.isEmpty()) {
+            logger.warn("The following modules could not be assigned to tutor {} (ID: {}): {}",
+                    tutor.getId(), tutor.getId(), unmatchedModules);
+            if (moduleNames.size() == unmatchedModules.size() && !moduleNames.isEmpty()) {
+                throw new IllegalArgumentException("No valid modules found for assignment: " + unmatchedModules);
+            }
+        }
+
+        // Handle availability
         Map<String, List<Map<String, String>>> availability = app.getAvailabilityJson();
         if (availability != null && availability.containsKey("availability")) {
             List<Map<String, String>> slots = availability.get("availability");
             for (Map<String, String> slot : slots) {
                 Integer dayOfWeek = DAY_TO_INT.get(slot.get("day"));
                 if (dayOfWeek == null) {
-                    logger.warn("Skipping invalid day: {}", slot.get("day"));
+                    logger.warn("Skipping invalid day: {} for application ID: {}", slot.get("day"), applicationId);
                     continue;
                 }
 
@@ -249,13 +323,27 @@ public class TutoringApplicationService {
                 availabilityRecord.setEndDate(null);
                 availabilityRecord.setRecurring(true);
                 availabilityRecord.setSlotDurationMinutes(60);
-                availabilityRepository.save(availabilityRecord);
+                try {
+                    availabilityRepository.save(availabilityRecord);
+                    logger.debug("Saved availability for tutor_id: {}, day: {}, start: {}, end: {}",
+                            tutor.getId(), slot.get("day"), start, end);
+                } catch (Exception e) {
+                    logger.error("Failed to save availability for tutor_id: {}, day: {}: {}",
+                            tutor.getId(), slot.get("day"), e.getMessage(), e);
+                }
             }
         }
 
         app.setStatus(ApplicationStatus.ACCEPTED);
         app.setTutor(tutor);
-        applicationRepository.save(app);
+        try {
+            applicationRepository.save(app);
+            logger.debug("Updated application ID: {} to status ACCEPTED with tutor_id: {}",
+                    applicationId, tutor.getId());
+        } catch (Exception e) {
+            logger.error("Failed to save application ID: {}: {}", applicationId, e.getMessage(), e);
+            throw new RuntimeException("Failed to update application status", e);
+        }
     }
 
     @Transactional
@@ -267,7 +355,13 @@ public class TutoringApplicationService {
         }
         app.setStatus(ApplicationStatus.DECLINED);
         app.setTutor(null);
-        applicationRepository.save(app);
+        try {
+            applicationRepository.save(app);
+            logger.debug("Updated application ID: {} to status DECLINED", applicationId);
+        } catch (Exception e) {
+            logger.error("Failed to save application ID: {}: {}", applicationId, e.getMessage(), e);
+            throw new RuntimeException("Failed to update application status", e);
+        }
     }
 
     public List<ApplicantDayAvailabilityDTO> getApplicantsByDayAvailability() {
@@ -282,10 +376,55 @@ public class TutoringApplicationService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public void deleteApplication(UUID applicationId) {
+        TutoringStudentApplication app = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new IllegalArgumentException("Application not found"));
+
+        String fileName = app.getApplicationTranscript();
+        if (fileName != null && !fileName.isEmpty()) {
+            String encodedFileName = fileName;
+            try {
+                String[] pathParts = fileName.split("/", -1);
+                if (pathParts.length > 1) {
+                    String folder = String.join("/", Arrays.copyOfRange(pathParts, 0, pathParts.length - 1));
+                    String filePart = pathParts[pathParts.length - 1];
+                    encodedFileName = folder + "/" + URLEncoder.encode(filePart, StandardCharsets.UTF_8).replace("+", "%20");
+                } else {
+                    encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+                }
+
+                String deleteUrl = SUPABASE_URL + "/storage/v1/object/" + BUCKET_NAME + "/" + encodedFileName;
+                Request request = new Request.Builder()
+                        .url(deleteUrl)
+                        .delete()
+                        .addHeader("Authorization", "Bearer " + SUPABASE_KEY)
+                        .build();
+                Response response = httpClient.newCall(request).execute();
+                if (!response.isSuccessful()) {
+                    String responseBody = response.body() != null ? response.body().string() : "No response body";
+                    logger.warn("Failed to delete file {} from Supabase: HTTP {} {} - {}", fileName, response.code(), response.message(), responseBody);
+                }
+                response.close();
+            } catch (Exception e) {
+                logger.warn("Failed to delete file {} from Supabase Storage: {}", fileName, e.getMessage());
+            }
+        }
+
+        try {
+            applicationRepository.delete(app);
+            logger.debug("Deleted application ID: {}", applicationId);
+        } catch (Exception e) {
+            logger.error("Failed to delete application ID: {}: {}", applicationId, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete application", e);
+        }
+    }
+
     public TutoringStudentApplication getApplication(UUID id) {
         return applicationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Application not found"));
     }
+
     public List<TutoringStudentApplication> getAllApplications() {
         return applicationRepository.findAll();
     }

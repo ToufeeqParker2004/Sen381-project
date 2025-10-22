@@ -24,36 +24,43 @@ public class TutoringApplicationController {
     }
 
     @GetMapping("/{id}/transcript")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> getTranscriptUrl(@PathVariable UUID id) {
         String url = tutoringApplicationService.getTranscriptUrl(id);
         return ResponseEntity.ok(url);
     }
 
     @PostMapping("/{id}/approve")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> approveApplication(@PathVariable UUID id) {
         tutoringApplicationService.approveApplication(id);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/decline")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> declineApplication(@PathVariable UUID id) {
         tutoringApplicationService.declineApplication(id);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<TutoringStudentApplication>> getAllApplications() {
         List<TutoringStudentApplication> applications = tutoringApplicationService.getAllApplications();
         return ResponseEntity.ok(applications);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TutoringStudentApplication> getApplication(@PathVariable UUID id) {
         TutoringStudentApplication application = tutoringApplicationService.getApplication(id);
         return ResponseEntity.ok(application);
+    }
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteApplication(@PathVariable UUID id) {
+        tutoringApplicationService.deleteApplication(id);
+        return ResponseEntity.noContent().build();
     }
 }
