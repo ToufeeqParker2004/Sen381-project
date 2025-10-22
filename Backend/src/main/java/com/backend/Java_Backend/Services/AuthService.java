@@ -11,6 +11,7 @@ import com.backend.Java_Backend.Security.PasswordHasher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -60,5 +61,24 @@ public class AuthService {
 
         LOGGER.warning("Login failed for identifier: " + identifier);
         return null;
+    }
+
+    public boolean updatePassword(Integer id, String password) {
+        // Input validation
+        if (id == null || password == null || password.trim().isEmpty()) {
+            return false;
+        }
+
+        Optional<Student> studentOpt = studentRepository.findById(id);
+
+        if (studentOpt.isPresent()) {
+            Student student = studentOpt.get();
+            String hashedPassword = PasswordHasher.hashPassword(password);
+            student.setPassword(hashedPassword);
+            studentRepository.save(student);
+            return true;
+        } else {
+            return false;
+        }
     }
 }
