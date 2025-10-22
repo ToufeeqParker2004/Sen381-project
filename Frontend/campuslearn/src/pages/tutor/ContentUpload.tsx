@@ -38,6 +38,7 @@ export default function ContentUpload() {
   const [title, setTitle] = useState('');
   const [module, setModule] = useState('');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -228,13 +229,7 @@ export default function ContentUpload() {
       student.attendance = student.totalLessons > 0 ? (student.completedLessons / student.totalLessons) * 100 : 0;
       student.streak = calculateStudentStreak(bookings, student.studentId);
 
-      if (student.totalLessons === 0) {
-        student.status = 'inactive';
-      } else if (student.completionRate < 50 || student.streak < 2) {
-        student.status = 'at-risk';
-      } else {
-        student.status = 'active';
-      }
+     
     });
 
     return studentMap;
@@ -333,49 +328,7 @@ export default function ContentUpload() {
   }
 };
 
-  // Test function for minimal upload
-  const testMinimalUpload = async () => {
-    if (!selectedFile) {
-      toast({
-        title: "No file selected",
-        description: "Please select a file first",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    console.log('🧪 Starting minimal upload test...');
-    
-    const formData = new FormData();
-    formData.append('title', 'Test File - ' + Date.now());
-    formData.append('document_type', 'PDF');
-    formData.append('module_id', '1'); // Hardcode known good module
-    formData.append('uploader_id', '1'); // Hardcode known good tutor
-    formData.append('topic_id', '1');
-    formData.append('file', selectedFile);
 
-    // Log FormData contents for debugging
-    console.log('📋 FormData contents for test:');
-    for (let [key, value] of formData.entries()) {
-      console.log(`  ${key}:`, value);
-    }
-
-    try {
-      const response = await apiClient.post('/learning-materials/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      console.log('✅ Minimal test upload successful:', response.data);
-      toast({ title: "Test upload successful!" });
-    } catch (error: any) {
-      console.error('❌ Minimal test upload failed:', error);
-      console.error('Error details:', error.response?.data);
-      toast({ 
-        title: "Test upload failed", 
-        description: error.response?.data?.error || error.message,
-        variant: "destructive" 
-      });
-    }
-  };
 
   // Map file types to document types
   const getDocumentType = (file: File): string => {
@@ -514,8 +467,13 @@ export default function ContentUpload() {
       formData.append('topic_id', '1');
       formData.append('file', selectedFile);
 
+      // Add description and tags separately
       if (description) {
-        formData.append('tags', description);
+        formData.append('description', description);
+      }
+      
+      if (tags) {
+        formData.append('tags', tags);
       }
 
       // Log FormData contents for debugging
@@ -566,6 +524,7 @@ export default function ContentUpload() {
       setSelectedModule('');
       setSelectedStudents([]); // Reset student selection
       setDescription('');
+      setTags('');
       setSelectedFile(null);
       setUploadProgress(0);
       if (fileInputRef.current) {
@@ -757,16 +716,31 @@ export default function ContentUpload() {
               )}
             </div>
 
+            {/* Description Input */}
             <div className="space-y-2">
-              <Label htmlFor="description">Description / Tags</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                placeholder="Brief description or tags for the content"
+                placeholder="Brief description of the content"
                 rows={3}
                 className="resize-none"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
+            </div>
+
+            {/* Tags Input */}
+            <div className="space-y-2">
+              <Label htmlFor="tags">Tags</Label>
+              <Input
+                id="tags"
+                placeholder="e.g., introduction, basics, week1 (comma-separated)"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Add relevant tags separated by commas to help with search and organization
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -867,14 +841,7 @@ export default function ContentUpload() {
                 )}
               </Button>
               
-              <Button
-                variant="outline"
-                onClick={testMinimalUpload}
-                disabled={!selectedFile}
-                title="Test with minimal data to isolate issues"
-              >
-                Test Upload
-              </Button>
+              
             </div>
           </CardContent>
         </Card>
