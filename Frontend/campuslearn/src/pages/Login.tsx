@@ -17,7 +17,18 @@ const Login = () => {
   const [showMicrosoftModal, setShowMicrosoftModal] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+
+  // Redirect based on user role after login
+  React.useEffect(() => {
+    if (user) {
+      if (user.isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    }
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,19 +42,7 @@ const Login = () => {
           title: 'Login Successful',
           description: 'Welcome to CampusLearn!',
         });
-        
-        // Get user data to check if admin
-        const token = localStorage.getItem('authToken');
-        if (token) {
-          const decoded = JSON.parse(atob(token.split('.')[1]));
-          if (decoded.roles && decoded.roles.includes('ADMIN')) {
-            navigate('/admin');
-          } else {
-            navigate('/');
-          }
-        } else {
-          navigate('/');
-        }
+        // Navigation is handled by useEffect watching user state
       } else {
         toast({
           title: 'Login Failed',
@@ -75,19 +74,7 @@ const Login = () => {
         title: 'Microsoft Login Successful',
         description: 'Welcome to CampusLearn!',
       });
-      
-      // Check if user is admin and redirect accordingly
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        const decoded = JSON.parse(atob(token.split('.')[1]));
-        if (decoded.roles && decoded.roles.includes('ADMIN')) {
-          navigate('/admin');
-        } else {
-          navigate('/');
-        }
-      } else {
-        navigate('/');
-      }
+      // Navigation will be handled by useEffect
     } else {
       toast({
         title: 'Microsoft Login Failed',
