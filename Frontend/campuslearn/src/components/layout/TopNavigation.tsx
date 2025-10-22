@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Settings, User, LogOut, Menu } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Search, Settings, User, LogOut, Menu, Home, Calendar, BookOpen, MessageSquare, Users, GraduationCap, BarChart, Bell, HelpCircle, FileText, Upload, UserCheck, LayoutDashboard, ClipboardList } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from "@/components/ui/NotificationBell";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 interface TopNavigationProps {
   sidebarExpanded: boolean;
   className?: string;
@@ -22,9 +24,62 @@ export function TopNavigation({
   isMobile = false
 }: TopNavigationProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [hasNotifications] = useState(3); // Mock notification count
+  const [searchOpen, setSearchOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
+
+  // Define navigation routes based on user role
+  const navigationRoutes = useMemo(() => {
+    if (user?.isAdmin) {
+      return [
+        { icon: LayoutDashboard, label: 'Admin Dashboard', path: '/admin' },
+        { icon: ClipboardList, label: 'Tutor Applications', path: '/tutor-applications' },
+      ];
+    } else if (user?.isTutor) {
+      return [
+        { icon: Home, label: 'Dashboard', path: '/' },
+        { icon: Calendar, label: 'Calendar', path: '/calendar' },
+        { icon: Users, label: 'My Students', path: '/tutor/my-students' },
+        { icon: Calendar, label: 'My Events', path: '/tutor/my-events' },
+        { icon: Upload, label: 'Content Upload', path: '/tutor/content-upload' },
+        { icon: BookOpen, label: 'Resources', path: '/resources' },
+        { icon: MessageSquare, label: 'Forum', path: '/forum' },
+        { icon: MessageSquare, label: 'Messages', path: '/messages' },
+        { icon: Bell, label: 'Notifications', path: '/notifications' },
+        { icon: HelpCircle, label: 'FAQ', path: '/faq' },
+      ];
+    } else {
+      return [
+        { icon: Home, label: 'Dashboard', path: '/' },
+        { icon: Calendar, label: 'Calendar', path: '/calendar' },
+        { icon: Calendar, label: 'Events', path: '/events' },
+        { icon: GraduationCap, label: 'AI Tutor', path: '/ai-tutor' },
+        { icon: Users, label: 'Tutors', path: '/tutors' },
+        { icon: BookOpen, label: 'Resources', path: '/resources' },
+        { icon: MessageSquare, label: 'Forum', path: '/forum' },
+        { icon: MessageSquare, label: 'Messages', path: '/messages' },
+        { icon: BarChart, label: 'Progress', path: '/progress' },
+        { icon: Bell, label: 'Notifications', path: '/notifications' },
+        { icon: HelpCircle, label: 'FAQ', path: '/faq' },
+      ];
+    }
+  }, [user]);
+
+  // Filter routes based on search query
+  const filteredRoutes = useMemo(() => {
+    if (!searchQuery) return navigationRoutes;
+    const query = searchQuery.toLowerCase();
+    return navigationRoutes.filter(route => 
+      route.label.toLowerCase().includes(query)
+    );
+  }, [searchQuery, navigationRoutes]);
+
+  const handleRouteSelect = (path: string) => {
+    navigate(path);
+    setSearchQuery('');
+    setSearchOpen(false);
+  };
 
   const handleLogout = () => {
     logout();
@@ -67,16 +122,54 @@ export function TopNavigation({
 
         {/* Center Section - Search */}
         <div className="flex-1 max-w-md mx-4 md:mx-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input 
-              type="search" 
-              placeholder={isMobile ? "Search..." : "Search courses, tutors, resources..."} 
-              className="w-full pl-9 pr-4 bg-muted/50 border-muted-foreground/20 focus:bg-background text-sm" 
-              value={searchQuery} 
-              onChange={e => setSearchQuery(e.target.value)} 
-            />
-          </div>
+          <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+            <PopoverTrigger asChild>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none z-10" />
+                <Input 
+                  type="search" 
+                  placeholder={isMobile ? "Search pages..." : "Search navigation pages..."} 
+                  className="w-full pl-9 pr-4 bg-muted/50 border-muted-foreground/20 focus:bg-background text-sm" 
+                  value={searchQuery} 
+                  onChange={e => {
+                    setSearchQuery(e.target.value);
+                    setSearchOpen(true);
+                  }}
+                  onFocus={() => setSearchOpen(true)}
+                />
+              </div>
+            </PopoverTrigger>
+            <PopoverContent 
+              className="w-[300px] p-0" 
+              align="start"
+              onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+              <Command>
+                <CommandList>
+                  <CommandEmpty>No pages found.</CommandEmpty>
+                  <CommandGroup heading="Navigation">
+                    {filteredRoutes.map((route) => {
+                      const Icon = route.icon;
+                      const isActive = location.pathname === route.path;
+                      return (
+                        <CommandItem
+                          key={route.path}
+                          onSelect={() => handleRouteSelect(route.path)}
+                          className={cn(
+                            "cursor-pointer",
+                            isActive && "bg-accent text-accent-foreground"
+                          )}
+                        >
+                          <Icon className="mr-2 h-4 w-4" />
+                          <span>{route.label}</span>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Right Section - Actions */}
