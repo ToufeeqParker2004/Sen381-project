@@ -1,11 +1,7 @@
 // StudentController.java (updated)
 package com.backend.Java_Backend.Controller;
 
-import com.backend.Java_Backend.DTO.CreateStudentDTO;
-import com.backend.Java_Backend.DTO.StudentDTO;
-import com.backend.Java_Backend.DTO.StudentWithModuleDTO;
-import com.backend.Java_Backend.DTO.UpdateStudentDTO;
-import com.backend.Java_Backend.DTO.LoginRequest; // Assume this exists with identifier/password
+import com.backend.Java_Backend.DTO.*;
 import com.backend.Java_Backend.Models.NotificationSubscription;
 import com.backend.Java_Backend.Models.Student;
 import com.backend.Java_Backend.Services.AuthService; // Use unified AuthService
@@ -105,6 +101,24 @@ public class StudentController {
         }
 
         return ResponseEntity.ok(Collections.singletonMap("token", token)); // Return as JSON object for clarity
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PutMapping("/updatePassword/{id}")
+    public ResponseEntity<?> updatePassword(@RequestBody UpdatePassword request, @PathVariable Integer id){
+        if (id == null){
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Collections.singletonMap("error", "No ID was found"));
+        }
+
+        boolean changed = authService.updatePassword(id, request.getPassword());
+
+        if (changed){
+            return ResponseEntity.ok(Collections.singletonMap("message", "Password updated successfully!"));
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", "Something went wrong"));
+        }
     }
 
     @PreAuthorize("hasAnyRole('STUDENT', 'TUTOR')")

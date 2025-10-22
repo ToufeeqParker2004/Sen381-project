@@ -39,7 +39,7 @@ export default function MyStudents() {
     favoriteSubject: 'N/A'
   });
 
-  
+
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetric[]>([]);
   const [timeframe, setTimeframe] = useState<'week' | 'month' | 'all'>('month');
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -188,10 +188,10 @@ export default function MyStudents() {
       student.attendance = student.totalLessons > 0 ? (student.completedLessons / student.totalLessons) * 100 : 0;
       student.streak = calculateStudentStreak(bookings, student.studentId);
 
-      if (student.totalLessons === 0) {
-        student.status = 'inactive';
+      if (student.totalLessons < 3) {
+        student.status = 'In-Progress-Student';
       } else if (student.completionRate < 50 || student.streak < 2) {
-        student.status = 'at-risk';
+        student.status = 'not-dedicated';
       } else {
         student.status = 'active';
       }
@@ -230,7 +230,7 @@ export default function MyStudents() {
 
   const calculateTutorStats = (students: StudentProgress[], bookings: Booking[]) => {
     const activeStudents = students.filter(s => s.status === 'active').length;
-    const atRiskStudents = students.filter(s => s.status === 'at-risk').length;
+    const atRiskStudents = students.filter(s => s.status === 'not-dedicated').length;
     const averageCompletionRate = students.length > 0
       ? students.reduce((acc, s) => acc + s.completionRate, 0) / students.length
       : 0;
@@ -265,32 +265,82 @@ export default function MyStudents() {
   };
 
   const calculatePerformanceMetrics = (students: StudentProgress[]) => {
+    if (students.length === 0) {
+      setPerformanceMetrics([]);
+      return;
+    }
+
+    // Calculate real metrics from student data
+    const activeStudents = students.filter(s => s.status === 'active').length;
+    const totalStudents = students.length;
+    const retentionRate = totalStudents > 0 ? (activeStudents / totalStudents) * 100 : 0;
+
+    // 2. Average Session Quality (based on completion rate and attendance)
+    const avgSessionQuality = students.reduce((acc, student) =>
+      acc + (student.completionRate * student.attendance / 100), 0) / students.length;
+
+    // 3. Student Progress Velocity (average completion rate improvement)
+    const avgProgressVelocity = students.reduce((acc, student) =>
+      acc + student.completionRate, 0) / students.length;
+
+    // 4. Engagement Score (combination of streak, attendance, and completion)
+    const avgEngagementScore = students.reduce((acc, student) => {
+      const engagement = (student.streak * 10) + (student.attendance * 0.6) + (student.completionRate * 0.4);
+      return acc + engagement;
+    }, 0) / students.length;
+
+    // Calculate trends (simulated based on current performance)
+    const getTrend = (value: number, benchmark: number): { change: number; trend: 'up' | 'down' | 'neutral' } => {
+      const change = ((value - benchmark) / benchmark) * 100;
+      const roundedChange = Math.abs(change) > 0.1 ? Math.round(change) : 0;
+
+      if (roundedChange > 0) {
+        return { change: roundedChange, trend: 'up' as const };
+      } else if (roundedChange < 0) {
+        return { change: Math.abs(roundedChange), trend: 'down' as const };
+      } else {
+        return { change: 0, trend: 'neutral' as const };
+      }
+    };
+
+    // Benchmarks for comparison
+    const retentionBenchmark = 75;
+    const qualityBenchmark = 70;
+    const progressBenchmark = 65;
+    const engagementBenchmark = 60;
+
+    const retentionTrend = getTrend(retentionRate, retentionBenchmark);
+    const qualityTrend = getTrend(avgSessionQuality, qualityBenchmark);
+    const progressTrend = getTrend(avgProgressVelocity, progressBenchmark);
+    const engagementTrend = getTrend(avgEngagementScore, engagementBenchmark);
+
     const metrics: PerformanceMetric[] = [
       {
         label: 'Student Retention',
-        value: tutorStats.studentEngagement,
-        change: 12,
-        trend: 'up'
+        value: Math.round(retentionRate),
+        change: retentionTrend.change,
+        trend: retentionTrend.trend
       },
       {
-        label: 'Completion Rate',
-        value: tutorStats.averageCompletionRate,
-        change: 5,
-        trend: 'up'
+        label: 'Session Quality',
+        value: Math.round(avgSessionQuality),
+        change: qualityTrend.change,
+        trend: qualityTrend.trend
       },
       {
-        label: 'Weekly Progress',
-        value: 78,
-        change: -2,
-        trend: 'down'
+        label: 'Progress Velocity',
+        value: Math.round(avgProgressVelocity),
+        change: progressTrend.change,
+        trend: progressTrend.trend
       },
       {
-        label: 'Student Satisfaction',
-        value: 92,
-        change: 3,
-        trend: 'up'
+        label: 'Engagement Score',
+        value: Math.round(avgEngagementScore),
+        change: engagementTrend.change,
+        trend: engagementTrend.trend
       }
     ];
+
     setPerformanceMetrics(metrics);
   };
 
@@ -555,10 +605,10 @@ export default function MyStudents() {
     switch (status) {
       case 'active':
         return <Badge className="bg-success text-success-foreground">Active</Badge>;
-      case 'at-risk':
-        return <Badge className="bg-destructive text-destructive-foreground">At Risk</Badge>;
-      case 'inactive':
-        return <Badge variant="outline">Inactive</Badge>;
+      case 'not-dedicated':
+        return <Badge className="bg-destructive text-destructive-foreground">Not Dedicated</Badge>;
+      case 'In-Progress-Student':
+        return <Badge variant="outline">In-Progress-Student</Badge>;
       default:
         return null;
     }
@@ -625,9 +675,7 @@ export default function MyStudents() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Students</p>
                 <p className="text-2xl font-bold">{tutorStats.totalStudents}</p>
-                <p className="text-xs text-success mt-1">
-                  +{tutorStats.activeStudents} active
-                </p>
+
               </div>
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Users className="h-6 w-6 text-primary" />
@@ -979,28 +1027,50 @@ export default function MyStudents() {
               <BarChart3 className="mr-2 h-5 w-5" />
               Performance Metrics
             </CardTitle>
+            <CardDescription>Real-time teaching performance analytics</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {performanceMetrics.map((metric, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium text-sm">{metric.label}</p>
-                  <p className="text-2xl font-bold mt-1">{metric.value}{metric.label.includes('Rating') ? '' : '%'}</p>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1 justify-end">
-                    {getTrendIcon(metric.trend)}
-                    <span className={`text-sm ${metric.trend === 'up' ? 'text-success' :
-                      metric.trend === 'down' ? 'text-destructive' :
-                        'text-muted-foreground'
-                      }`}>
-                      {metric.change > 0 ? '+' : ''}{metric.change}%
-                    </span>
+            {performanceMetrics.map((metric, index) => {
+              // Define descriptions based on the metric label
+              const getDescription = (label: string) => {
+                switch (label) {
+                  case 'Student Retention':
+                    return 'Active students maintaining progress';
+                  case 'Session Quality':
+                    return 'Based on completion and attendance rates';
+                  case 'Progress Velocity':
+                    return 'Average completion rate across students';
+                  case 'Engagement Score':
+                    return 'Combined streak, attendance & completion';
+                  default:
+                    return 'Performance metric';
+                }
+              };
+
+              return (
+                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{metric.label}</p>
+                    <p className="text-2xl font-bold mt-1">{metric.value}%</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {getDescription(metric.label)}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">vs last period</p>
+                  <div className="text-right">
+                    <div className="flex items-center gap-1 justify-end">
+                      {getTrendIcon(metric.trend)}
+                      <span className={`text-sm font-medium ${metric.trend === 'up' ? 'text-success' :
+                          metric.trend === 'down' ? 'text-destructive' :
+                            'text-muted-foreground'
+                        }`}>
+                        {metric.change > 0 ? '+' : ''}{metric.change}%
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">vs benchmark</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       </div>

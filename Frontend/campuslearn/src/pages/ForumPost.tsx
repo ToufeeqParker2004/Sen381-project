@@ -38,6 +38,7 @@ export default function ForumPost() {
   const [newComment, setNewComment] = useState("");
   const [authorName, setAuthorName] = useState<string | null>(null);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [isPostingComment, setIsPostingComment] = useState(false); // New state for posting status
   const { toast } = useToast();
 
   const token = localStorage.getItem("authToken");
@@ -121,9 +122,11 @@ export default function ForumPost() {
   }, [id, token]);
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !post) return;
+    if (!newComment.trim() || !post || isPostingComment) return; // Prevent if already posting
 
     try {
+      setIsPostingComment(true); // Disable the button
+
       const res = await fetch(
         `http://localhost:9090/api/comments/post/${post.id}/add`,
         {
@@ -138,10 +141,11 @@ export default function ForumPost() {
       const comment = await res.json();
       if (!res.ok) {
         toast({
+          variant: 'destructive',
           title: 'Error',
           description: comment.error || comment.message || "Failed to create post",
         });
-
+        setIsPostingComment(false); // Re-enable on error
         return;
       }
 
@@ -157,6 +161,13 @@ export default function ForumPost() {
       setNewComment("");
     } catch (err) {
       console.error(err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: "Failed to post comment",
+      });
+    } finally {
+      setIsPostingComment(false); // Re-enable button whether success or error
     }
   };
 
@@ -204,14 +215,6 @@ export default function ForumPost() {
                 <MessageCircle className="mr-1 h-3 w-3" />
                 {comments.length} Comments
               </Button>
-              <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
-                <Share className="mr-1 h-3 w-3" />
-                Share
-              </Button>
-              <Button variant="ghost" size="sm" className="h-7 px-2 hover:bg-muted">
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
-              <span>{post.upvotes || 0} upvotes</span>
             </div>
           </div>
         </CardContent>
@@ -242,9 +245,14 @@ export default function ForumPost() {
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               className="bg-muted/20 text-foreground"
+              disabled={isPostingComment} // Disable input while posting
             />
-            <Button className="self-end bg-gradient-primary hover:opacity-90" onClick={handleAddComment}>
-              Post Comment
+            <Button 
+              className="self-end bg-gradient-primary hover:opacity-90" 
+              onClick={handleAddComment}
+              disabled={isPostingComment || !newComment.trim()} // Disable when posting or empty
+            >
+              {isPostingComment ? "Posting..." : "Post Comment"}
             </Button>
           </div>
         )}

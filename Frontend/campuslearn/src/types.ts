@@ -112,7 +112,7 @@ export interface StudentProgress {
   averageSessionLength: number;
   subjectProgress: SubjectProgress[];
   lastActive: string;
-  status: 'active' | 'inactive' | 'at-risk';
+  status: 'active' | 'In-Progress-Student' | 'not-dedicated';
   streak: number;
   attendance: number;
 }

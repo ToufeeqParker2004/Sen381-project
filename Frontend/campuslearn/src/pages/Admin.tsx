@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
@@ -21,6 +20,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 import {
   Settings,
@@ -46,11 +55,47 @@ import {
   Activity,
   Server,
   Zap,
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react';
 import { LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ErrorRecord, ErrorResponse } from '@/types';
 import apiClient from '@/services/api';
 import { userService, User } from '@/services/userServices';
+
+interface ForumPost {
+  id: string;
+  authorId: number;
+  parent_post_id?: string | null;
+  content: string;
+  attachments?: string[];
+  upvotes?: number;
+  created_at?: string;
+  title?: string | null;
+  author?: string | null;
+  tags?: string[];
+  replies?: number;
+  downvotes?: number;
+  community?: string | null;
+  timestamp?: string | null;
+}
+
+interface FAQ {
+  id: number;
+  question: string;
+  answer: string;
+  category: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface FAQFormData {
+  question: string;
+  answer: string;
+  category: string;
+  color: string;
+}
 
 export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,15 +110,23 @@ export default function Admin() {
   const [hasMore, setHasMore] = useState(true);
   const pageSize = 10;
 
+  // FAQ States
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [faqLoading, setFaqLoading] = useState(false);
+  const [faqError, setFaqError] = useState<string | null>(null);
+  const [faqDialogOpen, setFaqDialogOpen] = useState(false);
+  const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
+  const [faqForm, setFaqForm] = useState<FAQFormData>({
+    question: '',
+    answer: '',
+    category: 'Getting Started',
+    color: 'bg-blue-500'
+  });
+
   const powerURL = "https://app.powerbi.com/view?r=eyJrIjoiZWNkNmVhYzQtNDliZC00YzFkLTljMTQtMmQ0ZThlZWM0YjU1IiwidCI6ImVhMWE5MDliLTY2MDAtNGEyNS04MmE1LTBjNmVkN2QwNTEzYiIsImMiOjl9&pageName=35a3420a0cb3b9bccc5e";
 
-  // System Stats
-  const systemStats = [
-    { label: 'Total Users', value: '2,847', change: '+12%', icon: Users, color: 'text-primary' },
-    { label: 'Active Tutors', value: '156', change: '+8%', icon: Shield, color: 'text-secondary' },
-    { label: 'Total Topics', value: '1,243', change: '+15%', icon: MessageSquare, color: 'text-success' },
-    { label: 'API Uptime', value: '99.9%', change: '0%', icon: Server, color: 'text-warning' },
-  ];
+
+  
 
   const [databaseTables, setDatabaseTables] = useState({
     users: [] as User[],
@@ -104,13 +157,284 @@ export default function Admin() {
     ],
   });
 
+  // Forum Posts State
+  const [forumPosts, setForumPosts] = useState<ForumPost[]>([]);
+  const [forumLoading, setForumLoading] = useState(false);
+  const [forumError, setForumError] = useState<string | null>(null);
+
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+
+  // FAQ Categories and Colors
+  const faqCategories = [
+    'Getting Started',
+    'Technical Support', 
+    'AI Tutor',
+    'Communication',
+    'Account Management',
+    'Billing & Payments',
+    'Other'
+  ];
+
+  const faqColors = [
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-purple-500', 
+    'bg-orange-500',
+    'bg-red-500',
+    'bg-indigo-500'
+  ];
+
+  // Fetch FAQs
+  const fetchFAQs = async () => {
+    try {
+      setFaqLoading(true);
+      setFaqError(null);
+      
+      const response = await fetch('http://localhost:9090/api/faqs',{
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch FAQs: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setFaqs(data);
+    } catch (err: any) {
+      console.error('Error fetching FAQs:', err);
+      setFaqError(err.message || 'Failed to fetch FAQs');
+    } finally {
+      setFaqLoading(false);
+    }
+  };
+
+  // Create or Update FAQ
+  const saveFAQ = async (formData: FAQFormData) => {
+    try {
+      setFaqError(null);
+      
+      const url = editingFaq 
+        ? `http://localhost:9090/api/faqs/${editingFaq.id}`
+        : 'http://localhost:9090/api/faqs';
+      
+      const method = editingFaq ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to ${editingFaq ? 'update' : 'create'} FAQ: ${response.status}`);
+      }
+      
+      await fetchFAQs(); // Refresh the list
+      setFaqDialogOpen(false);
+      resetFaqForm();
+      
+    } catch (err: any) {
+      console.error('Error saving FAQ:', err);
+      setFaqError(err.message || `Failed to ${editingFaq ? 'update' : 'create'} FAQ`);
+    }
+  };
+
+  // Delete FAQ
+  const deleteFAQ = async (id: number) => {
+    
+
+    try {
+      setFaqError(null);
+      
+      const response = await fetch(`http://localhost:9090/api/faqs/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete FAQ: ${response.status}`);
+      }
+      
+      await fetchFAQs(); // Refresh the list
+      
+    } catch (err: any) {
+      console.error('Error deleting FAQ:', err);
+      setFaqError(err.message || 'Failed to delete FAQ');
+    }
+  };
+
+  // Reset FAQ form
+  const resetFaqForm = () => {
+    setFaqForm({
+      question: '',
+      answer: '',
+      category: 'Getting Started',
+      color: 'bg-blue-500'
+    });
+    setEditingFaq(null);
+  };
+
+  // Open FAQ dialog for editing
+  const editFAQ = (faq: FAQ) => {
+    setEditingFaq(faq);
+    setFaqForm({
+      question: faq.question,
+      answer: faq.answer,
+      category: faq.category,
+      color: faq.color
+    });
+    setFaqDialogOpen(true);
+  };
+
+  // Open FAQ dialog for creating
+  const createFAQ = () => {
+    resetFaqForm();
+    setFaqDialogOpen(true);
+  };
 
   // Fetch users on component mount
   useEffect(() => {
     fetchUsers();
+    fetchFAQs();
   }, []);
+
+  // Fetch forum posts
+  const fetchForumPosts = async () => {
+    try {
+      setForumLoading(true);
+      setForumError(null);
+      
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setForumError("Authentication token not found");
+        return;
+      }
+
+      const response = await fetch("http://localhost:9090/ForumPosts", {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch forum posts: ${response.status}`);
+      }
+
+      const data: ForumPost[] = await response.json();
+      
+      // Fetch additional data for each post (author names, reply counts)
+      const postsWithDetails = await Promise.all(
+        data.map(async (post) => {
+          let authorName = null;
+          let replies = 0;
+
+          try {
+            // Fetch author name
+            const userRes = await fetch(`http://localhost:9090/student/${post.authorId}`, {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+            
+            if (userRes.ok) {
+              const userData = await userRes.json();
+              authorName = userData.name;
+            }
+          } catch (error) {
+            console.error("Error fetching user data:", error);
+          }
+
+          try {
+            // Fetch reply count
+            const commentsRes = await fetch(`http://localhost:9090/api/comments/post/${post.id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            
+            if (commentsRes.ok) {
+              const comments = await commentsRes.json();
+              replies = comments.length;
+            }
+          } catch (error) {
+            console.error("Error fetching comments:", error);
+          }
+
+          return {
+            ...post,
+            author: authorName || `User ${post.authorId}`,
+            replies,
+            created_at: post.created_at || post.timestamp || new Date().toISOString(),
+          };
+        })
+      );
+
+      // Sort by creation date (newest first)
+      postsWithDetails.sort(
+        (a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
+      );
+
+      setForumPosts(postsWithDetails);
+    } catch (err: any) {
+      console.error('Error fetching forum posts:', err);
+      setForumError(err.message || 'Failed to fetch forum posts');
+    } finally {
+      setForumLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchForumPosts();
+  }, []);
+
+  // Delete forum post
+  const deleteForumPost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this forum post? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        setForumError("Authentication token not found");
+        return;
+      }
+
+      const response = await fetch(`http://localhost:9090/ForumPosts/${postId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("Forum post not found");
+        }
+        throw new Error(`Failed to delete forum post: ${response.status}`);
+      }
+
+      // Remove from local state
+      setForumPosts(prev => prev.filter(post => post.id !== postId));
+      
+      setForumError(null);
+    } catch (err: any) {
+      console.error('Error deleting forum post:', err);
+      setForumError(err.message || 'Failed to delete forum post');
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -135,56 +459,56 @@ export default function Admin() {
   };
 
   const handleSaveRecord = async (updatedRecord: Record<string, any>) => {
-  try {
-    if (selectedTable === 'users') {
-      if (updatedRecord.id) {
-        // Update existing user - don't send password for updates
-        const { id, createdAt, password, ...updateData } = updatedRecord;
-        console.log('Updating user with data:', updateData);
-        
-        const updatedUser = await userService.updateUser(id, updateData);
-        
-        setDatabaseTables(prev => ({
-          ...prev,
-          users: prev.users.map(user => 
-            user.id === id ? updatedUser : user
-          )
-        }));
-      } else {
-        // Create new user - ALWAYS send the hash, ignore what user sees in UI
-        const createUserData = {
-          name: updatedRecord.name || '',
-          email: updatedRecord.email || '',
-          phoneNumber: updatedRecord.phoneNumber || '',
-          bio: updatedRecord.bio || '',
-          location: updatedRecord.location || '',
-          password: '2YEJxmSRl/fL0L2MFoRlUjdZ5ec2kg+8+gdUh4WtePo=', // Always send the hash
-          createdAt: new Date().toISOString()
-        };
-        
-        console.log('Creating user with data:', createUserData);
-        
-        if (!createUserData.name || !createUserData.email) {
-          setUsersError('Name and email are required fields');
-          return;
+    try {
+      if (selectedTable === 'users') {
+        if (updatedRecord.id) {
+          // Update existing user - don't send password for updates
+          const { id, createdAt, password, ...updateData } = updatedRecord;
+          console.log('Updating user with data:', updateData);
+          
+          const updatedUser = await userService.updateUser(id, updateData);
+          
+          setDatabaseTables(prev => ({
+            ...prev,
+            users: prev.users.map(user => 
+              user.id === id ? updatedUser : user
+            )
+          }));
+        } else {
+          // Create new user - ALWAYS send the hash, ignore what user sees in UI
+          const createUserData = {
+            name: updatedRecord.name || '',
+            email: updatedRecord.email || '',
+            phoneNumber: updatedRecord.phoneNumber || '',
+            bio: updatedRecord.bio || '',
+            location: updatedRecord.location || '',
+            password: '2YEJxmSRl/fL0L2MFoRlUjdZ5ec2kg+8+gdUh4WtePo=', // Always send the hash
+            createdAt: new Date().toISOString()
+          };
+          
+          console.log('Creating user with data:', createUserData);
+          
+          if (!createUserData.name || !createUserData.email) {
+            setUsersError('Name and email are required fields');
+            return;
+          }
+          
+          const newUser = await userService.createUser(createUserData);
+          setDatabaseTables(prev => ({
+            ...prev,
+            users: [...prev.users, newUser]
+          }));
         }
-        
-        const newUser = await userService.createUser(createUserData);
-        setDatabaseTables(prev => ({
-          ...prev,
-          users: [...prev.users, newUser]
-        }));
       }
+      
+      setEditDialogOpen(false);
+      setSelectedRecord(null);
+      setUsersError(null);
+    } catch (err: any) {
+      console.error('Error saving record:', err);
+      setUsersError(err.response?.data?.message || err.message || 'Failed to save record');
     }
-    
-    setEditDialogOpen(false);
-    setSelectedRecord(null);
-    setUsersError(null);
-  } catch (err: any) {
-    console.error('Error saving record:', err);
-    setUsersError(err.response?.data?.message || err.message || 'Failed to save record');
-  }
-};
+  };
 
   const handleDeleteRecord = async (record: Record<string, any>) => {
     if (!confirm('Are you sure you want to delete this record?')) {
@@ -209,17 +533,17 @@ export default function Admin() {
   };
 
   const handleCreateUser = () => {
-  setSelectedRecord({
-    name: '',
-    email: '',
-    phoneNumber: '',
-    bio: '',
-    location: '',
-    password: 'pass123', // Show "pass123" in UI but we'll override with hash in handleSaveRecord
-    createdAt: new Date().toISOString()
-  });
-  setEditDialogOpen(true);
-};
+    setSelectedRecord({
+      name: '',
+      email: '',
+      phoneNumber: '',
+      bio: '',
+      location: '',
+      password: 'pass123', // Show "pass123" in UI but we'll override with hash in handleSaveRecord
+      createdAt: new Date().toISOString()
+    });
+    setEditDialogOpen(true);
+  };
 
   useEffect(() => {
     const fetchErrors = async () => {
@@ -267,13 +591,6 @@ export default function Admin() {
     }
   };
 
-  // Forum Posts Data
-  const forumPosts = [
-    { id: 1, title: 'Need help with Calculus', author: 'Student A', replies: 15, flags: 0, status: 'Active', date: '2024-01-15' },
-    { id: 2, title: 'Best study techniques?', author: 'Student B', replies: 23, flags: 2, status: 'Flagged', date: '2024-01-14' },
-    { id: 3, title: 'Physics tutoring recommendations', author: 'Student C', replies: 8, flags: 0, status: 'Active', date: '2024-01-13' },
-  ];
-
   // Analytics Data
   const userActivityData = [
     { month: 'Jan', students: 400, tutors: 24 },
@@ -293,14 +610,6 @@ export default function Admin() {
   ];
 
   const COLORS = ['#000000', '#FFD500', '#FF4D4D', '#4CAF50', '#2196F3'];
-
-  // Audit Logs Data
-  const auditLogs = [
-    { id: 1, admin: 'Admin User', action: 'Suspended user', target: 'mike@campus.edu', timestamp: '2024-01-15 14:30', details: 'Violation of terms' },
-    { id: 2, admin: 'Admin User', action: 'Deleted post', target: 'Post #456', timestamp: '2024-01-15 12:15', details: 'Spam content' },
-    { id: 3, admin: 'Super Admin', action: 'Edited user role', target: 'jane@campus.edu', timestamp: '2024-01-14 09:45', details: 'Promoted to Tutor' },
-    { id: 4, admin: 'Admin User', action: 'Approved resource', target: 'Physics Notes.pdf', timestamp: '2024-01-14 08:20', details: 'Content verification' },
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -375,10 +684,22 @@ export default function Admin() {
     if (!dateString) return 'N/A';
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString();
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
     } catch {
       return dateString;
     }
+  };
+
+  const truncateText = (text: string, maxLength: number) => {
+    if (!text) return 'N/A';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   };
 
   return (
@@ -391,35 +712,16 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Dashboard Overview Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {systemStats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="hover:shadow-custom-md transition-shadow">
-              <CardContent className="flex items-center p-6">
-                <div className="p-3 rounded-lg bg-muted mr-4">
-                  <Icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-muted-foreground text-sm">{stat.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      
 
       {/* Main Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Reports</TabsTrigger>
           <TabsTrigger value="database">Database</TabsTrigger>
           <TabsTrigger value="errors">Errors</TabsTrigger>
           <TabsTrigger value="forum">Forum</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="audit">Audit Logs</TabsTrigger>
+          <TabsTrigger value="faq">FAQ</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Overview Tab */}
@@ -763,99 +1065,297 @@ export default function Admin() {
           </Card>
         </TabsContent>
 
-        {/* Reports & Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
+        {/* Forum Tab */}
+        <TabsContent value="forum" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Reports & Analytics
-              </CardTitle>
-              <CardDescription>Platform trends and engagement metrics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6 lg:grid-cols-2">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">User Growth</h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <RechartsBarChart data={userActivityData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="students" fill="#000000" />
-                      <Bar dataKey="tutors" fill="#FFD500" />
-                    </RechartsBarChart>
-                  </ResponsiveContainer>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Forum Management
+                  </CardTitle>
+                  <CardDescription>Manage all forum posts and content</CardDescription>
                 </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Key Metrics</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Total Sessions</p>
-                        <p className="text-2xl font-bold">1,234</p>
-                      </div>
-                      <Zap className="h-8 w-8 text-secondary" />
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Avg Session Duration</p>
-                        <p className="text-2xl font-bold">45 min</p>
-                      </div>
-                      <Clock className="h-8 w-8 text-secondary" />
-                    </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <p className="text-sm text-muted-foreground">User Satisfaction</p>
-                        <p className="text-2xl font-bold">4.8/5</p>
-                      </div>
-                      <CheckCircle className="h-8 w-8 text-success" />
-                    </div>
-                  </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={fetchForumPosts}
+                    disabled={forumLoading}
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${forumLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
                 </div>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Error Message */}
+              {forumError && (
+                <div className="bg-destructive/15 border border-destructive/50 text-destructive px-4 py-3 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4" />
+                    <span>{forumError}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading State */}
+              {forumLoading && (
+                <div className="flex justify-center items-center p-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-sm text-muted-foreground">Loading forum posts...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Forum Posts Table */}
+              {!forumLoading && (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Title/Content</TableHead>
+                        <TableHead>Author</TableHead>
+                        <TableHead>Community</TableHead>
+                        <TableHead>Replies</TableHead>
+                        <TableHead>Upvotes</TableHead>
+                        <TableHead>Created At</TableHead>
+                        <TableHead>Tags</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {forumPosts.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                            No forum posts found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        forumPosts.map((post) => (
+                          <TableRow key={post.id} className="hover:bg-muted/50">
+                            <TableCell className="font-mono text-xs">
+                              {post.id.slice(0, 8)}...
+                            </TableCell>
+                            <TableCell>
+                              <div className="max-w-[200px]">
+                                <div className="font-medium text-sm">
+                                  {post.title || 'No Title'}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {truncateText(post.content, 100)}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div>{post.author}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  ID: {post.authorId}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {post.community || (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {post.replies || 0}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {post.upvotes || 0}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(post.created_at!)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                {post.tags?.slice(0, 2).map((tag, index) => (
+                                  <Badge key={index} variant="outline" className="text-xs">
+                                    #{tag}
+                                  </Badge>
+                                ))}
+                                {post.tags && post.tags.length > 2 && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{post.tags.length - 2}
+                                  </Badge>
+                                )}
+                                {(!post.tags || post.tags.length === 0) && (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  title="Delete Post"
+                                  onClick={() => deleteForumPost(post.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Audit Logs Tab */}
-        <TabsContent value="audit" className="space-y-6">
+        {/* FAQ Management Tab */}
+        <TabsContent value="faq" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Audit Logs
-              </CardTitle>
-              <CardDescription>Track all admin actions for accountability</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <HelpCircle className="h-5 w-5" />
+                    FAQ Management
+                  </CardTitle>
+                  <CardDescription>Manage frequently asked questions and their categories</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={fetchFAQs}
+                    disabled={faqLoading}
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${faqLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  <Button size="sm" onClick={createFAQ}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add FAQ
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Admin</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Target</TableHead>
-                    <TableHead>Timestamp</TableHead>
-                    <TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {auditLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="font-medium">{log.admin}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{log.action}</Badge>
-                      </TableCell>
-                      <TableCell>{log.target}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{log.timestamp}</TableCell>
-                      <TableCell className="text-sm">{log.details}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent className="space-y-4">
+              {/* Error Message */}
+              {faqError && (
+                <div className="bg-destructive/15 border border-destructive/50 text-destructive px-4 py-3 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4" />
+                    <span>{faqError}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading State */}
+              {faqLoading && (
+                <div className="flex justify-center items-center p-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-sm text-muted-foreground">Loading FAQs...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* FAQ Table */}
+              {!faqLoading && (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Question</TableHead>
+                        <TableHead>Answer</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Color</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Updated</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {faqs.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                            No FAQs found. Create your first FAQ!
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        faqs.map((faq) => (
+                          <TableRow key={faq.id} className="hover:bg-muted/50">
+                            <TableCell className="font-medium">{faq.id}</TableCell>
+                            <TableCell>
+                              <div className="max-w-[200px]">
+                                <div className="font-medium text-sm">
+                                  {faq.question}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="max-w-[250px]">
+                                <div className="text-sm text-muted-foreground">
+                                  {truncateText(faq.answer, 100)}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {faq.category}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${faq.color}`}></div>
+                                <span className="text-xs text-muted-foreground">
+                                  {faq.color}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(faq.createdAt)}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(faq.updatedAt)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  title="Edit FAQ"
+                                  onClick={() => editFAQ(faq)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  title="Delete FAQ"
+                                  onClick={() => deleteFAQ(faq.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -868,8 +1368,108 @@ export default function Admin() {
         record={selectedRecord}
         tableName={selectedTable}
         onSave={handleSaveRecord}
-        
       />
+
+      {/* FAQ Dialog */}
+      <Dialog open={faqDialogOpen} onOpenChange={setFaqDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingFaq ? 'Edit FAQ' : 'Create New FAQ'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingFaq 
+                ? 'Update the frequently asked question details.' 
+                : 'Add a new frequently asked question to the knowledge base.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="question">Question</Label>
+              <Input
+                id="question"
+                placeholder="Enter the question..."
+                value={faqForm.question}
+                onChange={(e) => setFaqForm({...faqForm, question: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="answer">Answer</Label>
+              <Textarea
+                id="answer"
+                placeholder="Enter the answer..."
+                value={faqForm.answer}
+                onChange={(e) => setFaqForm({...faqForm, answer: e.target.value})}
+                rows={4}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select 
+                  value={faqForm.category} 
+                  onValueChange={(value) => setFaqForm({...faqForm, category: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {faqCategories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="color">Color</Label>
+                <Select 
+                  value={faqForm.color} 
+                  onValueChange={(value) => setFaqForm({...faqForm, color: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {faqColors.map((color) => (
+                      <SelectItem key={color} value={color}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                          <span>{color}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setFaqDialogOpen(false);
+                resetFaqForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => saveFAQ(faqForm)}
+              disabled={!faqForm.question.trim() || !faqForm.answer.trim()}
+            >
+              {editingFaq ? 'Update FAQ' : 'Create FAQ'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

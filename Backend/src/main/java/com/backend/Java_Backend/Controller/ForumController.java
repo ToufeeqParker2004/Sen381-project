@@ -60,7 +60,7 @@ public class ForumController {
 
             if (!allowed) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(Collections.singletonMap("error", "Post blocked by moderation due to inappropriate content"));
+                        .body(Collections.singletonMap("error", "Post blocked by moderation"));
             }
 
             ForumPost savedPost = forumPostService.saveForumPost(forumPost);
@@ -83,7 +83,7 @@ public class ForumController {
         boolean allowed = moderationService.isPostAllowed(updatedPost.getContent());
         if (!allowed) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Collections.singletonMap("error", "Updated post blocked by moderation due to inappropriate content"));
+                    .body(Collections.singletonMap("error", "Updated post blocked by moderation"));
         }
         ForumPost forumPost = forumPostOpt.get();
         forumPost.setAuthorId(updatedPost.getAuthorId());

@@ -45,6 +45,7 @@ export function CreatePostModal({
   const [community, setCommunity] = useState('');
   const [postType, setPostType] = useState('text');
   const [link, setLink] = useState('');
+  const [isPosting, setIsPosting] = useState(false); // New state for posting status
   const { toast } = useToast();
 
   const communities = [
@@ -71,23 +72,45 @@ export function CreatePostModal({
   ];
 
   const handlePost = async () => {
+    if (isPosting) return; // Prevent if already posting
+
     try {
+      setIsPosting(true); // Disable the button
+
       const token = localStorage.getItem('authToken');
-      if (!token) return;
+      if (!token) {
+        toast({
+          variant: "destructive",
+          title: 'Error',
+          description: "Authentication token not found",
+        });
+        setIsPosting(false);
+        return;
+      }
 
       let finalContent = content;
 
       // Handle link posts
       if (postType === 'link') {
         if (!link.trim()) {
-          alert('Please paste a valid link before posting.');
+          toast({
+            variant: "destructive",
+            title: 'Error',
+            description: 'Please paste a valid link before posting.',
+          });
+          setIsPosting(false);
           return;
         }
 
         try {
           new URL(link);
         } catch {
-          alert('Invalid URL format.');
+          toast({
+            variant: "destructive",
+            title: 'Error',
+            description: 'Invalid URL format.',
+          });
+          setIsPosting(false);
           return;
         }
 
@@ -115,14 +138,20 @@ export function CreatePostModal({
       const data = await res.json();
       if (!res.ok) {
         toast({
+          variant: "destructive",
           title: 'Error',
           description: data.error || data.message || "Failed to create post",
         });
+        setIsPosting(false);
         return;
       }
 
-      toast({ title: 'Success', description: data.message || 'Post created successfully!'});
+      toast({ 
+        title: 'Success', 
+        description: data.message || 'Post created successfully!' 
+      });
       
+      // Reset form
       setTitle('');
       setContent('');
       setCommunity('');
@@ -133,14 +162,24 @@ export function CreatePostModal({
       if (onPostCreated) onPostCreated();
     } catch (err: any) {
       toast({
-          title: 'Error',
-          description: err.message || 'Network error',
-        });
+        variant: "destructive",
+        title: 'Error',
+        description: err.message || 'Network error',
+      });
+    } finally {
+      setIsPosting(false); // Re-enable button whether success or error
     }
   };
 
+  // Determine if form is valid and ready for submission
+  const isFormValid = title.trim() && community && !isPosting;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => {
+      if (!isPosting) { // Only allow closing if not posting
+        onOpenChange(open);
+      }
+    }}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex flex-row items-center justify-between shrink-0 pb-4">
           <DialogTitle className="text-2xl">Create post</DialogTitle>
@@ -148,7 +187,7 @@ export function CreatePostModal({
 
         <div className="flex-1 flex flex-col space-y-4 overflow-hidden min-h-0">
           {/* Community Selection */}
-          <Select value={community} onValueChange={setCommunity}>
+          <Select value={community} onValueChange={setCommunity} disabled={isPosting}>
             <SelectTrigger className="w-full border-2 border-warning/50 focus:border-warning">
               <SelectValue placeholder="Select a community" />
             </SelectTrigger>
@@ -164,8 +203,8 @@ export function CreatePostModal({
           {/* Post Type Tabs */}
           <Tabs value={postType} onValueChange={setPostType} className="w-full shrink-0">
             <TabsList className="grid w-full grid-cols-2 bg-muted/50">
-              <TabsTrigger value="text">Text</TabsTrigger>
-              <TabsTrigger value="link">Link</TabsTrigger>
+              <TabsTrigger value="text" disabled={isPosting}>Text</TabsTrigger>
+              <TabsTrigger value="link" disabled={isPosting}>Link</TabsTrigger>
             </TabsList>
 
             {/* Text Tab */}
@@ -179,6 +218,7 @@ export function CreatePostModal({
                 onChange={(e) => setTitle(e.target.value)}
                 className="text-lg"
                 maxLength={300}
+                disabled={isPosting}
               />
               <Input
                 placeholder="Add tags (comma separated)"
@@ -186,6 +226,7 @@ export function CreatePostModal({
                 onChange={(e) =>
                   setTags(e.target.value.split(',').map((tag) => tag.trim()))
                 }
+                disabled={isPosting}
               />
               <div className="flex-1 flex flex-col border rounded-lg overflow-hidden min-h-0">
                 <div className="flex items-center space-x-1 p-2 border-b bg-muted/30 shrink-0 overflow-x-auto">
@@ -196,6 +237,7 @@ export function CreatePostModal({
                       size="sm"
                       className="h-8 w-8 p-0 shrink-0"
                       title={button.label}
+                      disabled={isPosting}
                     >
                       <button.icon className="h-4 w-4" />
                     </Button>
@@ -206,6 +248,7 @@ export function CreatePostModal({
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="h-full w-full border-0 resize-none focus-visible:ring-0 rounded-none"
+                  disabled={isPosting}
                 />
               </div>
             </TabsContent>
@@ -217,6 +260,7 @@ export function CreatePostModal({
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="text-lg"
+                disabled={isPosting}
               />
               <Input
                 placeholder="Add tags (comma separated)"
@@ -224,11 +268,13 @@ export function CreatePostModal({
                 onChange={(e) =>
                   setTags(e.target.value.split(',').map((tag) => tag.trim()))
                 }
+                disabled={isPosting}
               />
               <Input
                 placeholder="Paste a link"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
+                disabled={isPosting}
               />
             </TabsContent>
           </Tabs>
@@ -237,10 +283,10 @@ export function CreatePostModal({
           <div className="flex justify-end space-x-3 pt-4 border-t shrink-0">
             <Button
               onClick={handlePost}
-              disabled={!title.trim() || !community}
+              disabled={!isFormValid}
               className="bg-gradient-primary hover:opacity-90"
             >
-              Post
+              {isPosting ? "Posting..." : "Post"}
             </Button>
           </div>
         </div>
