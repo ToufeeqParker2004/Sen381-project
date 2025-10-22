@@ -22,36 +22,33 @@ This project is part of the **SEN381 Software Engineering Project** and leverage
 - **Database / Auth / Realtime:** Supabase  
 - **Build Tool:** Maven  
 - **Styling:** HTML + TailwindCSS  
-- **Other**  
-  - Docker + Kubernetes for containerization & auto-scaling  
+- **Other**   
   - JWT for secure token-based authentication  
-  - React Query / Axios for efficient API handling  
-  - Lombok for reduced boilerplate code in Java  
-  - JUnit, Jest + React Testing Library for testing
+  - React Query / Axios for efficient API handling   
+  - JUnit tests
 
 ---
 
 ### Features of Application (In progress/can change)
 
-#### Student Registration & Profile Management
-- **Login:** Google OAuth 2.0 restricted to `@belgiumcampus.ac.za` domain.  
+#### Student Profile Management
+- **Login:** restricted to `@belgiumcampus.ac.za` domain.  
 - **Profile:** Academic info collection (degree, year, modules), editable profile and interests.  
 - **Subscriptions & Tracking:** Subscribe to topics/tutors, store interaction history.  
 
 #### Tutor & Topic Management
 - **Tutor Validation:** Only verified tutors can create/respond to topics.  
 - **Topics:** Create topics with title, description, module, difficulty.  
-- **Student Interaction:** Receive notifications, upload study materials (PDF, video, slides), provide structured answers.  
+- **Student Interaction:** Receive notifications, upload study materials (PDF, video, slides), provide structured answers.
+- **Bookings:** Allow students to book verified tutors and recieve analytics from booking sessions and attending them.
 
 #### Content Storage & Access
 - **Uploads:** Students (questions) & tutors (resources), supports PDF, DOCX, PPT, MP4, MP3, images, HTML5 exercises.  
-- **Organization:** Tagged by module, tutor, topic; searchable by keywords/tags.  
-- **Device Support:** Mobile-friendly, offline viewing.  
+- **Organization:** Tagged by module, tutor, topic.  
 
-#### Discussion Forum
-- **Anonymous Posting:** Students post anonymously, linked internally for moderation.  
-- **Interaction:** Replies, threads, likes/upvotes, tagging tutors.  
-- **Moderation:** Admins can delete/flag posts; AI-assisted moderation.  
+#### Discussion Forum 
+- **Interaction:** Replies, threads, Community chats etc  
+- **Moderation:** Admins can delete posts, NLP AI-assisted moderation.  
 
 #### AI-Powered Chatbot Assistant
 - **Scope:** FAQ handling, study support, references stored resources.  
@@ -59,18 +56,13 @@ This project is part of the **SEN381 Software Engineering Project** and leverage
 - **Learning:** Improves with feedback (thumbs up/down).  
 
 #### Private Messaging
-- **One-on-One Channels:** Auto-created chat with verified tutors.  
-- **Messaging:** Text, attachments (PDF, images, links), inline previews.  
+- **One-on-One Channels:** Auto-created chat with verified tutors and students.  
 
 #### API Notifications
-- **Integration:** Email (SendGrid), SMS/WhatsApp (Twilio API).  
-- **Use Cases:** Notify students of tutor replies, reminders, announcements.  
-
-#### Real-Time Meetings
-- **Built-In Module:** Embedded video/audio conferencing (WebRTC).  
-- **Features:** Screen sharing, whiteboard, breakout rooms, recording.  
+- **Integration:** EmailJS
+- **Use Cases:** Notify students of tutor booking states.  
 
 #### Admin Panel 
-   - Manage users, sessions, and reports (optional for MVP)
+   - Manage analytics, users, Forum posts, FAQ's, Errors
 
 ---
