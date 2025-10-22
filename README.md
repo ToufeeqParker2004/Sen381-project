@@ -16,6 +16,28 @@ This project is part of the **SEN381 Software Engineering Project** and leverage
 
 ---
 
+# Insights
+
+# Student side
+
+<img width="1911" height="987" alt="Student Dash" src="https://github.com/user-attachments/assets/f8d54078-cb56-42c2-b940-8c8425792688" />
+<img width="1910" height="988" alt="StudentMessage" src="https://github.com/user-attachments/assets/b08647fa-a9c1-4f74-bf60-3dcf714e7773" />
+<img width="1908" height="995" alt="Forum" src="https://github.com/user-attachments/assets/ecd79ddd-dbed-4381-bbe4-0f1e457f3e45" />
+<img width="1906" height="991" alt="ProgressPage" src="https://github.com/user-attachments/assets/ea70b9fb-a51d-4f7d-81fe-9fbd583d51fc" />
+<img width="1916" height="992" alt="TutorBooking" src="https://github.com/user-attachments/assets/c29da8a6-bb54-4024-9790-03ef2ddc0391" />
+
+
+# Tutor side
+
+<img width="1915" height="990" alt="TutorDash" src="https://github.com/user-attachments/assets/41fa92eb-e2ec-4d84-80d8-bc6955bb9a17" />
+<img width="1911" height="988" alt="MyStudents" src="https://github.com/user-attachments/assets/89b22a4e-2210-4182-babd-7fc4db06e8b0" />
+
+
+# Admin side
+
+<img width="1910" height="993" alt="AdminDash" src="https://github.com/user-attachments/assets/839b8e4a-2523-468e-b0c5-992d1bad8b7e" />
+
+
 ## 🛠 Tech Stack
 - **Backend:** Java Spring Boot  
 - **Frontend:** React + TypeScript  
@@ -66,3 +88,9 @@ This project is part of the **SEN381 Software Engineering Project** and leverage
    - Manage analytics, users, Forum posts, FAQ's, Errors
 
 ---
+
+
+
+
+
+
