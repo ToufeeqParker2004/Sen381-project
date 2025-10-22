@@ -2,6 +2,7 @@ package com.backend.Java_Backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -10,7 +11,13 @@ public class JavaBackendApplication implements WebMvcConfigurer {
 
 	public static void main(String[] args) {
 
-		SpringApplication.run(JavaBackendApplication.class, args);
+
+
+        ConfigurableApplicationContext context = SpringApplication.run(JavaBackendApplication.class, args);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Shutting down and closing DB connections...");
+            context.close(); // closes Hikari pool + JPA connections
+        }));
 	}
 	@Override
 	public void addCorsMappings(CorsRegistry registry) {
