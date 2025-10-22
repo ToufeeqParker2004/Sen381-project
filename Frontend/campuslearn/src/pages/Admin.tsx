@@ -20,6 +20,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 import {
   Settings,
@@ -45,7 +55,8 @@ import {
   Activity,
   Server,
   Zap,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react';
 import { LineChart, Line, BarChart as RechartsBarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ErrorRecord, ErrorResponse } from '@/types';
@@ -69,6 +80,23 @@ interface ForumPost {
   timestamp?: string | null;
 }
 
+interface FAQ {
+  id: number;
+  question: string;
+  answer: string;
+  category: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface FAQFormData {
+  question: string;
+  answer: string;
+  category: string;
+  color: string;
+}
+
 export default function Admin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTable, setSelectedTable] = useState('users');
@@ -81,6 +109,19 @@ export default function Admin() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const pageSize = 10;
+
+  // FAQ States
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [faqLoading, setFaqLoading] = useState(false);
+  const [faqError, setFaqError] = useState<string | null>(null);
+  const [faqDialogOpen, setFaqDialogOpen] = useState(false);
+  const [editingFaq, setEditingFaq] = useState<FAQ | null>(null);
+  const [faqForm, setFaqForm] = useState<FAQFormData>({
+    question: '',
+    answer: '',
+    category: 'Getting Started',
+    color: 'bg-blue-500'
+  });
 
   const powerURL = "https://app.powerbi.com/view?r=eyJrIjoiZWNkNmVhYzQtNDliZC00YzFkLTljMTQtMmQ0ZThlZWM0YjU1IiwidCI6ImVhMWE5MDliLTY2MDAtNGEyNS04MmE1LTBjNmVkN2QwNTEzYiIsImMiOjl9&pageName=35a3420a0cb3b9bccc5e";
 
@@ -129,9 +170,147 @@ export default function Admin() {
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
 
+  // FAQ Categories and Colors
+  const faqCategories = [
+    'Getting Started',
+    'Technical Support', 
+    'AI Tutor',
+    'Communication',
+    'Account Management',
+    'Billing & Payments',
+    'Other'
+  ];
+
+  const faqColors = [
+    'bg-blue-500',
+    'bg-green-500',
+    'bg-purple-500', 
+    'bg-orange-500',
+    'bg-red-500',
+    'bg-indigo-500'
+  ];
+
+  // Fetch FAQs
+  const fetchFAQs = async () => {
+    try {
+      setFaqLoading(true);
+      setFaqError(null);
+      
+      const response = await fetch('http://localhost:9090/api/faqs',{
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch FAQs: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setFaqs(data);
+    } catch (err: any) {
+      console.error('Error fetching FAQs:', err);
+      setFaqError(err.message || 'Failed to fetch FAQs');
+    } finally {
+      setFaqLoading(false);
+    }
+  };
+
+  // Create or Update FAQ
+  const saveFAQ = async (formData: FAQFormData) => {
+    try {
+      setFaqError(null);
+      
+      const url = editingFaq 
+        ? `http://localhost:9090/api/faqs/${editingFaq.id}`
+        : 'http://localhost:9090/api/faqs';
+      
+      const method = editingFaq ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to ${editingFaq ? 'update' : 'create'} FAQ: ${response.status}`);
+      }
+      
+      await fetchFAQs(); // Refresh the list
+      setFaqDialogOpen(false);
+      resetFaqForm();
+      
+    } catch (err: any) {
+      console.error('Error saving FAQ:', err);
+      setFaqError(err.message || `Failed to ${editingFaq ? 'update' : 'create'} FAQ`);
+    }
+  };
+
+  // Delete FAQ
+  const deleteFAQ = async (id: number) => {
+    
+
+    try {
+      setFaqError(null);
+      
+      const response = await fetch(`http://localhost:9090/api/faqs/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to delete FAQ: ${response.status}`);
+      }
+      
+      await fetchFAQs(); // Refresh the list
+      
+    } catch (err: any) {
+      console.error('Error deleting FAQ:', err);
+      setFaqError(err.message || 'Failed to delete FAQ');
+    }
+  };
+
+  // Reset FAQ form
+  const resetFaqForm = () => {
+    setFaqForm({
+      question: '',
+      answer: '',
+      category: 'Getting Started',
+      color: 'bg-blue-500'
+    });
+    setEditingFaq(null);
+  };
+
+  // Open FAQ dialog for editing
+  const editFAQ = (faq: FAQ) => {
+    setEditingFaq(faq);
+    setFaqForm({
+      question: faq.question,
+      answer: faq.answer,
+      category: faq.category,
+      color: faq.color
+    });
+    setFaqDialogOpen(true);
+  };
+
+  // Open FAQ dialog for creating
+  const createFAQ = () => {
+    resetFaqForm();
+    setFaqDialogOpen(true);
+  };
+
   // Fetch users on component mount
   useEffect(() => {
     fetchUsers();
+    fetchFAQs();
   }, []);
 
   // Fetch forum posts
@@ -219,9 +398,10 @@ export default function Admin() {
       setForumLoading(false);
     }
   };
+
   useEffect(() => {
-  fetchForumPosts();
-}, []);
+    fetchForumPosts();
+  }, []);
 
   // Delete forum post
   const deleteForumPost = async (postId: string) => {
@@ -284,56 +464,56 @@ export default function Admin() {
   };
 
   const handleSaveRecord = async (updatedRecord: Record<string, any>) => {
-  try {
-    if (selectedTable === 'users') {
-      if (updatedRecord.id) {
-        // Update existing user - don't send password for updates
-        const { id, createdAt, password, ...updateData } = updatedRecord;
-        console.log('Updating user with data:', updateData);
-        
-        const updatedUser = await userService.updateUser(id, updateData);
-        
-        setDatabaseTables(prev => ({
-          ...prev,
-          users: prev.users.map(user => 
-            user.id === id ? updatedUser : user
-          )
-        }));
-      } else {
-        // Create new user - ALWAYS send the hash, ignore what user sees in UI
-        const createUserData = {
-          name: updatedRecord.name || '',
-          email: updatedRecord.email || '',
-          phoneNumber: updatedRecord.phoneNumber || '',
-          bio: updatedRecord.bio || '',
-          location: updatedRecord.location || '',
-          password: '2YEJxmSRl/fL0L2MFoRlUjdZ5ec2kg+8+gdUh4WtePo=', // Always send the hash
-          createdAt: new Date().toISOString()
-        };
-        
-        console.log('Creating user with data:', createUserData);
-        
-        if (!createUserData.name || !createUserData.email) {
-          setUsersError('Name and email are required fields');
-          return;
+    try {
+      if (selectedTable === 'users') {
+        if (updatedRecord.id) {
+          // Update existing user - don't send password for updates
+          const { id, createdAt, password, ...updateData } = updatedRecord;
+          console.log('Updating user with data:', updateData);
+          
+          const updatedUser = await userService.updateUser(id, updateData);
+          
+          setDatabaseTables(prev => ({
+            ...prev,
+            users: prev.users.map(user => 
+              user.id === id ? updatedUser : user
+            )
+          }));
+        } else {
+          // Create new user - ALWAYS send the hash, ignore what user sees in UI
+          const createUserData = {
+            name: updatedRecord.name || '',
+            email: updatedRecord.email || '',
+            phoneNumber: updatedRecord.phoneNumber || '',
+            bio: updatedRecord.bio || '',
+            location: updatedRecord.location || '',
+            password: '2YEJxmSRl/fL0L2MFoRlUjdZ5ec2kg+8+gdUh4WtePo=', // Always send the hash
+            createdAt: new Date().toISOString()
+          };
+          
+          console.log('Creating user with data:', createUserData);
+          
+          if (!createUserData.name || !createUserData.email) {
+            setUsersError('Name and email are required fields');
+            return;
+          }
+          
+          const newUser = await userService.createUser(createUserData);
+          setDatabaseTables(prev => ({
+            ...prev,
+            users: [...prev.users, newUser]
+          }));
         }
-        
-        const newUser = await userService.createUser(createUserData);
-        setDatabaseTables(prev => ({
-          ...prev,
-          users: [...prev.users, newUser]
-        }));
       }
+      
+      setEditDialogOpen(false);
+      setSelectedRecord(null);
+      setUsersError(null);
+    } catch (err: any) {
+      console.error('Error saving record:', err);
+      setUsersError(err.response?.data?.message || err.message || 'Failed to save record');
     }
-    
-    setEditDialogOpen(false);
-    setSelectedRecord(null);
-    setUsersError(null);
-  } catch (err: any) {
-    console.error('Error saving record:', err);
-    setUsersError(err.response?.data?.message || err.message || 'Failed to save record');
-  }
-};
+  };
 
   const handleDeleteRecord = async (record: Record<string, any>) => {
     if (!confirm('Are you sure you want to delete this record?')) {
@@ -358,17 +538,17 @@ export default function Admin() {
   };
 
   const handleCreateUser = () => {
-  setSelectedRecord({
-    name: '',
-    email: '',
-    phoneNumber: '',
-    bio: '',
-    location: '',
-    password: 'pass123', // Show "pass123" in UI but we'll override with hash in handleSaveRecord
-    createdAt: new Date().toISOString()
-  });
-  setEditDialogOpen(true);
-};
+    setSelectedRecord({
+      name: '',
+      email: '',
+      phoneNumber: '',
+      bio: '',
+      location: '',
+      password: 'pass123', // Show "pass123" in UI but we'll override with hash in handleSaveRecord
+      createdAt: new Date().toISOString()
+    });
+    setEditDialogOpen(true);
+  };
 
   useEffect(() => {
     const fetchErrors = async () => {
@@ -559,11 +739,12 @@ export default function Admin() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Reports</TabsTrigger>
           <TabsTrigger value="database">Database</TabsTrigger>
           <TabsTrigger value="errors">Errors</TabsTrigger>
           <TabsTrigger value="forum">Forum</TabsTrigger>
+          <TabsTrigger value="faq">FAQ</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Overview Tab */}
@@ -1059,6 +1240,148 @@ export default function Admin() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* FAQ Management Tab */}
+        <TabsContent value="faq" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <HelpCircle className="h-5 w-5" />
+                    FAQ Management
+                  </CardTitle>
+                  <CardDescription>Manage frequently asked questions and their categories</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={fetchFAQs}
+                    disabled={faqLoading}
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${faqLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  <Button size="sm" onClick={createFAQ}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add FAQ
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Error Message */}
+              {faqError && (
+                <div className="bg-destructive/15 border border-destructive/50 text-destructive px-4 py-3 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4" />
+                    <span>{faqError}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading State */}
+              {faqLoading && (
+                <div className="flex justify-center items-center p-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-2 text-sm text-muted-foreground">Loading FAQs...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* FAQ Table */}
+              {!faqLoading && (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Question</TableHead>
+                        <TableHead>Answer</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Color</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Updated</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {faqs.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                            No FAQs found. Create your first FAQ!
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        faqs.map((faq) => (
+                          <TableRow key={faq.id} className="hover:bg-muted/50">
+                            <TableCell className="font-medium">{faq.id}</TableCell>
+                            <TableCell>
+                              <div className="max-w-[200px]">
+                                <div className="font-medium text-sm">
+                                  {faq.question}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="max-w-[250px]">
+                                <div className="text-sm text-muted-foreground">
+                                  {truncateText(faq.answer, 100)}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {faq.category}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${faq.color}`}></div>
+                                <span className="text-xs text-muted-foreground">
+                                  {faq.color}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(faq.createdAt)}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatDate(faq.updatedAt)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  title="Edit FAQ"
+                                  onClick={() => editFAQ(faq)}
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  title="Delete FAQ"
+                                  onClick={() => deleteFAQ(faq.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Edit Record Dialog */}
@@ -1069,6 +1392,107 @@ export default function Admin() {
         tableName={selectedTable}
         onSave={handleSaveRecord}
       />
+
+      {/* FAQ Dialog */}
+      <Dialog open={faqDialogOpen} onOpenChange={setFaqDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingFaq ? 'Edit FAQ' : 'Create New FAQ'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingFaq 
+                ? 'Update the frequently asked question details.' 
+                : 'Add a new frequently asked question to the knowledge base.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="question">Question</Label>
+              <Input
+                id="question"
+                placeholder="Enter the question..."
+                value={faqForm.question}
+                onChange={(e) => setFaqForm({...faqForm, question: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="answer">Answer</Label>
+              <Textarea
+                id="answer"
+                placeholder="Enter the answer..."
+                value={faqForm.answer}
+                onChange={(e) => setFaqForm({...faqForm, answer: e.target.value})}
+                rows={4}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select 
+                  value={faqForm.category} 
+                  onValueChange={(value) => setFaqForm({...faqForm, category: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {faqCategories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="color">Color</Label>
+                <Select 
+                  value={faqForm.color} 
+                  onValueChange={(value) => setFaqForm({...faqForm, color: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {faqColors.map((color) => (
+                      <SelectItem key={color} value={color}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                          <span>{color}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setFaqDialogOpen(false);
+                resetFaqForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => saveFAQ(faqForm)}
+              disabled={!faqForm.question.trim() || !faqForm.answer.trim()}
+            >
+              {editingFaq ? 'Update FAQ' : 'Create FAQ'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

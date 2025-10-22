@@ -1,83 +1,60 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 
 const FAQ = () => {
-  const faqCategories = [
-    {
-      category: "Getting Started",
-      color: "bg-blue-500",
-      faqs: [
-        {
-          question: "How do I access my courses?",
-          answer: "Navigate to the 'Courses / Tutors' section in the sidebar to view all your enrolled courses and available tutors."
+  const [faqCategories, setFaqCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchFAQs();
+  }, []);
+
+  const fetchFAQs = async () => {
+    try {
+      const token = localStorage.getItem('authToken'); // Get JWT token
+      
+      const response = await fetch('http://localhost:9090/api/faqs/grouped', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        {
-          question: "How do I book a tutoring session?",
-          answer: "Go to the 'Courses / Tutors' page, find your desired tutor, and click on their profile to view available time slots and book a session."
-        },
-        {
-          question: "Where can I find my study materials?",
-          answer: "All your study materials and resources are available in the 'Resources' section. You can filter by subject or type of material."
-        }
-      ]
-    },
-    {
-      category: "Technical Support",
-      color: "bg-green-500",
-      faqs: [
-        {
-          question: "I can't access my account, what should I do?",
-          answer: "If you're having trouble logging in, please contact your campus IT support or use the 'Contact Support' option in your profile settings."
-        },
-        {
-          question: "How do I reset my password?",
-          answer: "Click on 'Forgot Password' on the login page and follow the instructions sent to your registered email address."
-        },
-        {
-          question: "The platform is running slowly, how can I fix this?",
-          answer: "Try clearing your browser cache, ensure you have a stable internet connection, or try accessing the platform from a different browser."
-        }
-      ]
-    },
-    {
-      category: "AI Tutor",
-      color: "bg-purple-500",
-      faqs: [
-        {
-          question: "What is the AI Tutor feature?",
-          answer: "The AI Tutor is your personal learning assistant that can help answer questions, provide explanations, and guide you through complex topics 24/7."
-        },
-        {
-          question: "How do I use the AI chatbot on resource pages?",
-          answer: "When viewing any learning resource, you'll see a small chat icon at the bottom of the page. Click on it to ask questions about the specific content you're studying."
-        },
-        {
-          question: "Can the AI Tutor help with assignments?",
-          answer: "The AI Tutor can provide guidance, explanations, and help you understand concepts, but it cannot complete assignments for you. It's designed to support your learning process."
-        }
-      ]
-    },
-    {
-      category: "Communication",
-      color: "bg-orange-500",
-      faqs: [
-        {
-          question: "How do I message other students?",
-          answer: "Use the 'Messages' section to send direct messages to classmates or join the 'Forum' for group discussions on various topics."
-        },
-        {
-          question: "Can I create study groups?",
-          answer: "Yes! Use the 'Forum' section to create or join study groups. You can also coordinate through the 'Messages' feature."
-        },
-        {
-          question: "How do I get notifications about new messages?",
-          answer: "Check your profile settings to enable email notifications and browser notifications for new messages and forum updates."
-        }
-      ]
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch FAQs: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setFaqCategories(data);
+    } catch (err) {
+      setError(err.message);
+      console.error('FAQ fetch error:', err);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">Loading FAQs...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center text-red-500">
+          <p>Error loading FAQs: {error}</p>
+          <p className="text-sm mt-2">Please try refreshing the page or contact support if the problem persists.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
