@@ -171,7 +171,16 @@ public class TutoringApplicationService {
 
         String encodedFileName;
         try {
-            encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.toString()).replace("+", "%20");
+            // Split fileName into segments (e.g., ["transcripts", "uuid_filename.pdf"])
+            String[] segments = fileName.split("/", -1);  // -1 to include trailing empty segments if any
+            // Encode each segment individually (for chars like space, -, but keep / raw)
+            String[] encodedSegments = new String[segments.length];
+            for (int i = 0; i < segments.length; i++) {
+                // Encode only non-slash reserved chars; replace + with %20 for consistency
+                encodedSegments[i] = URLEncoder.encode(segments[i], StandardCharsets.UTF_8.toString()).replace("+", "%20");
+            }
+            // Rejoin with raw / (no encoding for path separators)
+            encodedFileName = String.join("/", encodedSegments);
         } catch (Exception e) {
             logger.error("Failed to encode file name: {}", fileName, e);
             throw new RuntimeException("Failed to encode file name", e);
@@ -179,31 +188,38 @@ public class TutoringApplicationService {
 
         String url = SUPABASE_URL + "/storage/v1/object/sign/" + BUCKET_NAME + "/" + encodedFileName + "?download=true";
         try {
-            FormBody body = new FormBody.Builder()
-                    .add("expiresIn", "3600")
-                    .build();
+            // JSON payload for request body (as fixed previously)
+            String jsonBody = "{\"expiresIn\": 3600}";
+            RequestBody body = RequestBody.create(jsonBody, MediaType.parse("application/json"));
+
+            logger.debug("Sending request to URL: {}", url);
+            logger.debug("Authorization Header: Bearer {}", SUPABASE_KEY);
+            logger.debug("Request Body: {}", jsonBody);
+
             Request request = new Request.Builder()
                     .url(url)
                     .post(body)
                     .addHeader("Authorization", "Bearer " + SUPABASE_KEY)
+                    .addHeader("Content-Type", "application/json")
                     .build();
-            Response response = httpClient.newCall(request).execute();
-            if (!response.isSuccessful()) {
-                String responseBody = response.body() != null ? response.body().string() : "No response body";
-                logger.error("Failed to generate signed URL for {}: HTTP {} {} - {}", fileName, response.code(), response.message(), responseBody);
-                throw new RuntimeException("Failed to generate signed URL: HTTP " + response.code() + " " + response.message() + " - " + responseBody);
+            try (Response response = httpClient.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    String responseBody = response.body() != null ? response.body().string() : "No response body";
+                    logger.error("Failed to generate signed URL for {}: HTTP {} {} - {}", fileName, response.code(), response.message(), responseBody);
+                    throw new RuntimeException("Failed to generate signed URL: HTTP " + response.code() + " " + response.message() + " - " + responseBody);
+                }
+                String responseBody = response.body() != null ? response.body().string() : "{}";
+                logger.debug("Response Body: {}", responseBody);
+                Map<String, String> responseMap = objectMapper.readValue(responseBody, new TypeReference<Map<String, String>>() {});
+                String signedUrl = responseMap.get("signedURL") != null ? responseMap.get("signedURL") : responseMap.getOrDefault("url", responseMap.get("signedUrl"));
+                if (signedUrl == null) {
+                    logger.error("Signed URL not found in response for file {}: {}", fileName, responseBody);
+                    throw new RuntimeException("Signed URL not found in response");
+                }
+                String finalUrl = signedUrl.startsWith("http") ? signedUrl : SUPABASE_URL + "/storage/v1" + signedUrl;
+                logger.debug("Generated signed URL: {}", finalUrl);
+                return finalUrl;
             }
-            String responseBody = response.body() != null ? response.body().string() : "{}";
-            Map<String, String> responseMap = objectMapper.readValue(responseBody, new TypeReference<Map<String, String>>() {});
-            String signedUrl = responseMap.get("signedURL") != null ? responseMap.get("signedURL") : responseMap.getOrDefault("url", responseMap.get("signedUrl"));
-            if (signedUrl == null) {
-                logger.error("Signed URL not found in response for file {}: {}", fileName, responseBody);
-                throw new RuntimeException("Signed URL not found in response");
-            }
-            String finalUrl = signedUrl.startsWith("http") ? signedUrl : SUPABASE_URL + "/storage/v1" + signedUrl;
-            logger.debug("Generated signed URL: {}", finalUrl);
-            response.close();
-            return finalUrl;
         } catch (Exception e) {
             logger.error("Failed to generate signed URL for application ID: {}, file: {}", applicationId, fileName, e);
             throw new RuntimeException("Failed to generate signed URL", e);
