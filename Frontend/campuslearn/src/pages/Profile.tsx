@@ -32,6 +32,7 @@ const Profile = () => {
   const [availableModules, setAvailableModules] = useState<string[]>([]);
   const [isLoadingModules, setIsLoadingModules] = useState(true);
   const [subscribed, setSubscribed] = useState<boolean>(false);
+  const [hasPendingApplication, setHasPendingApplication] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -226,6 +227,9 @@ const Profile = () => {
         throw new Error(errorData.message || 'Failed to submit tutor application');
       }
 
+      // Update local state to hide the form
+      setHasPendingApplication(true);
+
       toast({
         title: 'Application Submitted',
         description: 'Your tutor application has been submitted for review.',
@@ -297,6 +301,33 @@ const Profile = () => {
 
     fetchSubscription();
   }, [toast]);
+
+  useEffect(() => {
+    const checkPendingApplication = async () => {
+      if (!user || user.isAdmin || user.isTutor) return;
+
+      try {
+        const response = await fetch('http://localhost:9090/api/tutoring-applications', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const applications = await response.json();
+          const userApplication = applications.find((app: any) => 
+            app.student?.id === parseInt(user.id) && app.status?.toLowerCase() === 'pending'
+          );
+          setHasPendingApplication(!!userApplication);
+        }
+      } catch (error) {
+        console.error('Failed to check pending application', error);
+      }
+    };
+
+    checkPendingApplication();
+  }, [user]);
 
   const updatePassword = async (newPassword: string) => {
     try {
@@ -476,7 +507,7 @@ const Profile = () => {
           </Card>
         )}
 
-        {(!user.isTutor && user.tutorApplicationStatus !== 'pending') && (
+        {!user.isAdmin && !user.isTutor && !hasPendingApplication && (
           <Card className="shadow-custom-md">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
